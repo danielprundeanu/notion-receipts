@@ -1,0 +1,8 @@
+# Recipe URLs - un URL per linie
+# Liniile care încep cu # sunt ignorate
+
+# URL-uri de test:
+https://holymolydips.com/recipes/three-chilli-guac-recipe/
+https://holymolydips.com/recipes/black-bean-burrito-recipe-2/
+https://plantyou.com/olive-garden-minestrone-soup/
+

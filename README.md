@@ -1,6 +1,8 @@
 # Import Rețete în Notion
 
-Script Python pentru a importa rețete în bazele de date Notion dintr-un fișier text simplu.
+Scripturi Python pentru a importa rețete în bazele de date Notion:
+- **`scrape_recipes.py`** - Extrage rețete de pe website-uri și le convertește în format txt
+- **`import_recipes.py`** - Importă rețetele din fișiere txt în Notion
 
 ## Configurare inițială
 
@@ -21,7 +23,44 @@ Rulează scriptul de inspecție pentru a vedea structura exactă:
 
 ## Utilizare
 
-### 1. Creează fișierul cu rețete
+### Metoda 1: Extragere automată de pe website-uri
+
+#### 1. Creează fișier cu URL-uri
+
+Creează `recipe_urls.txt` cu URL-urile rețetelor (un URL per linie):
+
+```
+https://www.allrecipes.com/recipe/example
+https://www.jamieoliver.com/recipes/example
+https://retetefeldefel.ro/example
+```
+
+#### 2. Extrage rețetele
+
+```bash
+/Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python scrape_recipes.py recipe_urls.txt scraped_recipes.txt
+```
+
+Scriptul va:
+- ✓ Extrage automat ingrediente și cantități
+- ✓ Identifica timpul și numărul de porții
+- ✓ Salva pașii de preparare ca comentarii
+- ✓ Converti în formatul corect pentru import
+
+**Funcționează cu:**
+- Site-uri care folosesc schema.org Recipe (majoritatea site-urilor moderne)
+- AllRecipes, Jamie Oliver, BBC Good Food, etc.
+- Site-uri românești de rețete
+
+#### 3. Importă în Notion
+
+```bash
+/Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python import_recipes.py scraped_recipes.txt
+```
+
+### Metoda 2: Scriere manuală în fișier text
+
+#### 1. Creează fișierul cu rețete
 
 Folosește formatul din `recipe_example.txt`:
 
@@ -61,7 +100,7 @@ Ingredient 5
 - `Category:` - categorie rețetă (**Breakfast**, **Lunch**, **Dinner**, **Snack**, **Smoothie**, **Smoothie Bowl**, **Soup**, **High Protein**, **Receipt**, **Extra**)
 - `Favorite:` - Yes/No/Da/Nu
 
-### 2. Rulează importul
+#### 2. Rulează importul
 
 ```bash
 /Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python import_recipes.py recipe_example.txt

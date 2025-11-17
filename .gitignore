@@ -23,3 +23,7 @@ verify_*.py
 find_*.py
 inspect_*.py
 test_template.txt
+
+# Scraped recipes
+scraped_recipes.txt
+recipe_urls_personal.txt
