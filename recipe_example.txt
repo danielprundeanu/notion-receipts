@@ -1,0 +1,32 @@
+=== Test Receipt 2.0 ===
+Servings: 4
+Time: 45
+Difficulty: Moderate
+Category: Dinner
+Favorite: Yes
+
+[A]
+500g Yellow Potato
+300ml Water
+10g Mozzarella
+1 tsp Salt
+1 cup Honey
+
+[2]
+400g Tomatos
+2 Garlic clove
+1 lingura Busuioc
+
+
+
+=== Pancakes ===
+Servings: 6
+Time: 20
+Difficulty: Easy
+Category: Breakfast
+Favorite: No
+
+[1]
+250g Flour
+2 buc Egg
+300ml Milk

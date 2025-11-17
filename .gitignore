@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Notion credentials - NU PUBLICA ACESTEA PE GITHUB!
+notion.env
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Test files
+test_*.py
+check_*.py
+verify_*.py
+find_*.py
+inspect_*.py
+test_template.txt
