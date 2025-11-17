@@ -1,0 +1,24 @@
+{
+  "grocery_mappings": {
+    "sunflower oil": "Olive Oil",
+    "oregano": "Dried Oregano",
+    "paprika": "Paprika Powder",
+    "tortilla": "Wholemeal wrap",
+    "corn tortillas": "Wholemeal wrap",
+    "tortillas": "Wholemeal wrap",
+    "onion": "Yellow Onion",
+    "chilli": "Chilli Powder",
+    "clove": "Garlic clove",
+    "garlic clove": "Garlic clove",
+    "bunch coriander": "Fresh Coriander",
+    "coriander": "Fresh Coriander",
+    "milk": "Low-fat milk"
+  },
+  "unit_conversions": {
+    "custom_rules": []
+  },
+  "auto_create": {
+    "enabled": false,
+    "whitelist": []
+  }
+}

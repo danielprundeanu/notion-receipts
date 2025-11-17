@@ -3,6 +3,7 @@ Script pentru importul rețetelor în Notion din fișiere text
 """
 import os
 import re
+import json
 from notion_client import Client
 from dotenv import load_dotenv
 from typing import Dict, List, Tuple, Optional
@@ -23,9 +24,86 @@ class RecipeImporter:
     VALID_CATEGORIES = ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Smoothie', 
                         'Smoothie Bowl', 'Soup', 'High Protein', 'Receipt', 'Extra']
     
+    # Dicționar de conversii între unități
+    UNIT_CONVERSIONS = {
+        # Volume - conversii la ml
+        'cup': ('ml', 240),
+        'cups': ('ml', 240),
+        'tsp': ('ml', 5),
+        'teaspoon': ('ml', 5),
+        'teaspoons': ('ml', 5),
+        'tbsp': ('ml', 15),
+        'tablespoon': ('ml', 15),
+        'tablespoons': ('ml', 15),
+        'fl oz': ('ml', 30),
+        'fluid ounce': ('ml', 30),
+        'fluid ounces': ('ml', 30),
+        'pint': ('ml', 473),
+        'pints': ('ml', 473),
+        'quart': ('ml', 946),
+        'quarts': ('ml', 946),
+        'gallon': ('ml', 3785),
+        'gallons': ('ml', 3785),
+        'liter': ('ml', 1000),
+        'liters': ('ml', 1000),
+        'l': ('ml', 1000),
+        
+        # Weight - conversii la g
+        'oz': ('g', 28.35),
+        'ounce': ('g', 28.35),
+        'ounces': ('g', 28.35),
+        'lb': ('g', 453.6),
+        'lbs': ('g', 453.6),
+        'pound': ('g', 453.6),
+        'pounds': ('g', 453.6),
+        'kg': ('g', 1000),
+        'kilogram': ('g', 1000),
+        'kilograms': ('g', 1000),
+    }
+    
+    # Mapări de sinonime pentru unități
+    UNIT_SYNONYMS = {
+        'ml': ['ml', 'milliliter', 'milliliters', 'mL'],
+        'l': ['l', 'L', 'liter', 'liters', 'litre', 'litres'],
+        'g': ['g', 'gram', 'grams', 'gm'],
+        'kg': ['kg', 'kilogram', 'kilograms'],
+        'buc': ['buc', 'piece', 'pieces', 'pc', 'pcs', 'bucată', 'bucăți'],
+        'lingura': ['lingura', 'lingură', 'linguri', 'tbsp', 'tablespoon', 'tablespoons'],
+        'lingurita': ['lingurita', 'lingurită', 'lingurite', 'linguriță', 'tsp', 'teaspoon', 'teaspoons'],
+    }
+    
     def __init__(self):
         self.grocery_cache = {}  # Cache pentru grocery items deja găsite
         self.unit_warnings = []  # Warnings pentru unități necunoscute
+        self.mappings = self._load_mappings()
+        self.new_mappings = {}  # Mapări noi învățate în această sesiune
+    
+    def _load_mappings(self) -> Dict:
+        """Încarcă mapările din fișierul JSON"""
+        mappings_file = 'ingredient_mappings.json'
+        if os.path.exists(mappings_file):
+            try:
+                with open(mappings_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            except Exception as e:
+                print(f"⚠ Eroare la încărcarea mapărilor: {e}")
+                return {"grocery_mappings": {}, "unit_conversions": {}, "auto_create": {"enabled": False}}
+        return {"grocery_mappings": {}, "unit_conversions": {}, "auto_create": {"enabled": False}}
+    
+    def _save_mappings(self):
+        """Salvează mapările actualizate în fișier"""
+        if not self.new_mappings:
+            return
+        
+        # Actualizează mapările cu cele noi
+        self.mappings['grocery_mappings'].update(self.new_mappings)
+        
+        try:
+            with open('ingredient_mappings.json', 'w', encoding='utf-8') as f:
+                json.dump(self.mappings, f, indent=2, ensure_ascii=False)
+            print(f"\n✓ {len(self.new_mappings)} mapări noi salvate în ingredient_mappings.json")
+        except Exception as e:
+            print(f"\n⚠ Eroare la salvarea mapărilor: {e}")
         
     def parse_recipe_file(self, filepath: str) -> List[Dict]:
         """Parsează fișierul text și extrage rețetele"""
@@ -64,14 +142,33 @@ class RecipeImporter:
             'difficulty': None,
             'category': None,
             'favorite': False,
-            'ingredient_groups': []
+            'link': None,
+            'image_url': None,
+            'ingredient_groups': [],
+            'instructions': []
         }
         
         current_group = None
+        in_method_section = False
         i = 1
         
         while i < len(lines):
             line = lines[i]
+            
+            # Verifică dacă am intrat în secțiunea Steps
+            if line.startswith('Steps:') or line.startswith('Method:'):
+                in_method_section = True
+                i += 1
+                continue
+            
+            # Dacă suntem în Steps, parsează instrucțiunile
+            if in_method_section:
+                # Parsează liniile numerotate: "1. text", "2. text", etc.
+                match = re.match(r'^\d+\.\s*(.+)$', line)
+                if match:
+                    recipe['instructions'].append(match.group(1))
+                i += 1
+                continue
             
             # Metadata rețetă
             if line.startswith('Servings:'):
@@ -85,6 +182,10 @@ class RecipeImporter:
             elif line.startswith('Favorite:'):
                 val = line.split(':', 1)[1].strip().lower()
                 recipe['favorite'] = val in ['yes', 'da', 'true', '1']
+            elif line.startswith('Link:'):
+                recipe['link'] = line.split(':', 1)[1].strip()
+            elif line.startswith('Image:'):
+                recipe['image_url'] = line.split(':', 1)[1].strip()
             
             # Grup nou de ingrediente
             elif line.startswith('[') and line.endswith(']'):
@@ -97,6 +198,10 @@ class RecipeImporter:
             
             # Ingredient
             elif current_group is not None and line:
+                # Ignoră comentariile (linii care încep cu #)
+                if line.startswith('#'):
+                    i += 1
+                    continue
                 ingredient = self._parse_ingredient(line)
                 if ingredient:
                     current_group['ingredients'].append(ingredient)
@@ -114,22 +219,69 @@ class RecipeImporter:
         - 1 lingura Zahar
         - Sare (fără cantitate)
         - 500g Faina (Faina alba)  # cu grocery item specific în paranteze
+        - 0.5 large tomatoes, finely chopped  # cu adjective și observații
         """
+        # Lista de adjective comune pentru ingrediente
+        adjectives = r'\b(large|small|medium|fresh|dried|chopped|diced|sliced|minced|grated|peeled|crushed|whole|canned|frozen|ripe|unripe|green|red|yellow|white|black|brown|raw|cooked)\b'
+        
         # Pattern pentru ingredient cu cantitate și unitate
+        # Exemplu: "0.5 large tomatoes, finely chopped" sau "500g beef mince"
         pattern = r'^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?\s+(.+?)(?:\s*\((.+?)\))?$'
         match = re.match(pattern, line)
         
         if match:
             quantity = float(match.group(1))
             unit = match.group(2) or ''
-            name = match.group(3).strip()
-            grocery_item = match.group(4).strip() if match.group(4) else name
+            rest = match.group(3).strip()
+            grocery_item = match.group(4).strip() if match.group(4) else None
+            
+            # Separă observațiile (după virgulă)
+            observations = ''
+            name = rest
+            if ',' in rest:
+                parts = rest.split(',', 1)
+                name = parts[0].strip()
+                observations = parts[1].strip()
+            
+            # Elimină adjectivele din nume și le adaugă la observații
+            name_words = name.split()
+            cleaned_words = []
+            removed_adjectives = []
+            
+            for word in name_words:
+                if re.match(adjectives, word, re.IGNORECASE):
+                    removed_adjectives.append(word)
+                else:
+                    cleaned_words.append(word)
+            
+            # Reconstituie numele fără adjective
+            if cleaned_words:
+                name = ' '.join(cleaned_words)
+            
+            # Adaugă adjectivele eliminate la începutul observațiilor
+            if removed_adjectives:
+                adj_text = ' '.join(removed_adjectives)
+                if observations:
+                    observations = f"{adj_text}, {observations}"
+                else:
+                    observations = adj_text
+            
+            # Singularizează numele (tomatoes -> tomato)
+            name = self._singularize(name)
+            
+            # Capitalizează prima literă
+            name = name.capitalize()
+            
+            # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
+            if not grocery_item:
+                grocery_item = name
             
             return {
                 'quantity': quantity,
                 'unit': unit,
                 'name': name,
-                'grocery_item': grocery_item
+                'grocery_item': grocery_item,
+                'observations': observations
             }
         
         # Ingredient fără cantitate (doar nume)
@@ -137,17 +289,82 @@ class RecipeImporter:
         match = re.match(pattern_no_qty, line)
         
         if match:
-            name = match.group(1).strip()
-            grocery_item = match.group(2).strip() if match.group(2) else name
+            rest = match.group(1).strip()
+            grocery_item = match.group(2).strip() if match.group(2) else None
+            
+            # Separă observațiile (după virgulă)
+            observations = ''
+            name = rest
+            if ',' in rest:
+                parts = rest.split(',', 1)
+                name = parts[0].strip()
+                observations = parts[1].strip()
+            
+            # Elimină adjectivele din nume
+            name_words = name.split()
+            cleaned_words = []
+            removed_adjectives = []
+            
+            for word in name_words:
+                if re.match(adjectives, word, re.IGNORECASE):
+                    removed_adjectives.append(word)
+                else:
+                    cleaned_words.append(word)
+            
+            if cleaned_words:
+                name = ' '.join(cleaned_words)
+            
+            if removed_adjectives:
+                adj_text = ' '.join(removed_adjectives)
+                if observations:
+                    observations = f"{adj_text}, {observations}"
+                else:
+                    observations = adj_text
+            
+            # Singularizează și capitalizează
+            name = self._singularize(name)
+            name = name.capitalize()
+            
+            if not grocery_item:
+                grocery_item = name
             
             return {
                 'quantity': None,
                 'unit': '',
                 'name': name,
-                'grocery_item': grocery_item
+                'grocery_item': grocery_item,
+                'observations': observations
             }
         
         return None
+    
+    def _singularize(self, word: str) -> str:
+        """Singularizează un cuvânt (tomatoes -> tomato, onions -> onion)"""
+        word = word.strip().lower()
+        
+        # Cazuri speciale
+        special_cases = {
+            'potatoes': 'potato',
+            'tomatoes': 'tomato',
+            'onions': 'onion',
+            'carrots': 'carrot',
+            'mushrooms': 'mushroom',
+            'cloves': 'clove',
+            'limes': 'lime',
+            'lemons': 'lemon',
+            'beans': 'bean',
+            'peas': 'pea',
+            'chickpeas': 'chickpea',
+        }
+        
+        if word in special_cases:
+            return special_cases[word]
+        
+        # Regulă generală: dacă se termină în 's', îl elimină
+        if word.endswith('s') and len(word) > 3:
+            return word[:-1]
+        
+        return word
     
     def find_or_create_grocery_item(self, name: str) -> str:
         """Caută sau creează un grocery item și returnează ID-ul"""
@@ -155,8 +372,16 @@ class RecipeImporter:
         if name in self.grocery_cache:
             return self.grocery_cache[name]
         
+        # Verifică în mapări salvate
+        name_lower = name.lower()
+        if name_lower in self.mappings.get('grocery_mappings', {}):
+            mapped_name = self.mappings['grocery_mappings'][name_lower]
+            print(f"  📋 Folosesc mapare salvată: '{name}' → '{mapped_name}'")
+            # Recursiv pentru a găsi mapped item
+            return self.find_or_create_grocery_item(mapped_name)
+        
         try:
-            # Caută în baza de date
+            # Metoda 1: Caută exact
             response = notion.databases.query(
                 **{
                     "database_id": DB_GROCERIES,
@@ -175,7 +400,71 @@ class RecipeImporter:
                 print(f"  ✓ Găsit grocery item existent: {name}")
                 return page_id
             
-            # Nu există, creează unul nou
+            # Metoda 2: Caută parțial (case-insensitive)
+            response = notion.databases.query(
+                **{
+                    "database_id": DB_GROCERIES,
+                    "filter": {
+                        "property": "Name",
+                        "title": {
+                            "contains": name
+                        }
+                    }
+                }
+            )
+            
+            if response.get('results'):
+                # Găsit posibile match-uri
+                print(f"\n  Găsite {len(response['results'])} grocery items similare cu '{name}':")
+                for idx, result in enumerate(response['results'][:5], 1):  # Max 5 rezultate
+                    title_prop = result.get('properties', {}).get('Name', {})
+                    if title_prop.get('title'):
+                        item_name = title_prop['title'][0]['plain_text']
+                        print(f"    {idx}. {item_name}")
+                
+                print(f"    0. Creează item nou: {name}")
+                
+                choice = input("\n  Selectează (0-{}): ".format(min(len(response['results']), 5)))
+                
+                try:
+                    choice = int(choice)
+                    if choice > 0 and choice <= len(response['results']):
+                        # Folosește item-ul selectat
+                        selected = response['results'][choice - 1]
+                        page_id = selected['id']
+                        selected_name = selected['properties']['Name']['title'][0]['plain_text']
+                        self.grocery_cache[name] = page_id
+                        
+                        # Salvează maparea pentru viitor
+                        self.new_mappings[name_lower] = selected_name
+                        print(f"  ✓ Folosit grocery item existent: {selected_name}")
+                        print(f"  💾 Mapare salvată: '{name}' → '{selected_name}'")
+                        
+                        return page_id
+                    elif choice == 0:
+                        # Continuă la creare
+                        pass
+                    else:
+                        print(f"  ⚠ Opțiune invalidă, creez item nou")
+                except ValueError:
+                    print(f"  ⚠ Input invalid, creez item nou")
+            
+            # Nu există match sau utilizatorul a ales să creeze nou
+            # Întreabă utilizatorul confirmarea
+            print(f"\n  Grocery item '{name}' nu există în baza de date.")
+            confirm = input(f"  Creez '{name}' în Grocery List? (y/n): ").strip().lower()
+            
+            if confirm != 'y' and confirm != 'yes':
+                # Permite utilizatorului să specifice un nume diferit
+                new_name = input(f"  Introdu numele corect sau ENTER pentru a sări: ").strip()
+                if new_name:
+                    # Recursiv - încearcă să găsești/creezi cu numele nou
+                    return self.find_or_create_grocery_item(new_name)
+                else:
+                    print(f"  ⚠ Sărit grocery item pentru '{name}'")
+                    return None
+            
+            # Creează item nou
             new_page = notion.pages.create(
                 parent={"database_id": DB_GROCERIES},
                 properties={
@@ -216,57 +505,159 @@ class RecipeImporter:
             print(f"  ⚠ Eroare la obținerea unităților: {e}")
             return '', ''
     
-    def validate_unit(self, ingredient: Dict, grocery_item_id: str, grocery_name: str) -> bool:
-        """Validează dacă unitatea folosită este compatibilă cu grocery item-ul"""
+    def _normalize_unit(self, unit: str) -> str:
+        """Normalizează o unitate la forma ei canonică"""
+        unit_lower = unit.lower().strip()
+        
+        # Verifică sinonimele
+        for canonical, synonyms in self.UNIT_SYNONYMS.items():
+            if unit_lower in [s.lower() for s in synonyms]:
+                return canonical
+        
+        return unit_lower
+    
+    def _units_match(self, unit1: str, unit2: str) -> bool:
+        """Verifică dacă două unități sunt echivalente (inclusiv sinonime)"""
+        if not unit1 or not unit2:
+            return False
+        
+        normalized1 = self._normalize_unit(unit1)
+        normalized2 = self._normalize_unit(unit2)
+        
+        return normalized1 == normalized2
+    
+    def _convert_unit(self, quantity: float, from_unit: str, to_unit: str) -> Optional[float]:
+        """Convertește cantitatea dintr-o unitate în alta"""
+        from_normalized = self._normalize_unit(from_unit)
+        to_normalized = self._normalize_unit(to_unit)
+        
+        # Dacă sunt deja aceleași (inclusiv sinonime), nu e nevoie de conversie
+        if from_normalized == to_normalized:
+            return quantity
+        
+        # Încearcă conversie prin dicționar
+        if from_normalized in self.UNIT_CONVERSIONS:
+            target_unit, factor = self.UNIT_CONVERSIONS[from_normalized]
+            
+            # Convertește la unitatea intermediară
+            intermediate_value = quantity * factor
+            
+            # Verifică dacă unitatea țintă este compatibilă
+            if self._normalize_unit(target_unit) == to_normalized:
+                return intermediate_value
+            
+            # Dacă to_unit e în conversii și are aceeași unitate intermediară
+            if to_normalized in self.UNIT_CONVERSIONS:
+                to_target, to_factor = self.UNIT_CONVERSIONS[to_normalized]
+                if self._normalize_unit(to_target) == self._normalize_unit(target_unit):
+                    return intermediate_value / to_factor
+        
+        return None
+    
+    def validate_unit(self, ingredient: Dict, grocery_item_id: str, grocery_name: str) -> Tuple[bool, Optional[float], Optional[str]]:
+        """
+        Validează dacă unitatea folosită este compatibilă cu grocery item-ul.
+        
+        Returns:
+            Tuple[bool, Optional[float], Optional[str]]: 
+                - True dacă e compatibil (cu sau fără conversie), False dacă nu
+                - Cantitatea convertită (sau None dacă nu e nevoie de conversie)
+                - Unitatea țintă (sau None dacă nu e nevoie de conversie)
+        """
         if not ingredient['unit'] or not grocery_item_id:
-            return True
+            return True, None, None
         
         unity, second_unity = self.get_grocery_item_units(grocery_item_id)
         
-        # Normalizare unități
-        unit_normalized = ingredient['unit'].lower().strip()
-        unity_normalized = unity.lower().strip() if unity else ''
-        second_unity_normalized = second_unity.lower().strip() if second_unity else ''
-        
-        # Verifică dacă unitatea se potrivește
-        if unit_normalized == unity_normalized or unit_normalized == second_unity_normalized:
-            return True
-        
         # Dacă grocery item-ul nu are unități setate, acceptă orice
-        if not unity_normalized and not second_unity_normalized:
+        if not unity and not second_unity:
             print(f"    ℹ Grocery item '{grocery_name}' nu are unități definite - se acceptă '{ingredient['unit']}'")
-            return True
+            return True, None, None
         
-        # Unitatea nu se potrivește - OPREȘTE EXECUȚIA
+        # Verifică dacă unitatea se potrivește direct (inclusiv sinonime)
+        if self._units_match(ingredient['unit'], unity) or self._units_match(ingredient['unit'], second_unity):
+            return True, None, None
+        
+        # Unitatea nu se potrivește - încearcă conversie
         print(f"\n{'='*60}")
-        print(f"❌ EROARE: Unitate de măsură incompatibilă!")
+        print(f"⚠️  Unitate de măsură diferită!")
         print(f"{'='*60}")
         print(f"\nIngredient: {ingredient['name']}")
-        print(f"Unitate folosită: '{ingredient['unit']}'")
+        print(f"Cantitate: {ingredient['quantity']} {ingredient['unit']}")
         print(f"Grocery item: '{grocery_name}'")
         print(f"  - Unitate principală: '{unity if unity else '(nedefinită)'}'")
         print(f"  - Unitate secundară: '{second_unity if second_unity else '(nedefinită)'}'")
-        print(f"\n{'─'*60}")
-        print("SOLUȚII:")
-        print(f"{'─'*60}")
-        print(f"\n1. CONVERSIA în fișierul de rețete:")
+        
+        # Încearcă conversie la fiecare unitate disponibilă
+        conversions = []
+        
         if unity:
-            print(f"   - Convertește cantitatea în '{unity}' în fișierul text")
+            converted = self._convert_unit(ingredient['quantity'], ingredient['unit'], unity)
+            if converted is not None:
+                conversions.append((converted, unity, 'principală'))
+        
         if second_unity:
-            print(f"   - SAU convertește cantitatea în '{second_unity}' în fișierul text")
+            converted = self._convert_unit(ingredient['quantity'], ingredient['unit'], second_unity)
+            if converted is not None:
+                conversions.append((converted, second_unity, 'secundară'))
+        
+        if conversions:
+            print(f"\n{'─'*60}")
+            print("💡 CONVERSII DISPONIBILE:")
+            print(f"{'─'*60}\n")
+            
+            for idx, (conv_qty, conv_unit, unit_type) in enumerate(conversions, 1):
+                print(f"{idx}. Convertește la {conv_qty:.2f} {conv_unit} (unitate {unit_type})")
+            
+            print(f"\n0. Anulează - oprește importul")
+            
+            while True:
+                choice = input(f"\nAlege conversie (0-{len(conversions)}): ").strip()
+                
+                try:
+                    choice_num = int(choice)
+                    if choice_num == 0:
+                        print(f"  ✗ Import anulat pentru '{ingredient['name']}'")
+                        return False, None, None
+                    elif 1 <= choice_num <= len(conversions):
+                        conv_qty, conv_unit, _ = conversions[choice_num - 1]
+                        print(f"  ✓ Se va folosi {conv_qty:.2f} {conv_unit}")
+                        return True, conv_qty, conv_unit
+                    else:
+                        print(f"  ⚠ Opțiune invalidă, alege 0-{len(conversions)}")
+                except ValueError:
+                    print(f"  ⚠ Input invalid, alege 0-{len(conversions)}")
+        
+        # Nu există conversii disponibile
+        print(f"\n{'─'*60}")
+        print("❌ Nu există conversii automate disponibile!")
+        print(f"{'─'*60}")
+        print(f"\nSOLUȚII:")
+        print(f"\n1. MODIFICĂ rețeta:")
+        if unity:
+            print(f"   - Convertește manual cantitatea în '{unity}' în fișierul text")
+        if second_unity:
+            print(f"   - SAU convertește manual cantitatea în '{second_unity}' în fișierul text")
         print(f"\n2. ACTUALIZARE Grocery Item în Notion:")
         print(f"   - Deschide '{grocery_name}' în Grocery List 2.0")
         print(f"   - Setează 'unity' sau '2nd unity' la '{ingredient['unit']}'")
-        if unity and second_unity:
-            print(f"   - Actualizează 'conversion' dacă adaugi o nouă unitate")
         print(f"\n{'='*60}\n")
         
-        raise ValueError(f"Unitate incompatibilă: '{ingredient['unit']}' pentru '{grocery_name}'")
+        confirm = input("Continui oricum fără conversie? (y/n): ").strip().lower()
+        if confirm == 'y' or confirm == 'yes':
+            print(f"  ⚠ Se continuă cu unitate neconvertită: {ingredient['unit']}")
+            return True, None, None
+        
+        return False, None, None
 
     
     def create_recipe(self, recipe_data: Dict) -> Optional[str]:
         """Creează rețeta în baza Receipts 2.0"""
         try:
+            # Verifică schema bazei de date pentru a vedea ce proprietăți există
+            db_schema = notion.databases.retrieve(database_id=DB_RECEIPTS)
+            available_props = db_schema.get('properties', {}).keys()
+            
             properties = {
                 "Name": {
                     "title": [{"text": {"content": recipe_data['name']}}]
@@ -304,6 +695,10 @@ class RecipeImporter:
             # if recipe_data.get('favorite') is not None:
             #     properties["Favorite"] = {"checkbox": recipe_data['favorite']}
             
+            # Adaugă Link (URL) - doar dacă proprietatea există în baza de date
+            if recipe_data.get('link') and 'Link' in available_props:
+                properties["Link"] = {"url": recipe_data['link']}
+            
             # Creează pagina fără template (template-ul va fi aplicat la final)
             new_page = notion.pages.create(
                 parent={"database_id": DB_RECEIPTS},
@@ -311,6 +706,23 @@ class RecipeImporter:
             )
             
             print(f"\n✓ Rețeta '{recipe_data['name']}' a fost creată cu succes!")
+            
+            # Set cover image dacă există
+            if recipe_data.get('image_url'):
+                try:
+                    notion.pages.update(
+                        page_id=new_page['id'],
+                        cover={
+                            "type": "external",
+                            "external": {
+                                "url": recipe_data['image_url']
+                            }
+                        }
+                    )
+                    print(f"  ✓ Cover image setat")
+                except Exception as e:
+                    print(f"  ⚠ Eroare la setarea cover image: {e}")
+            
             return new_page['id']
             
         except Exception as e:
@@ -415,6 +827,172 @@ class RecipeImporter:
         
         return clean_block
     
+    def create_recipe_content(self, recipe_id: str, recipe_data: Dict):
+        """Creează conținutul paginii de rețetă cu structura dorită"""
+        blocks_to_add = []
+        
+        # 1. Heading "Ingredients"
+        blocks_to_add.append({
+            "object": "block",
+            "type": "heading_1",
+            "heading_1": {
+                "rich_text": [{"type": "text", "text": {"content": "Ingredients"}}]
+            }
+        })
+        
+        # 2. Pentru fiecare grup de ingrediente - doar heading-ul
+        # View-urile filtrate trebuie adăugate manual sau prin template
+        separator_counter = 1
+        for group in recipe_data['ingredient_groups']:
+            # Heading cu numele grupului
+            group_title = group.get('name', str(separator_counter))
+            if not group_title or group_title.isdigit():
+                group_title = f"Ingredients Group {separator_counter}"
+            
+            blocks_to_add.append({
+                "object": "block",
+                "type": "heading_3",
+                "heading_3": {
+                    "rich_text": [{"type": "text", "text": {"content": group_title}}]
+                }
+            })
+            
+            # Placeholder pentru view - va fi adăugat manual
+            blocks_to_add.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{
+                        "type": "text", 
+                        "text": {
+                            "content": f"[Adaugă aici view Ingredients 2.0 filtrat pentru Receipt separator = {separator_counter}]"
+                        },
+                        "annotations": {
+                            "color": "gray"
+                        }
+                    }]
+                }
+            })
+            
+            separator_counter += 1
+        
+        # 3. Heading "Method:"
+        blocks_to_add.append({
+            "object": "block",
+            "type": "heading_1",
+            "heading_1": {
+                "rich_text": [{"type": "text", "text": {"content": "Method:"}}]
+            }
+        })
+        
+        # 4. Lista numerotată cu instrucțiunile
+        if recipe_data.get('instructions'):
+            for step in recipe_data['instructions']:
+                blocks_to_add.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
+                        "rich_text": [{"type": "text", "text": {"content": step}}]
+                    }
+                })
+        else:
+            # Fallback dacă nu există instrucțiuni
+            blocks_to_add.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {
+                    "rich_text": [{"type": "text", "text": {"content": "Nu s-au găsit instrucțiuni."}}]
+                }
+            })
+        
+        # Adaugă toate blocurile în pagina de rețetă
+        try:
+            notion.blocks.children.append(
+                block_id=recipe_id,
+                children=blocks_to_add
+            )
+            print(f"\n✓ Structură de conținut creată pentru rețeta!")
+        except Exception as e:
+            print(f"\n⚠ Eroare la crearea structurii de conținut: {e}")
+    
+    def add_steps_to_recipe(self, recipe_id: str, recipe_data: Dict):
+        """Adaugă pașii (Steps) la rețeta existentă care are deja template aplicat"""
+        if not recipe_data.get('instructions'):
+            print("  ⚠ Nu există instrucțiuni de adăugat")
+            return
+        
+        # Găsește heading-ul "Steps" în pagină
+        try:
+            blocks = notion.blocks.children.list(block_id=recipe_id)
+            steps_block_id = None
+            
+            for block in blocks.get('results', []):
+                if block.get('type') == 'heading_2':
+                    heading_text = block.get('heading_2', {}).get('rich_text', [])
+                    if heading_text and 'Steps' in heading_text[0].get('text', {}).get('content', ''):
+                        steps_block_id = block['id']
+                        break
+            
+            if not steps_block_id:
+                print("  ⚠ Nu s-a găsit heading 'Steps' în template. Adaug la final.")
+                steps_block_id = recipe_id
+            
+            # Creează lista numerotată cu pașii
+            step_blocks = []
+            for step in recipe_data['instructions']:
+                step_blocks.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
+                        "rich_text": [{"type": "text", "text": {"content": step}}]
+                    }
+                })
+            
+            # Adaugă blocurile după heading-ul Steps
+            notion.blocks.children.append(
+                block_id=steps_block_id,
+                children=step_blocks
+            )
+            
+            print(f"  ✓ Adăugate {len(step_blocks)} pași în secțiunea Steps")
+            
+        except Exception as e:
+            print(f"  ⚠ Eroare la adăugarea pașilor: {e}")
+    
+    def add_method_section(self, recipe_id: str, recipe_data: Dict):
+        """Adaugă secțiunea Method la sfârșitul paginii de rețetă"""
+        blocks_to_add = []
+        
+        # Heading "Method:"
+        blocks_to_add.append({
+            "object": "block",
+            "type": "heading_1",
+            "heading_1": {
+                "rich_text": [{"type": "text", "text": {"content": "Method:"}}]
+            }
+        })
+        
+        # Lista numerotată cu instrucțiunile
+        if recipe_data.get('instructions'):
+            for step in recipe_data['instructions']:
+                blocks_to_add.append({
+                    "object": "block",
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
+                        "rich_text": [{"type": "text", "text": {"content": step}}]
+                    }
+                })
+        
+        # Adaugă blocurile la sfârșitul paginii
+        try:
+            notion.blocks.children.append(
+                block_id=recipe_id,
+                children=blocks_to_add
+            )
+            print(f"  ✓ Method adăugat ({len(recipe_data.get('instructions', []))} pași)")
+        except Exception as e:
+            print(f"  ⚠ Eroare la adăugarea Method: {e}")
+    
     def create_ingredients(self, recipe_id: str, recipe_data: Dict):
         """Creează ingredientele pentru o rețetă"""
         separator_counter = 1
@@ -429,8 +1007,18 @@ class RecipeImporter:
                 if not grocery_id:
                     continue
                 
-                # Validează unitatea
-                self.validate_unit(ingredient, grocery_id, ingredient['grocery_item'])
+                # Validează unitatea și verifică dacă e nevoie de conversie
+                is_valid, converted_qty, converted_unit = self.validate_unit(
+                    ingredient, grocery_id, ingredient['grocery_item']
+                )
+                
+                if not is_valid:
+                    print(f"    ✗ Import anulat pentru '{ingredient['name']}'")
+                    continue
+                
+                # Folosește cantitatea și unitatea convertite dacă există
+                final_quantity = converted_qty if converted_qty is not None else ingredient['quantity']
+                final_unit = converted_unit if converted_unit is not None else ingredient['unit']
                 
                 # Creează ingredientul
                 try:
@@ -450,26 +1038,35 @@ class RecipeImporter:
                     }
                     
                     # Adaugă cantitatea dacă există
-                    if ingredient['quantity'] is not None:
-                        properties["Size / Unit"] = {"number": ingredient['quantity']}
+                    if final_quantity is not None:
+                        properties["Size / Unit"] = {"number": final_quantity}
+                    
+                    # Adaugă observațiile dacă există
+                    if ingredient.get('observations'):
+                        properties["Obs"] = {
+                            "rich_text": [{"text": {"content": ingredient['observations']}}]
+                        }
                     
                     notion.pages.create(
                         parent={"database_id": DB_INGREDIENTS},
                         properties=properties
                     )
                     
-                    qty_str = f"{ingredient['quantity']}{ingredient['unit']}" if ingredient['quantity'] else ""
-                    print(f"    ✓ {qty_str} {ingredient['name']}")
+                    qty_str = f"{final_quantity}{final_unit}" if final_quantity else ""
+                    obs_str = f" ({ingredient.get('observations')})" if ingredient.get('observations') else ""
+                    conversion_note = " [convertit]" if converted_qty is not None else ""
+                    print(f"    ✓ {qty_str} {ingredient['name']}{obs_str}{conversion_note}")
                     
                 except Exception as e:
                     print(f"    ✗ Eroare la crearea ingredientului '{ingredient['name']}': {e}")
             
             separator_counter += 1
     
-    def import_recipes(self, filepath: str):
+    def import_recipes(self, filepath: str, steps_only: bool = False):
         """Importă toate rețetele dintr-un fișier"""
+        mode_text = "Adăugare Steps" if steps_only else "Import rețete"
         print(f"\n{'='*60}")
-        print(f"Import rețete din: {filepath}")
+        print(f"{mode_text} din: {filepath}")
         print(f"{'='*60}\n")
         
         # Parsează fișierul
@@ -483,15 +1080,23 @@ class RecipeImporter:
             print(f"{'─'*60}")
             
             try:
-                # Creează rețeta
-                recipe_id = self.create_recipe(recipe)
-                
-                if recipe_id:
-                    # Creează ingredientele
-                    self.create_ingredients(recipe_id, recipe)
+                if steps_only:
+                    # Modul Steps: caută rețeta existentă și adaugă pașii
+                    recipe_id = self.find_existing_recipe(recipe['name'])
+                    if recipe_id:
+                        self.add_steps_to_recipe(recipe_id, recipe)
+                    else:
+                        print(f"  ✗ Rețeta '{recipe['name']}' nu există. Creează-o mai întâi fără --steps.")
+                else:
+                    # Modul normal: creează rețeta + ingredientele
+                    recipe_id = self.create_recipe(recipe)
                     
-                    # Aplică template-ul la final
-                    self.apply_template_to_recipe(recipe_id, recipe['name'])
+                    if recipe_id:
+                        # Creează ingredientele
+                        self.create_ingredients(recipe_id, recipe)
+                        print(f"\n  ✓ Rețeta și ingredientele create!")
+                        print(f"  📝 Aplică manual template-ul în Notion, apoi rulează:")
+                        print(f"     python import_recipes.py {filepath} --steps")
                     
             except ValueError as e:
                 # Eroare de validare unitate - oprește importul
@@ -506,21 +1111,28 @@ class RecipeImporter:
         print(f"\n\n{'='*60}")
         print("✓ Import finalizat cu succes!")
         print(f"{'='*60}\n")
+        
+        # Salvează mapările noi
+        self._save_mappings()
 
 
 if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 2:
-        print("Utilizare: python import_recipes.py <fisier_retete.txt>")
-        print("\nExemplu: python import_recipes.py recipe_example.txt")
+        print("Utilizare: python import_recipes.py <fisier_retete.txt> [--steps]")
+        print("\nExemplu (import complet):")
+        print("  python import_recipes.py scraped_recipes.txt")
+        print("\nExemplu (adaugă doar Steps după aplicarea template-ului):")
+        print("  python import_recipes.py scraped_recipes.txt --steps")
         sys.exit(1)
     
     filepath = sys.argv[1]
+    steps_only = '--steps' in sys.argv
     
     if not os.path.exists(filepath):
         print(f"Eroare: Fișierul '{filepath}' nu există!")
         sys.exit(1)
     
     importer = RecipeImporter()
-    importer.import_recipes(filepath)
+    importer.import_recipes(filepath, steps_only=steps_only)
