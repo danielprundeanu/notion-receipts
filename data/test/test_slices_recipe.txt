@@ -1,0 +1,15 @@
+=== Test Slices Recipe ===
+Servings: 2
+Time: 20
+Difficulty: Easy
+Favorite: No
+Slices: 12
+
+[1]
+200g flour
+2buc eggs
+100ml milk
+
+Method:
+1. Mix all ingredients
+2. Bake at 180C for 20 minutes

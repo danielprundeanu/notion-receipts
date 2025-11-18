@@ -15,6 +15,9 @@ import re
 from typing import Dict, List, Optional
 from fractions import Fraction
 import sys
+import os
+from urllib.parse import urlparse
+import hashlib
 
 
 class RecipeScraper:
@@ -45,6 +48,13 @@ class RecipeScraper:
             
             if recipe:
                 recipe['source_url'] = url
+                
+                # Descarcă imaginea local dacă există URL
+                if recipe.get('image_url'):
+                    local_path = self._download_image(recipe['image_url'], recipe['name'])
+                    if local_path:
+                        recipe['image_path'] = local_path
+                
                 return recipe
             
             print("  ✗ Nu s-a putut extrage rețeta")
@@ -133,19 +143,74 @@ class RecipeScraper:
         
         return None
     
+    def _download_image(self, image_url: str, recipe_name: str) -> Optional[str]:
+        """Descarcă imaginea local și returnează path-ul local"""
+        if not image_url:
+            return None
+        
+        try:
+            # Creează directorul img/ dacă nu există
+            img_dir = 'img'
+            os.makedirs(img_dir, exist_ok=True)
+            
+            # Generează nume de fișier unic bazat pe URL
+            url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
+            
+            # Extrage extensia din URL (default .jpg)
+            parsed = urlparse(image_url)
+            ext = os.path.splitext(parsed.path)[1]
+            if not ext or ext not in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                ext = '.jpg'
+            
+            # Creează nume fișier safe din numele rețetei
+            safe_name = re.sub(r'[^a-zA-Z0-9\s-]', '', recipe_name)
+            safe_name = re.sub(r'\s+', '_', safe_name.strip())
+            safe_name = safe_name[:50]  # Limitează lungimea
+            
+            filename = f"{safe_name}_{url_hash}{ext}"
+            filepath = os.path.join(img_dir, filename)
+            
+            # Descarcă imaginea
+            print(f"  📥 Descarc imaginea...")
+            response = requests.get(image_url, headers=self.headers, timeout=10, stream=True)
+            response.raise_for_status()
+            
+            # Salvează imaginea
+            with open(filepath, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+            
+            print(f"  ✓ Imagine salvată: {filepath}")
+            return filepath
+            
+        except Exception as e:
+            print(f"  ⚠ Eroare la descărcarea imaginii: {e}")
+            return None
+    
     def _extract_servings(self, yield_data) -> Optional[int]:
         """Extrage numărul de porții"""
         if not yield_data:
             return None
         
         if isinstance(yield_data, (int, float)):
-            return int(yield_data)
+            servings = int(yield_data)
+            print(f"  ℹ Servings from JSON-LD (numeric): {servings}")
+            return servings
         
         if isinstance(yield_data, str):
-            # Caută primul număr
+            # Mai întâi încearcă să găsească pattern "Servings: X" sau "Serves X"
+            match = re.search(r'(?:servings?|serves?|yields?|porții)\s*:?\s*(\d+)', yield_data, re.I)
+            if match:
+                servings = int(match.group(1))
+                print(f"  ℹ Servings from JSON-LD (pattern): {servings} (text: '{yield_data}')")
+                return servings
+            
+            # Fallback: caută doar primul număr
             match = re.search(r'\d+', yield_data)
             if match:
-                return int(match.group())
+                servings = int(match.group())
+                print(f"  ℹ Servings from JSON-LD (first number): {servings} (text: '{yield_data}')")
+                return servings
         
         return None
     
@@ -359,12 +424,20 @@ class RecipeScraper:
         
         # Metodă 1: Caută în apropierea textului "servings" sau "serves"
         for elem in soup.find_all(['span', 'div', 'p', 'li']):
-            text = elem.get_text()
-            if re.search(r'(servings?|serves?|yields?|porții)', text, re.I):
-                # Caută numere în același element sau în următorul
-                match = re.search(r'(\d+)', text)
+            text = elem.get_text().strip()
+            # Pattern mai specific: caută "Servings: 6" sau "Serves 4 people" etc.
+            if re.search(r'(servings?|serves?|yields?|porții|portii)', text, re.I):
+                # Încearcă mai întâi pattern specific: "Servings: X" sau "Serves X"
+                match = re.search(r'(?:servings?|serves?|yields?|porții|portii)\s*:?\s*(\d+)', text, re.I)
                 if match:
                     servings = int(match.group(1))
+                    print(f"  ℹ Servings from HTML (pattern match): {servings} (text: '{text[:60]}...')")
+                    break
+                # Fallback: caută primul număr după keyword
+                match = re.search(r'(servings?|serves?|yields?|porții|portii).*?(\d+)', text, re.I)
+                if match:
+                    servings = int(match.group(2))
+                    print(f"  ℹ Servings from HTML (keyword+number): {servings} (text: '{text[:60]}...')")
                     break
         
         # Metodă 2: Dacă nu am găsit, caută meta tags
@@ -525,8 +598,10 @@ class RecipeScraper:
         if recipe.get('source_url'):
             lines.append(f"Link: {recipe['source_url']}")
         
-        # Image (Cover)
-        if recipe.get('image_url'):
+        # Image (Cover) - salvează path-ul local dacă există
+        if recipe.get('image_path'):
+            lines.append(f"Image: {recipe['image_path']}")
+        elif recipe.get('image_url'):
             lines.append(f"Image: {recipe['image_url']}")
         
         lines.append("")

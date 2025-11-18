@@ -111,6 +111,42 @@ Sau cu fișierul tău:
 /Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python import_recipes.py retete_mele.txt
 ```
 
+### 🆕 Import Interactiv cu Autocompletare Macronutrienți
+
+**Când adaugi un ingredient nou**, scriptul te ghidează interactiv prin:
+
+1. **📏 Selectare Unity** - Alegi unitatea principală din lista Notion
+   - piece, tsp, tbsp, g, slice, handful, pinch, ml, scoop, bottle, cup
+
+2. **📏 Selectare 2nd Unity** (opțional) - Unitate secundară pentru conversii
+   - cup, piece, tbsp, tsp
+
+3. **🔄 Conversion Factor** (opțional) - Factorul de conversie
+   - Ex: 1 cup = 240ml → Conversion = 240
+
+4. **🏷️ Selectare Category** - Categoria ingredientului
+   - 🍎 Fruits, 🥕 Veg & Legumes, 🌾 Grains, 🫙 Pantry, 🥩 Meat & Alt, 🥛 Dairy, 
+   - 🥫 Canned, 🫕 Sauces & Condiments, 🥜 Nuts & Seeds, 🧂Fresh/Dried Herbs & Spices,
+   - 🥑 Healthy Fats, 🍸 Drinks, 🥘 Homemade Receipts, Other, 🧴 Supplies
+
+5. **🔍 Autocompletare Macronutrienți** - Căutare automată în baza locală (80+ alimente)
+   - KCal / 100g, Carbs / 100g, Fat / 100g, Protein / 100g
+   - Suport RO + EN: piept pui, chicken breast, fulgi ovaz, oats, etc.
+   - Dacă nu găsește, poți introduce manual sau skip
+
+**Bază de date nutrițională include:**
+- **Carne & Pește**: piept pui, pulpa pui, carne tocată, somon, ton, ouă
+- **Lactate**: brânză de vaci, iaurt grecesc, lapte, parmezan, mozzarella
+- **Cereale**: fulgi ovaz, orez, paste, quinoa, pâine, naut, linte, fasole
+- **Fructe**: banane, măr, portocală, căpșuni, afine, avocado
+- **Legume**: broccoli, spanac, roșii, morcov, castravete, ardei, ceapă, usturoi, cartofi
+- **Nuci & Semințe**: migdale, nuci, unt arahide, semințe chia, semințe in
+- **Uleiuri**: ulei măsline, ulei cocos, unt
+- **Altele**: miere, sirop arțar, ciocolată neagră
+
+📖 **Documentație completă**: [FEATURE_INTERACTIVE_IMPORT.md](FEATURE_INTERACTIVE_IMPORT.md)  
+🎬 **Demo pas-cu-pas**: [DEMO_INTERACTIVE_IMPORT.md](DEMO_INTERACTIVE_IMPORT.md)
+
 ## Ce face scriptul?
 
 1. **Parsează fișierul text** și extrage toate rețetele

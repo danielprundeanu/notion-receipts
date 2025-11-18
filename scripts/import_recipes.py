@@ -7,6 +7,7 @@ import json
 from notion_client import Client
 from dotenv import load_dotenv
 from typing import Dict, List, Tuple, Optional
+from nutrition_api import NutritionAPI
 
 # Încarcă variabilele de mediu
 load_dotenv('notion.env')
@@ -72,15 +73,28 @@ class RecipeImporter:
         'lingurita': ['lingurita', 'lingurită', 'lingurite', 'linguriță', 'tsp', 'teaspoon', 'teaspoons'],
     }
     
+    # Opțiuni disponibile în Notion pentru Unity și Category (din database schema)
+    AVAILABLE_UNITS = ['piece', 'tsp', 'tbsp', 'g', 'slice', 'handful', 'pinch', 'ml', 'scoop', 'bottle', 'cup']
+    AVAILABLE_2ND_UNITS = ['cup', 'piece', 'tbsp', 'tsp']
+    AVAILABLE_CATEGORIES = [
+        '🍎 Fruits', '🥕 Veg & Legumes', '🌾 Grains', '🫙 Pantry', 
+        '🥩 Meat & Alt', '🥛 Dairy', '🥫 Canned', '🫕 Sauces & Condiments',
+        '🥜 Nuts & Seeds', '🧂Fresh Herbs & Spices', '🌵 Dried Herbs & Spices',
+        '🥑 Healthy Fats', '🍸 Drinks', '🥘 Homemade Receipts', 'Other', '🧴 Supplies'
+    ]
+    
     def __init__(self):
         self.grocery_cache = {}  # Cache pentru grocery items deja găsite
         self.unit_warnings = []  # Warnings pentru unități necunoscute
         self.mappings = self._load_mappings()
         self.new_mappings = {}  # Mapări noi învățate în această sesiune
+        self.nutrition_api = NutritionAPI()  # API pentru informații nutriționale
     
     def _load_mappings(self) -> Dict:
         """Încarcă mapările din fișierul JSON"""
-        mappings_file = 'ingredient_mappings.json'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        mappings_file = os.path.join(project_root, 'data', 'ingredient_mappings.json')
         if os.path.exists(mappings_file):
             try:
                 with open(mappings_file, 'r', encoding='utf-8') as f:
@@ -99,9 +113,12 @@ class RecipeImporter:
         self.mappings['grocery_mappings'].update(self.new_mappings)
         
         try:
-            with open('ingredient_mappings.json', 'w', encoding='utf-8') as f:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(script_dir)
+            mappings_file = os.path.join(project_root, 'data', 'ingredient_mappings.json')
+            with open(mappings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.mappings, f, indent=2, ensure_ascii=False)
-            print(f"\n✓ {len(self.new_mappings)} mapări noi salvate în ingredient_mappings.json")
+            print(f"\n✓ {len(self.new_mappings)} mapări noi salvate în data/ingredient_mappings.json")
         except Exception as e:
             print(f"\n⚠ Eroare la salvarea mapărilor: {e}")
         
@@ -143,6 +160,7 @@ class RecipeImporter:
             'category': None,
             'favorite': False,
             'link': None,
+            'slices': None,  # Slice / Receipe
             'image_url': None,
             'ingredient_groups': [],
             'instructions': []
@@ -172,9 +190,13 @@ class RecipeImporter:
             
             # Metadata rețetă
             if line.startswith('Servings:'):
-                recipe['servings'] = int(re.search(r'\d+', line).group())
+                match = re.search(r'\d+', line)
+                if match:
+                    recipe['servings'] = int(match.group())
             elif line.startswith('Time:'):
-                recipe['time'] = int(re.search(r'\d+', line).group())
+                match = re.search(r'\d+', line)
+                if match:
+                    recipe['time'] = int(match.group())
             elif line.startswith('Difficulty:'):
                 recipe['difficulty'] = line.split(':', 1)[1].strip()
             elif line.startswith('Category:'):
@@ -182,6 +204,10 @@ class RecipeImporter:
             elif line.startswith('Favorite:'):
                 val = line.split(':', 1)[1].strip().lower()
                 recipe['favorite'] = val in ['yes', 'da', 'true', '1']
+            elif line.startswith('Slices:'):
+                match = re.search(r'\d+', line)
+                if match:
+                    recipe['slices'] = int(match.group())
             elif line.startswith('Link:'):
                 recipe['link'] = line.split(':', 1)[1].strip()
             elif line.startswith('Image:'):
@@ -366,6 +392,156 @@ class RecipeImporter:
         
         return word
     
+    def _configure_new_grocery_item(self, name: str) -> Optional[Dict]:
+        """
+        Configurare interactivă pentru un grocery item nou
+        Returns: Dict cu properties pentru Notion sau None dacă se anulează
+        """
+        print(f"\n{'─'*60}")
+        print(f"Configurare grocery item nou: {name}")
+        print(f"{'─'*60}")
+        
+        # 1. Selectare Unity (obligatoriu)
+        print(f"\n📏 Selectează Unity (unitate principală):")
+        for idx, unit in enumerate(self.AVAILABLE_UNITS, 1):
+            print(f"    {idx}. {unit}")
+        
+        unity = None
+        while not unity:
+            choice = input(f"\n  Selectează Unity (1-{len(self.AVAILABLE_UNITS)}): ").strip()
+            try:
+                choice = int(choice)
+                if 1 <= choice <= len(self.AVAILABLE_UNITS):
+                    unity = self.AVAILABLE_UNITS[choice - 1]
+                    print(f"  ✓ Unity: {unity}")
+                else:
+                    print(f"  ⚠️ Opțiune invalidă")
+            except ValueError:
+                print(f"  ⚠️ Te rog introdu un număr")
+        
+        # 2. Selectare 2nd Unity (opțional)
+        print(f"\n📏 Selectează 2nd Unity (unitate secundară - opțional):")
+        for idx, unit in enumerate(self.AVAILABLE_2ND_UNITS, 1):
+            print(f"    {idx}. {unit}")
+        print(f"    0. Skip (fără 2nd Unity)")
+        
+        second_unity = None
+        while True:
+            choice = input(f"\n  Selectează 2nd Unity (0-{len(self.AVAILABLE_2ND_UNITS)}): ").strip()
+            try:
+                choice = int(choice)
+                if choice == 0:
+                    print(f"  ⊗ Fără 2nd Unity")
+                    break
+                elif 1 <= choice <= len(self.AVAILABLE_2ND_UNITS):
+                    second_unity = self.AVAILABLE_2ND_UNITS[choice - 1]
+                    print(f"  ✓ 2nd Unity: {second_unity}")
+                    break
+                else:
+                    print(f"  ⚠️ Opțiune invalidă")
+            except ValueError:
+                print(f"  ⚠️ Te rog introdu un număr")
+        
+        # 3. Conversion (opțional - pentru 2nd Unity)
+        conversion = None
+        if second_unity:
+            print(f"\n🔄 Conversion factor: câte {unity} sunt într-un {second_unity}?")
+            print(f"   Exemplu: dacă 1 cup = 240ml, introduce 240")
+            conv_input = input(f"   Conversion (sau ENTER pentru skip): ").strip()
+            if conv_input:
+                try:
+                    conversion = float(conv_input)
+                    print(f"  ✓ Conversion: 1 {second_unity} = {conversion} {unity}")
+                except ValueError:
+                    print(f"  ⚠️ Conversion invalid, skip")
+        
+        # 4. Selectare Category
+        print(f"\n🏷️ Selectează Category:")
+        for idx, cat in enumerate(self.AVAILABLE_CATEGORIES, 1):
+            print(f"    {idx}. {cat}")
+        
+        category = None
+        while not category:
+            choice = input(f"\n  Selectează Category (1-{len(self.AVAILABLE_CATEGORIES)}): ").strip()
+            try:
+                choice = int(choice)
+                if 1 <= choice <= len(self.AVAILABLE_CATEGORIES):
+                    category = self.AVAILABLE_CATEGORIES[choice - 1]
+                    print(f"  ✓ Category: {category}")
+                else:
+                    print(f"  ⚠️ Opțiune invalidă")
+            except ValueError:
+                print(f"  ⚠️ Te rog introdu un număr")
+        
+        # 5. Informații nutriționale (automat din API sau manual)
+        print(f"\n🔍 Informații nutriționale (per 100g):")
+        nutrients = self.nutrition_api.get_nutrition_interactive(name)
+        
+        if not nutrients:
+            print(f"\n  💡 Poți introduce manual sau skip (valori vor fi 0)")
+            manual = input(f"  Introduc manual? (y/n): ").strip().lower()
+            
+            if manual == 'y' or manual == 'yes':
+                nutrients = {}
+                try:
+                    nutrients['kcal'] = float(input(f"    KCal / 100g: ").strip() or "0")
+                    nutrients['carbs'] = float(input(f"    Carbs / 100g: ").strip() or "0")
+                    nutrients['fat'] = float(input(f"    Fat / 100g: ").strip() or "0")
+                    nutrients['protein'] = float(input(f"    Protein / 100g: ").strip() or "0")
+                except ValueError:
+                    print(f"  ⚠️ Valori invalide, folosesc 0")
+                    nutrients = {'kcal': 0, 'carbs': 0, 'fat': 0, 'protein': 0}
+            else:
+                nutrients = {'kcal': 0, 'carbs': 0, 'fat': 0, 'protein': 0}
+        
+        # Construiește proprietățile pentru Notion
+        properties = {
+            "Name": {
+                "title": [{"text": {"content": name}}]
+            },
+            "Unity": {
+                "select": {"name": unity}
+            },
+            "Category": {
+                "select": {"name": category}
+            },
+            "KCal / 100g": {
+                "number": nutrients['kcal']
+            },
+            "Carbs / 100g": {
+                "number": nutrients['carbs']
+            },
+            "Fat / 100g": {
+                "number": nutrients['fat']
+            },
+            "Protein / 100g": {
+                "number": nutrients['protein']
+            }
+        }
+        
+        # Adaugă 2nd Unity dacă există
+        if second_unity:
+            properties["2nd Unity"] = {
+                "select": {"name": second_unity}
+            }
+        
+        # Adaugă Conversion dacă există
+        if conversion is not None:
+            properties["Conversion"] = {
+                "number": conversion
+            }
+        
+        print(f"\n{'─'*60}")
+        print(f"✓ Configurare completă pentru '{name}'")
+        print(f"  Unity: {unity}" + (f" | 2nd Unity: {second_unity}" if second_unity else ""))
+        if conversion:
+            print(f"  Conversion: 1 {second_unity} = {conversion} {unity}")
+        print(f"  Category: {category}")
+        print(f"  Macros: {nutrients['kcal']} kcal | {nutrients['carbs']}g carbs | {nutrients['fat']}g fat | {nutrients['protein']}g protein")
+        print(f"{'─'*60}\n")
+        
+        return properties
+    
     def find_or_create_grocery_item(self, name: str) -> str:
         """Caută sau creează un grocery item și returnează ID-ul"""
         # Verifică în cache
@@ -464,14 +640,17 @@ class RecipeImporter:
                     print(f"  ⚠ Sărit grocery item pentru '{name}'")
                     return None
             
-            # Creează item nou
+            # Configurează proprietățile pentru noul grocery item
+            properties = self._configure_new_grocery_item(name)
+            
+            if not properties:
+                print(f"  ⚠ Anulată crearea grocery item pentru '{name}'")
+                return None
+            
+            # Creează item nou cu toate proprietățile
             new_page = notion.pages.create(
                 parent={"database_id": DB_GROCERIES},
-                properties={
-                    "Name": {
-                        "title": [{"text": {"content": name}}]
-                    }
-                }
+                properties=properties
             )
             
             page_id = new_page['id']
@@ -575,7 +754,13 @@ class RecipeImporter:
             return True, None, None
         
         # Verifică dacă unitatea se potrivește direct (inclusiv sinonime)
-        if self._units_match(ingredient['unit'], unity) or self._units_match(ingredient['unit'], second_unity):
+        # Prioritate: verifică mai întâi dacă se potrivește exact cu oricare din cele două
+        matches_unity = unity and self._units_match(ingredient['unit'], unity)
+        matches_second_unity = second_unity and self._units_match(ingredient['unit'], second_unity)
+        
+        if matches_unity or matches_second_unity:
+            # Unitatea se potrivește direct - nu e nevoie de conversie
+            # Folosește unitatea care se potrivește (prioritate la cea din rețetă)
             return True, None, None
         
         # Unitatea nu se potrivește - încearcă conversie
@@ -668,6 +853,9 @@ class RecipeImporter:
             if recipe_data.get('servings'):
                 properties["Servings / Receipt"] = {"number": recipe_data['servings']}
             
+            if recipe_data.get('slices'):
+                properties["Slice / Receipe"] = {"number": recipe_data['slices']}
+            
             if recipe_data.get('time'):
                 properties["Time / Min"] = {"number": recipe_data['time']}
             
@@ -708,18 +896,28 @@ class RecipeImporter:
             print(f"\n✓ Rețeta '{recipe_data['name']}' a fost creată cu succes!")
             
             # Set cover image dacă există
-            if recipe_data.get('image_url'):
+            image_value = recipe_data.get('image_url')
+            if image_value:
                 try:
-                    notion.pages.update(
-                        page_id=new_page['id'],
-                        cover={
-                            "type": "external",
-                            "external": {
-                                "url": recipe_data['image_url']
+                    # Verifică dacă e path local (începe cu img/ sau este path absolut la img/)
+                    if image_value.startswith('img/') or '/img/' in image_value:
+                        # Upload fișier local
+                        # Notion API nu suportă upload direct de fișiere în cover
+                        # Trebuie să folosim un URL extern sau să uploadăm în blocks
+                        print(f"  ⚠ Imaginea locală '{image_value}' trebuie încărcată manual în Notion")
+                        print(f"    Sau folosește un serviciu de hosting pentru imagini")
+                    else:
+                        # URL extern - folosește direct
+                        notion.pages.update(
+                            page_id=new_page['id'],
+                            cover={
+                                "type": "external",
+                                "external": {
+                                    "url": image_value
+                                }
                             }
-                        }
-                    )
-                    print(f"  ✓ Cover image setat")
+                        )
+                        print(f"  ✓ Cover image setat din URL")
                 except Exception as e:
                     print(f"  ⚠ Eroare la setarea cover image: {e}")
             
@@ -1020,6 +1218,10 @@ class RecipeImporter:
                 final_quantity = converted_qty if converted_qty is not None else ingredient['quantity']
                 final_unit = converted_unit if converted_unit is not None else ingredient['unit']
                 
+                # Determină care câmp să folosim (Size / Unit sau Size / 2nd Unit)
+                unity, second_unity = self.get_grocery_item_units(grocery_id)
+                use_second_unit = second_unity and self._units_match(final_unit, second_unity)
+                
                 # Creează ingredientul
                 try:
                     properties = {
@@ -1037,9 +1239,12 @@ class RecipeImporter:
                         }
                     }
                     
-                    # Adaugă cantitatea dacă există
+                    # Adaugă cantitatea în câmpul corespunzător
                     if final_quantity is not None:
-                        properties["Size / Unit"] = {"number": final_quantity}
+                        if use_second_unit:
+                            properties["Size / 2nd Unit"] = {"number": final_quantity}
+                        else:
+                            properties["Size / Unit"] = {"number": final_quantity}
                     
                     # Adaugă observațiile dacă există
                     if ingredient.get('observations'):

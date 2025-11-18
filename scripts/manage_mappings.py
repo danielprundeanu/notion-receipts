@@ -4,8 +4,12 @@ Script helper pentru gestionarea mapărilor de ingrediente
 """
 import json
 import sys
+import os
 
-MAPPINGS_FILE = 'ingredient_mappings.json'
+# Path relativ la locația scriptului
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+MAPPINGS_FILE = os.path.join(PROJECT_ROOT, 'data', 'ingredient_mappings.json')
 
 def load_mappings():
     try:
