@@ -11,7 +11,9 @@
     "garlic clove": "Garlic clove",
     "bunch coriander": "Fresh Coriander",
     "coriander": "Fresh Coriander",
-    "milk": "Low-fat milk"
+    "milk": "Low-fat milk",
+    "cottage cheese": "Low-fat cottage cheese",
+    "rolled oat": "Rolled Oats"
   },
   "unit_conversions": {
     "custom_rules": []

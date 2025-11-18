@@ -170,6 +170,10 @@ class LocalRecipeParser:
             
             # Procesează linia în funcție de secțiune
             if current_section == 'ingredients':
+                # Skip linii care nu arată ca ingrediente (descrieri, titluri, etc.)
+                if not self._looks_like_ingredient(line):
+                    continue
+                    
                 ingredient = self._parse_ingredient_line(line)
                 if ingredient:
                     current_ingredients.append(ingredient)
@@ -374,6 +378,12 @@ class LocalRecipeParser:
         
         lines.append("")
         
+        # Descriere (dacă există) - ÎNAINTE de ingrediente
+        if recipe.get('description'):
+            for para in recipe['description']:
+                lines.append(para)
+            lines.append("")
+        
         # Ingrediente - grupate
         for group_idx, group in enumerate(recipe['ingredient_groups'], 1):
             lines.append(f"[{group_idx}]")
@@ -385,12 +395,6 @@ class LocalRecipeParser:
                 normalized = self._normalize_quantity(ingredient, original_servings or 1)
                 lines.append(normalized)
             
-            lines.append("")
-        
-        # Descriere (dacă există)
-        if recipe.get('description'):
-            for para in recipe['description']:
-                lines.append(para)
             lines.append("")
         
         # Instrucțiuni
