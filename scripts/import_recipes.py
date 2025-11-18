@@ -1074,12 +1074,12 @@ class RecipeImporter:
             
             separator_counter += 1
         
-        # 3. Heading "Method:"
+        # 3. Heading "Steps:"
         blocks_to_add.append({
             "object": "block",
             "type": "heading_1",
             "heading_1": {
-                "rich_text": [{"type": "text", "text": {"content": "Method:"}}]
+                "rich_text": [{"type": "text", "text": {"content": "Steps:"}}]
             }
         })
         
@@ -1161,12 +1161,12 @@ class RecipeImporter:
         """Adaugă secțiunea Method la sfârșitul paginii de rețetă"""
         blocks_to_add = []
         
-        # Heading "Method:"
+        # Heading "Steps:"
         blocks_to_add.append({
             "object": "block",
             "type": "heading_1",
             "heading_1": {
-                "rich_text": [{"type": "text", "text": {"content": "Method:"}}]
+                "rich_text": [{"type": "text", "text": {"content": "Steps:"}}]
             }
         })
         
@@ -1187,9 +1187,9 @@ class RecipeImporter:
                 block_id=recipe_id,
                 children=blocks_to_add
             )
-            print(f"  ✓ Method adăugat ({len(recipe_data.get('instructions', []))} pași)")
+            print(f"  ✓ Steps adăugat ({len(recipe_data.get('instructions', []))} pași)")
         except Exception as e:
-            print(f"  ⚠ Eroare la adăugarea Method: {e}")
+            print(f"  ⚠ Eroare la adăugarea Steps: {e}")
     
     def create_ingredients(self, recipe_id: str, recipe_data: Dict):
         """Creează ingredientele pentru o rețetă"""

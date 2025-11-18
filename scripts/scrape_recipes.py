@@ -660,7 +660,7 @@ class RecipeScraper:
         
         # Adaugă instrucțiunile - formatate pentru copiere manuală în Notion
         if recipe.get('instructions'):
-            lines.append("Method:")
+            lines.append("Steps:")
             for i, step in enumerate(recipe['instructions'], 1):
                 lines.append(f"{i}. {step}")
             lines.append("")
