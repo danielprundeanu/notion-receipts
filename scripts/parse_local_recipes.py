@@ -12,12 +12,14 @@ import re
 import sys
 from typing import Dict, List, Optional
 from fractions import Fraction
+from ingredient_processor import get_ingredient_processor
 
 
 class LocalRecipeParser:
     def __init__(self):
         self.current_recipe = None
         self.recipes = []
+        self.ingredient_processor = get_ingredient_processor(use_notion=True)
     
     def parse_file(self, filepath: str) -> List[Dict]:
         """Parsează fișierul cu rețete"""
@@ -270,7 +272,7 @@ class LocalRecipeParser:
         return False
     
     def _parse_ingredient_line(self, line: str) -> Optional[str]:
-        """Parsează o linie de ingredient"""
+        """Parsează o linie de ingredient și separă adjectivele"""
         # Elimină bullet points
         line = re.sub(r'^[\-–•*]\s*', '', line).strip()
         
@@ -281,7 +283,14 @@ class LocalRecipeParser:
         if line.endswith(':') or re.match(r'^[A-Z\s]+:?$', line):
             return None
         
-        return line
+        # Procesează ingredientul pentru a separa adjectivele
+        processed_line, adjectives = self.ingredient_processor.process_ingredient_line(line)
+        
+        # Dacă am găsit adjective, adaugă-le ca observații la sfârșit
+        if adjectives:
+            return f"{processed_line} ({adjectives})"
+        
+        return processed_line
     
     def _parse_instruction_line(self, line: str) -> Optional[str]:
         """Parsează o linie de instrucțiune"""

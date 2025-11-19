@@ -18,6 +18,7 @@ import sys
 import os
 from urllib.parse import urlparse
 import hashlib
+from ingredient_processor import get_ingredient_processor
 
 
 class RecipeScraper:
@@ -25,6 +26,7 @@ class RecipeScraper:
         self.headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
+        self.ingredient_processor = get_ingredient_processor(use_notion=True)
     
     def scrape_recipe(self, url: str) -> Optional[Dict]:
         """Extrage rețeta de la URL dat"""
@@ -242,16 +244,27 @@ class RecipeScraper:
         return str(category_data)
     
     def _extract_ingredients(self, ingredients_data: List) -> List[str]:
-        """Extrage lista de ingrediente"""
+        """Extrage lista de ingrediente și separă adjectivele"""
         ingredients = []
         
         for item in ingredients_data:
             if isinstance(item, str):
-                ingredients.append(item.strip())
+                ingredient_text = item.strip()
             elif isinstance(item, dict):
                 # Uneori ingredientele sunt obiecte
-                text = item.get('text') or item.get('name') or str(item)
-                ingredients.append(text.strip())
+                ingredient_text = item.get('text') or item.get('name') or str(item)
+                ingredient_text = ingredient_text.strip()
+            else:
+                continue
+            
+            # Procesează ingredientul pentru a separa adjectivele
+            processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_text)
+            
+            # Dacă am găsit adjective, adaugă-le ca observații
+            if adjectives:
+                ingredients.append(f"{processed} ({adjectives})")
+            else:
+                ingredients.append(processed)
         
         return ingredients
     
