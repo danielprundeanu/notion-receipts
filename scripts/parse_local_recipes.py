@@ -143,7 +143,7 @@ class LocalRecipeParser:
                 continue
             
             # Secțiune Instrucțiuni - verifică ÎNAINTE de subsecțiuni ingrediente
-            if re.search(r'^(instructions?|mod[ul]*\s+de\s+preparare|preparare|steps?|method|pa[șs]i)[\s:]*$', line_lower):
+            if re.search(r'^(instructions?|directions?|mod[ul]*\s+de\s+preparare|preparare|steps?|method|pa[șs]i)[\s:]*$', line_lower):
                 # Salvează ultimul grup de ingrediente
                 if current_ingredients:
                     ingredient_groups.append({
@@ -246,7 +246,11 @@ class LocalRecipeParser:
     def _looks_like_ingredient(self, line: str) -> bool:
         """Verifică dacă linia arată ca un ingredient"""
         # Elimină bullet points
-        clean_line = re.sub(r'^[\-–•*]\s*', '', line)
+        clean_line = re.sub(r'^[\-–•*▢☐□]\s*', '', line).strip()
+        
+        # Exclude linii care sunt clar timp/servings/alte metadate
+        if re.search(r'\b(minutes?|hours?|mins?|hrs?|servings?|portions?|serves?)\b', clean_line, re.I):
+            return False
         
         # Verifică dacă începe cu cantitate (număr, fracție)
         if re.match(r'^\d+(?:[.,]\d+)?(?:\s*[/-]\s*\d+)?', clean_line):
@@ -273,8 +277,8 @@ class LocalRecipeParser:
     
     def _parse_ingredient_line(self, line: str) -> Optional[str]:
         """Parsează o linie de ingredient și separă adjectivele"""
-        # Elimină bullet points
-        line = re.sub(r'^[\-–•*]\s*', '', line).strip()
+        # Elimină bullet points și caractere speciale (▢, ☐, □, ▪, ◦, etc.)
+        line = re.sub(r'^[\-–•*▢☐□▪◦✓✔︎→◆■●○]\s*', '', line).strip()
         
         if not line or len(line) < 3:
             return None

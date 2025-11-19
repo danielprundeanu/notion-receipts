@@ -102,7 +102,13 @@ class RecipeScraper:
         """Parsează datele din schema.org Recipe"""
         print("  ✓ Găsit JSON-LD Recipe schema")
         
-        ingredients = self._extract_ingredients(data.get('recipeIngredient', []))
+        # Extrage grupuri de ingrediente (poate avea structură de tip array de obiecte)
+        ingredient_groups = self._extract_ingredient_groups_from_schema(data.get('recipeIngredient', []))
+        
+        # Pentru compatibilitate, creează și o listă plată
+        all_ingredients = []
+        for group in ingredient_groups:
+            all_ingredients.extend(group['items'])
         
         recipe = {
             'name': data.get('name', 'Untitled Recipe'),
@@ -110,14 +116,15 @@ class RecipeScraper:
             'time': self._extract_time(data.get('totalTime') or data.get('cookTime')),
             'difficulty': None,  # De obicei nu e în schema
             'category': self._extract_category(data.get('recipeCategory')),
-            'ingredients': ingredients,  # Păstrăm pentru compatibilitate
-            'ingredient_groups': [{'name': None, 'items': ingredients}] if ingredients else [],
+            'ingredients': all_ingredients,  # Listă plată pentru compatibilitate
+            'ingredient_groups': ingredient_groups,  # Grupuri cu nume
             'instructions': self._extract_instructions(data.get('recipeInstructions', [])),
             'image_url': self._extract_image_url(data.get('image'))
         }
         
+        total_groups = len(ingredient_groups)
         print(f"  ✓ Titlu: {recipe['name']}")
-        print(f"  ✓ Ingrediente: {len(recipe['ingredients'])}")
+        print(f"  ✓ Ingrediente: {len(all_ingredients)} ({total_groups} grup{'uri' if total_groups != 1 else ''})")
         print(f"  ✓ Pași: {len(recipe['instructions'])}")
         
         return recipe
@@ -243,6 +250,30 @@ class RecipeScraper:
         
         return str(category_data)
     
+    def _extract_ingredient_groups_from_schema(self, ingredients_data) -> List[Dict]:
+        """Extrage grupuri de ingrediente din JSON-LD, păstrând numele grupurilor"""
+        groups = []
+        
+        # Cazul 1: Array de obiecte cu structură de grup (ex: {"@type": "HowToSection", "name": "...", "itemListElement": [...]})
+        if isinstance(ingredients_data, list) and len(ingredients_data) > 0:
+            # Verifică dacă primul element e un dict cu itemListElement (grup structurat)
+            if isinstance(ingredients_data[0], dict) and 'itemListElement' in ingredients_data[0]:
+                for group_data in ingredients_data:
+                    if isinstance(group_data, dict):
+                        group_name = group_data.get('name', '').strip()
+                        items_data = group_data.get('itemListElement', [])
+                        items = self._extract_ingredients(items_data)
+                        if items:
+                            groups.append({'name': group_name if group_name else None, 'items': items})
+                return groups if groups else [{'name': None, 'items': self._extract_ingredients(ingredients_data)}]
+        
+        # Cazul 2: Array simplu de string-uri (fără grupuri)
+        ingredients = self._extract_ingredients(ingredients_data)
+        if ingredients:
+            return [{'name': None, 'items': ingredients}]
+        
+        return []
+    
     def _extract_ingredients(self, ingredients_data: List) -> List[str]:
         """Extrage lista de ingrediente și separă adjectivele"""
         ingredients = []
@@ -257,6 +288,9 @@ class RecipeScraper:
             else:
                 continue
             
+            # Elimină caractere speciale de la început (▢, checkboxes, bullets)
+            ingredient_text = re.sub(r'^[\-–•*▢☐□▪◦✓✔︎→◆■●○]\s*', '', ingredient_text).strip()
+            
             # Procesează ingredientul pentru a separa adjectivele
             processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_text)
             
@@ -269,7 +303,7 @@ class RecipeScraper:
         return ingredients
     
     def _extract_instructions(self, instructions_data) -> List[str]:
-        """Extrage pașii de preparare"""
+        """Extrage pașii de preparare, păstrând headerele secțiunilor"""
         steps = []
         
         if isinstance(instructions_data, str):
@@ -281,17 +315,28 @@ class RecipeScraper:
                 if isinstance(item, str):
                     steps.append(item.strip())
                 elif isinstance(item, dict):
-                    # Poate fi HowToStep sau HowToSection
-                    text = item.get('text') or item.get('name') or ''
-                    if text:
-                        steps.append(text.strip())
+                    item_type = item.get('@type', '')
                     
-                    # Verifică dacă are itemListElement (pentru secțiuni)
+                    # Verifică dacă e secțiune (HowToSection) cu itemListElement
                     if 'itemListElement' in item:
+                        # Adaugă numele secțiunii ca header
+                        section_name = item.get('name', '').strip()
+                        if section_name:
+                            steps.append(f"## {section_name}")
+                        
+                        # Adaugă pașii din secțiune
                         for sub_item in item['itemListElement']:
-                            sub_text = sub_item.get('text') or sub_item.get('name') or ''
-                            if sub_text:
-                                steps.append(sub_text.strip())
+                            if isinstance(sub_item, dict):
+                                sub_text = sub_item.get('text') or sub_item.get('name') or ''
+                                if sub_text:
+                                    steps.append(sub_text.strip())
+                            elif isinstance(sub_item, str):
+                                steps.append(sub_item.strip())
+                    else:
+                        # E un pas simplu (HowToStep)
+                        text = item.get('text') or item.get('name') or ''
+                        if text:
+                            steps.append(text.strip())
         
         return steps
     
@@ -321,7 +366,71 @@ class RecipeScraper:
             
             # Verifică dacă containerul este pentru ingrediente
             if any(word in class_name + id_name for word in ['ingredient', 'ingrediente']):
-                # Caută heading-uri înainte de liste pentru separatori de grup
+                # Metodă 1: Caută structura cu h4/h5 nested
+                # Găsește toate heading-urile h4, h5, h6 din container
+                headings = container.find_all(['h4', 'h5', 'h6'])
+                lists = container.find_all(['ul', 'ol'])  # recursive=True implicit
+                
+                # Dacă avem cel puțin un heading și liste, încearcă să le asociem
+                if headings and lists and len(lists) > 1:
+                    # Mai multe liste înseamnă grupuri multiple (chiar dacă e un singur heading)
+                    # Prima listă după heading devine primul grup
+                    # Listele suplimentare devin grupuri fără nume sau cu nume implicit
+                    
+                    processed_lists = set()
+                    
+                    # Procesează fiecare heading și lista care urmează
+                    for heading in headings:
+                        heading_text = heading.get_text().strip()
+                        next_ul = heading.find_next(['ul', 'ol'])
+                        
+                        if current_group['items']:
+                            ingredient_groups.append(current_group)
+                        
+                        current_group = {'name': heading_text, 'items': []}
+                        
+                        if next_ul and next_ul in lists:
+                            processed_lists.add(id(next_ul))
+                            for li in next_ul.find_all('li', recursive=False):
+                                text = li.get_text().strip()
+                                has_quantity = any(char.isdigit() for char in text) or any(unit in text.lower() for unit in ['cup', 'tsp', 'tbsp', 'oz', 'g', 'ml', 'kg', 'pinch', 'handful', 'bunch', 'clove', 'cloves'])
+                                
+                                if not has_quantity:
+                                    continue
+                                
+                                clean_text = self._clean_ingredient(text)
+                                if clean_text and clean_text not in seen_ingredients:
+                                    current_group['items'].append(clean_text)
+                                    seen_ingredients.add(clean_text)
+                    
+                    # Salvează grupul curent
+                    if current_group['items']:
+                        ingredient_groups.append(current_group)
+                    
+                    # Procesează listele rămase (fără heading)
+                    for ul in lists:
+                        if id(ul) not in processed_lists:
+                            # Creează grup pentru ingredientele principale (fără nume)
+                            temp_group = {'name': None, 'items': []}
+                            for li in ul.find_all('li', recursive=False):
+                                text = li.get_text().strip()
+                                has_quantity = any(char.isdigit() for char in text) or any(unit in text.lower() for unit in ['cup', 'tsp', 'tbsp', 'oz', 'g', 'ml', 'kg', 'pinch', 'handful', 'bunch', 'clove', 'cloves'])
+                                
+                                if not has_quantity:
+                                    continue
+                                
+                                clean_text = self._clean_ingredient(text)
+                                if clean_text and clean_text not in seen_ingredients:
+                                    temp_group['items'].append(clean_text)
+                                    seen_ingredients.add(clean_text)
+                            
+                            if temp_group['items']:
+                                ingredient_groups.append(temp_group)
+                    
+                    if ingredient_groups:
+                        break
+                
+                # Metodă 2: Fallback - caută h3/h4/h5 ca copii direcți și liste după ele
                 for child in container.children:
                     if not hasattr(child, 'name'):
                         continue
@@ -329,11 +438,10 @@ class RecipeScraper:
                     # Dacă e heading, e separator de grup
                     if child.name in ['h3', 'h4', 'h5', 'h6']:
                         heading_text = child.get_text().strip()
-                        if heading_text.endswith(':'):
-                            # Salvează grupul anterior
-                            if current_group['items']:
-                                ingredient_groups.append(current_group)
-                            current_group = {'name': heading_text.rstrip(':'), 'items': []}
+                        # Salvează grupul anterior
+                        if current_group['items']:
+                            ingredient_groups.append(current_group)
+                        current_group = {'name': heading_text.rstrip(':'), 'items': []}
                     
                     # Dacă e listă, extrage ingredientele
                     elif child.name in ['ul', 'ol']:
@@ -489,21 +597,25 @@ class RecipeScraper:
             id_name = container.get('id', '').lower()
             
             if any(word in class_name + id_name for word in ['instruction', 'step', 'preparare', 'mod', 'direction', 'method', 'preparation', 'accordion', 'collapse', 'toggle']):
-                # Prioritizează liste ordonate (ol > li), dar caută și în paragrafe
-                items = container.find_all('li', recursive=True) or container.find_all(['p'], recursive=True)
-                for item in items:
-                    text = item.get_text().strip()
-                    # Curăță textul de whitespace excesiv
+                # Caută în ordinea copiilor pentru a păstra structura cu headere
+                for child in container.find_all(['h4', 'h5', 'h6', 'strong', 'li', 'p'], recursive=True):
+                    text = child.get_text().strip()
                     text = re.sub(r'\s+', ' ', text)
-                    # Exclude texte prea scurte, duplicate sau care sunt doar titluri
-                    if text and len(text) > 20 and text not in seen_instructions:
-                        # Exclude titluri (care nu conțin verbe de acțiune)
-                        has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse)\b', text.lower()))
-                        # Exclude texte care sunt doar titluri sau nume de secțiuni
-                        is_title = text.endswith(':') or (len(text.split()) <= 5 and not has_action_verb)
-                        if not is_title and has_action_verb:
+                    
+                    # Verifică dacă e heading (scurt, fără verbe multe)
+                    is_heading = child.name in ['h4', 'h5', 'h6', 'strong'] or (len(text.split()) <= 6 and not '.' in text)
+                    has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse)\b', text.lower()))
+                    
+                    if text and text not in seen_instructions:
+                        # Dacă e heading fără verbe prea multe, adaugă ca secțiune
+                        if is_heading and len(text.split()) <= 6 and not text in seen_instructions:
+                            instructions.append(f"## {text}")
+                            seen_instructions.add(text)
+                        # Altfel, dacă e instrucțiune validă
+                        elif len(text) > 20 and has_action_verb:
                             instructions.append(text)
                             seen_instructions.add(text)
+                
                 if instructions:
                     break  # Am găsit instrucțiuni, oprim căutarea
         
@@ -619,17 +731,17 @@ class RecipeScraper:
         
         lines.append("")
         
-        # Ingrediente - grupate în [1], [2], etc.
+        # Ingrediente - grupate cu numele lor sau [1], [2], etc.
         ingredient_groups = recipe.get('ingredient_groups', [])
         seen_ingredients = set()  # Pentru deduplicare globală
         
         for group_idx, group in enumerate(ingredient_groups, 1):
-            # Scrie numărul grupului
-            lines.append(f"[{group_idx}]")
-            
-            # Dacă grupul are nume (de ex: "For the salsa"), adaugă-l ca comentariu
-            if group.get('name'):
-                lines.append(f"# {group['name']}")
+            # Scrie numele grupului în brackets, sau numărul dacă nu are nume
+            group_name = group.get('name')
+            if group_name:
+                lines.append(f"[{group_name}]")
+            else:
+                lines.append(f"[{group_idx}]")
             
             # Scrie ingredientele din grup - normalizate la 1 porție
             for ingredient in group.get('items', []):
@@ -671,11 +783,19 @@ class RecipeScraper:
                         seen_ingredients.add(clean_ingredient)
             lines.append("")
         
-        # Adaugă instrucțiunile - formatate pentru copiere manuală în Notion
+        # Adaugă instrucțiunile - formatate cu secțiuni dacă există
         if recipe.get('instructions'):
             lines.append("Steps:")
-            for i, step in enumerate(recipe['instructions'], 1):
-                lines.append(f"{i}. {step}")
+            step_number = 1
+            for step in recipe['instructions']:
+                # Verifică dacă e header de secțiune (începe cu ##)
+                if step.startswith('## '):
+                    # Adaugă header fără numerotare
+                    lines.append(step[3:])  # Elimină ## 
+                else:
+                    # Adaugă pas normal cu numerotare
+                    lines.append(f"{step_number}. {step}")
+                    step_number += 1
             lines.append("")
         
         lines.append("")

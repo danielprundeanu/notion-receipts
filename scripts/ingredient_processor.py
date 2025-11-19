@@ -149,9 +149,9 @@ class IngredientProcessor:
         """
         # Unități de măsură cunoscute
         KNOWN_UNITS = {
-            'cup', 'cups', 'tsp', 'tsps', 'teaspoon', 'teaspoons',
-            'tbsp', 'tbsps', 'tablespoon', 'tablespoons',
-            'oz', 'ounce', 'ounces', 'lb', 'lbs', 'pound', 'pounds',
+            'cup', 'cups', 'tsp', 'tsp.', 'tsps', 'teaspoon', 'teaspoons',
+            'tbsp', 'tbsp.', 'tbsps', 'tablespoon', 'tablespoons',
+            'oz', 'oz.', 'ounce', 'ounces', 'lb', 'lb.', 'lbs', 'pound', 'pounds',
             'g', 'gram', 'grams', 'kg', 'kilogram', 'kilograms',
             'ml', 'milliliter', 'milliliters', 'l', 'liter', 'liters',
             'pinch', 'dash', 'handful', 'piece', 'pieces',
