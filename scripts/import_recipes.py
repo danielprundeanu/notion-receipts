@@ -181,9 +181,13 @@ class RecipeImporter:
             
             # Dacă suntem în Steps, parsează instrucțiunile
             if in_method_section:
+                # Verifică dacă e un header de secțiune (text fără numerotare, nu vid)
+                if line.strip() and not re.match(r'^\d+\.', line) and len(line.strip()) > 0:
+                    # E un header de secțiune - marchează-l cu prefix special
+                    recipe['instructions'].append(f"__SECTION_HEADER__{line.strip()}")
                 # Parsează liniile numerotate: "1. text", "2. text", etc.
-                match = re.match(r'^\d+\.\s*(.+)$', line)
-                if match:
+                elif re.match(r'^\d+\.\s*(.+)$', line):
+                    match = re.match(r'^\d+\.\s*(.+)$', line)
                     recipe['instructions'].append(match.group(1))
                 i += 1
                 continue
@@ -1135,16 +1139,35 @@ class RecipeImporter:
                 print("  ⚠ Nu s-a găsit heading 'Steps' în template. Adaug la final.")
                 steps_block_id = recipe_id
             
+            # Verifică dacă avem grupuri multiple cu nume
+            has_multiple_named_groups = False
+            ingredient_groups = recipe_data.get('ingredient_groups', [])
+            if len(ingredient_groups) > 1:
+                has_multiple_named_groups = any(group.get('name') for group in ingredient_groups)
+            
             # Creează lista numerotată cu pașii
             step_blocks = []
             for step in recipe_data['instructions']:
-                step_blocks.append({
-                    "object": "block",
-                    "type": "numbered_list_item",
-                    "numbered_list_item": {
-                        "rich_text": [{"type": "text", "text": {"content": step}}]
-                    }
-                })
+                # Verifică dacă e un header de secțiune
+                if step.startswith('__SECTION_HEADER__'):
+                    section_name = step.replace('__SECTION_HEADER__', '')
+                    # Adaugă H3 doar dacă avem grupuri multiple cu nume
+                    if has_multiple_named_groups:
+                        step_blocks.append({
+                            "object": "block",
+                            "type": "heading_3",
+                            "heading_3": {
+                                "rich_text": [{"type": "text", "text": {"content": f"For the {section_name}"}}]
+                            }
+                        })
+                else:
+                    step_blocks.append({
+                        "object": "block",
+                        "type": "numbered_list_item",
+                        "numbered_list_item": {
+                            "rich_text": [{"type": "text", "text": {"content": step}}]
+                        }
+                    })
             
             # Adaugă blocurile după heading-ul Steps
             notion.blocks.children.append(
@@ -1161,6 +1184,13 @@ class RecipeImporter:
         """Adaugă secțiunea Method la sfârșitul paginii de rețetă"""
         blocks_to_add = []
         
+        # Verifică dacă avem grupuri multiple cu nume pentru a decide dacă adăugăm H3
+        has_multiple_named_groups = False
+        ingredient_groups = recipe_data.get('ingredient_groups', [])
+        if len(ingredient_groups) > 1:
+            # Verifică dacă cel puțin un grup are nume
+            has_multiple_named_groups = any(group.get('name') for group in ingredient_groups)
+        
         # Heading "Steps:"
         blocks_to_add.append({
             "object": "block",
@@ -1173,13 +1203,27 @@ class RecipeImporter:
         # Lista numerotată cu instrucțiunile
         if recipe_data.get('instructions'):
             for step in recipe_data['instructions']:
-                blocks_to_add.append({
-                    "object": "block",
-                    "type": "numbered_list_item",
-                    "numbered_list_item": {
-                        "rich_text": [{"type": "text", "text": {"content": step}}]
-                    }
-                })
+                # Verifică dacă e un header de secțiune
+                if step.startswith('__SECTION_HEADER__'):
+                    section_name = step.replace('__SECTION_HEADER__', '')
+                    # Adaugă H3 doar dacă avem grupuri multiple cu nume
+                    if has_multiple_named_groups:
+                        blocks_to_add.append({
+                            "object": "block",
+                            "type": "heading_3",
+                            "heading_3": {
+                                "rich_text": [{"type": "text", "text": {"content": f"For the {section_name}"}}]
+                            }
+                        })
+                else:
+                    # E un pas normal
+                    blocks_to_add.append({
+                        "object": "block",
+                        "type": "numbered_list_item",
+                        "numbered_list_item": {
+                            "rich_text": [{"type": "text", "text": {"content": step}}]
+                        }
+                    })
         
         # Adaugă blocurile la sfârșitul paginii
         try:

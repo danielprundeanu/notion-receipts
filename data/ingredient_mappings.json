@@ -3,7 +3,8 @@
     "sunflower oil": "Avocado Oil",
     "oregano": "Dried Oregano",
     "paprika": "Paprika Powder",
-    "tortilla": "Wholemeal wrap",
+    "tortilla": "Tortillas",
+    "wrap": "Wholemeal wrap",
     "corn tortillas": "Tortillas",
     "onion": "Yellow Onion",
     "chilli": "Chilli Powder",
@@ -13,7 +14,9 @@
     "coriander": "Fresh Coriander",
     "milk": "Low-fat milk",
     "cottage cheese": "Low-fat cottage cheese",
-    "rolled oat": "Rolled Oats"
+    "rolled oat": "Rolled Oats",
+    "Holy Moly Three Chilli Guacamole" :  "Guacamole",
+
   },
   "unit_conversions": {
     "custom_rules": []

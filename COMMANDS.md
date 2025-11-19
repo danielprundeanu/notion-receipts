@@ -1,220 +1,53 @@
-# 🍳 Notion Recipes - Comenzi disponibile
+🍳 Notion Recipes - Comenzi
 
-## 📁 Navigare
-```bash
-notion-cd              # Navighează în folder-ul proiectului
-```
+═══════════════════════════════════════════════════════════
 
-## 🌐 Scraping Web
-```bash
-notion-scrape          # Scrape rețete din data/recipe_urls.txt
-notion-urls            # Editează lista de URL-uri
-```
+COMENZI PRINCIPALE:
 
-## 📝 Parsing Local (din PDF/documente)
-```bash
-notion-parse <input.txt> <output.txt>   # Parsează rețete locale
-```
+  Parse & Import:
+    notion-parse [input] [output]    Parse rețete locale (default: local_recipes.txt)
+    notion-import [file]              Import în Notion (default: scraped_recipes.txt)
+    notion-import-local               Shortcut: import data/local_scraped_recipes.txt
 
-**Exemplu:**
-```bash
-notion-parse my_recipes.txt data/scraped_recipes.txt
-```
+  Scraping Web:
+    notion-scrape                     Scrape din data/recipe_urls.txt
+    notion-urls                       Editează URL-uri
 
-## 📥 Import în Notion
-```bash
-notion-import          # Importă rețete în Notion (INTERACTIV! ⭐)
-notion-steps           # Adaugă Steps la rețete existente
-```
+  Vizualizare:
+    notion-view                       Vezi rețete scraped
+    notion-edit                       Editează în VS Code
 
-### 🆕 Import Interactiv cu Autocompletare
-Când imporți rețete, scriptul te ghidează interactiv pentru ingrediente noi:
+  Mappings:
+    notion-mappings                   Listează mappings
+    notion-map-add                    Adaugă mapping
+    notion-map-remove                 Șterge mapping
 
-**Funcționalități:**
-- ✅ **Selectare Unity** din lista Notion (g, ml, cup, piece, etc.)
-- ✅ **Selectare 2nd Unity** opțional (pentru conversii)
-- ✅ **Conversion Factor** (ex: 1 cup = 240ml)
-- ✅ **Selectare Category** (🍎 Fruits, 🥕 Veg, 🌾 Grains, etc.)
-- ✅ **Autocompletare Macronutrienți** din bază de date locală (80+ alimente RO/EN)
-  - KCal / 100g
-  - Carbs / 100g
-  - Fat / 100g
-  - Protein / 100g
+  Navigare:
+    notion-cd                         Du-te în folder proiect
+    notion-images                     Listează imagini
 
-**Bază de date locală include:**
-- Carne: piept pui, somon, ton, ouă
-- Lactate: brânză vaci, iaurt grecesc, lapte
-- Cereale: fulgi ovaz, orez, paste, quinoa
-- Fructe: banane, măr, portocală, căpșuni
-- Legume: broccoli, spanac, roșii, cartofi
-- Nuci: migdale, nuci, semințe chia
-- și multe altele...
+═══════════════════════════════════════════════════════════
 
-📖 Vezi [FEATURE_INTERACTIVE_IMPORT.md](FEATURE_INTERACTIVE_IMPORT.md) pentru detalii complete
-🎬 Vezi [DEMO_INTERACTIVE_IMPORT.md](DEMO_INTERACTIVE_IMPORT.md) pentru exemplu pas-cu-pas
+WORKFLOW:
 
-## 📋 Vizualizare & Editare
-```bash
-notion-view            # Afișează rețete scraped
-notion-edit            # Editează rețete scraped în VS Code
-```
+  Rețete locale (PDF/copy-paste):
+    notion-parse data/local_recipes.txt
+    notion-import-local
 
-## 🗺️ Ingredient Mappings
-```bash
-notion-mappings        # Listează toate mappings
-notion-map-add         # Adaugă mapping nou
-notion-map-remove      # Șterge mapping
-notion-map-edit        # Editează mappings manual
-```
+  Rețete web:
+    notion-urls              # Adaugă URL-uri
+    notion-scrape
+    notion-import
 
-## 📸 Imagini
-```bash
-notion-images          # Listează imagini descărcate
-```
+═══════════════════════════════════════════════════════════
 
-## 🧪 Testing
-```bash
-notion-test            # Test import cu test_recipe.txt
-notion-test-steps      # Test Steps cu test_recipe.txt
-```
+FUNCȚIONALITĂȚI:
 
----
+  ✅ Adjective inteligente: "1 ripe banana" → "1 banana (ripe)"
+  ✅ Grocery List din Notion: 117 items pentru match automat
+  ✅ Interactiv: Selectare Unity, Category, Macros automate (80+ foods)
+  ✅ Slices, Time, Servings - toate suportate
 
-## 🔄 Workflow Complet
+═══════════════════════════════════════════════════════════
 
-### Opțiunea 1: Rețete de pe web
-
-```bash
-# 1. Adaugă URL-uri
-notion-urls
-
-# 2. Scrape rețete
-notion-scrape
-
-# 3. Verifică rezultate
-notion-view
-
-# 4. Importă în Notion
-notion-import
-
-# 5. Aplică template MANUAL în Notion UI
-
-# 6. Adaugă Steps
-notion-steps
-```
-
-### Opțiunea 2: Rețete locale (PDF/documente)
-
-```bash
-# 1. Copy-paste rețete în fișier text
-# my_recipes.txt
-
-# 2. Parsează
-notion-parse my_recipes.txt data/scraped_recipes.txt
-
-# 3. Verifică
-notion-view
-
-# 4. Importă în Notion
-notion-import
-
-# 5. Aplică template MANUAL în Notion UI
-
-# 6. Adaugă Steps
-notion-steps
-```
-
----
-
-## 📂 Structură foldere
-
-```
-notion/
-├── scripts/              # Toate scripturile Python
-│   ├── scrape_recipes.py
-│   ├── parse_local_recipes.py
-│   ├── import_recipes.py
-│   ├── manage_mappings.py
-│   └── upload_cover.py
-│
-├── data/                 # Date pentru workflow
-│   ├── recipe_urls.txt          # Input: URL-uri pentru scraping
-│   ├── scraped_recipes.txt      # Output: Rețete pentru import
-│   ├── ingredient_mappings.json # Mappings învățate
-│   └── test/                    # Fișiere de test
-│
-├── img/                  # Imagini descărcate
-│
-├── README.md             # Documentație principală
-├── README_IMAGES.md      # Ghid imagini locale
-├── README_LOCAL_PARSING.md  # Ghid parsing local
-├── COMMANDS.md           # Acest fișier
-└── notion.env            # Credențiale Notion API
-```
-
----
-
-## 📚 Documentație detaliată
-
-```bash
-cat README.md                    # Ghid principal
-cat README_IMAGES.md             # Ghid imagini locale
-cat README_LOCAL_PARSING.md      # Ghid parsing local
-cat UNITATI.md                   # Info unități de măsură
-```
-
----
-
-## 💡 Tips
-
-### Scraping rapid
-```bash
-# Scrape o singură rețetă
-echo "https://site.com/recipe" > data/recipe_urls.txt
-notion-scrape
-```
-
-### Verificare mappings
-```bash
-# Vezi ce mappings ai
-notion-mappings
-
-# Editează manual dacă e nevoie
-notion-map-edit
-```
-
-### Clean restart
-```bash
-# Backup și șterge rețete vechi
-mv data/scraped_recipes.txt data/scraped_recipes_$(date +%Y%m%d).txt
-```
-
----
-
-## 🆘 Probleme comune
-
-### "Command not found: notion-scrape"
-```bash
-source ~/.zshrc
-```
-
-### "No such file or directory"
-```bash
-notion-cd
-ls -la data/
-```
-
-### "Module not found"
-```bash
-cd /Users/danielprundeanu/Documents/GitHub/notion
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### Imagini nu se uploadă
-Notion API nu suportă upload direct de fișiere în cover.
-Vezi: `cat README_IMAGES.md`
-
----
-
-Pentru mai multe detalii, consultă README-urile! 📖
+Detalii: cat README.md | cat README_LOCAL_PARSING.md
