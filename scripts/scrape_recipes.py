@@ -743,10 +743,12 @@ class RecipeScraper:
             else:
                 lines.append(f"[{group_idx}]")
             
-            # Scrie ingredientele din grup - normalizate la 1 porție
+            # Scrie ingredientele din grup - convertește unități apoi normalizează la 1 porție
             for ingredient in group.get('items', []):
-                # Normalizează cantitatea
-                normalized = self._normalize_quantity(ingredient, original_servings or 1)
+                # Mai întâi convertește unitățile nestandard
+                converted = self._convert_units(ingredient)
+                # Apoi normalizează cantitatea
+                normalized = self._normalize_quantity(converted, original_servings or 1)
                 
                 # Dacă ingredientul conține newlines, split-ează și procesează fiecare linie
                 if '\n' in normalized:
@@ -831,6 +833,101 @@ class RecipeScraper:
                 return value
         
         return 'Dinner'  # Default
+    
+    def _convert_units(self, ingredient: str) -> str:
+        """Convertește unitățile nestandard la unitățile disponibile în Notion"""
+        # Dicționar de conversii - mapează la unitățile din Notion
+        # Notion units: piece, tsp, tbsp, g, slice, handful, pinch, ml, scoop, bottle, cup
+        conversions = {
+            # Weight conversions to g
+            'oz': ('g', 28.35),
+            'ounce': ('g', 28.35),
+            'ounces': ('g', 28.35),
+            'lb': ('g', 453.6),
+            'lbs': ('g', 453.6),
+            'pound': ('g', 453.6),
+            'pounds': ('g', 453.6),
+            'kg': ('g', 1000),
+            'kilogram': ('g', 1000),
+            'kilograms': ('g', 1000),
+            
+            # Volume conversions to ml
+            'liter': ('ml', 1000),
+            'liters': ('ml', 1000),
+            'l': ('ml', 1000),
+            'fl oz': ('ml', 30),
+            'fluid ounce': ('ml', 30),
+            'fluid ounces': ('ml', 30),
+            'pint': ('ml', 473),
+            'pints': ('ml', 473),
+            'quart': ('ml', 946),
+            'quarts': ('ml', 946),
+            'gallon': ('ml', 3785),
+            'gallons': ('ml', 3785),
+            
+            # Note: cup, tsp, tbsp există deja în Notion, nu le convertim
+        }
+        
+        # Pattern pentru cantități cu unități - include fracții și numere mixte
+        # Ex: "2 oz", "1.5 lb", "1 1/2 liter", "500ml" (fără spațiu)
+        pattern = r'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*([a-zA-Z\s]+)'
+        match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
+        
+        if not match:
+            return ingredient
+        
+        quantity_str = match.group(1).strip()
+        unit_str = match.group(2).strip().lower()
+        rest = ingredient[match.end():].strip()
+        
+        # Verifică dacă unitatea trebuie convertită
+        target_unit = None
+        conversion_factor = None
+        
+        # Normalizează unit_str: elimină spații multiple și trimite
+        unit_normalized = ' '.join(unit_str.split())
+        
+        for source_unit, (target, factor) in conversions.items():
+            # Match exact sau la început (pentru "fl oz butter" → "fl oz")
+            if unit_normalized == source_unit.lower() or unit_normalized.startswith(source_unit.lower() + ' '):
+                target_unit = target
+                conversion_factor = factor
+                break
+        
+        if not target_unit:
+            return ingredient
+        
+        # Parsează cantitatea
+        try:
+            if '/' in quantity_str:
+                parts = quantity_str.split()
+                if len(parts) == 2:
+                    # Număr mixt: "1 1/2"
+                    whole = int(parts[0])
+                    frac = Fraction(parts[1])
+                    quantity = float(whole + frac)
+                else:
+                    # Doar fracție: "1/2"
+                    quantity = float(Fraction(quantity_str))
+            else:
+                quantity = float(quantity_str)
+            
+            # Convertește
+            converted_qty = quantity * conversion_factor
+            
+            # Rotunjește inteligent (elimină zerourile finale)
+            if converted_qty >= 10:
+                # Pentru valori mari, rotunjește la întreg
+                qty_formatted = f"{int(round(converted_qty))}"
+            else:
+                # Pentru valori mici, păstrează precizie
+                qty_formatted = f"{converted_qty:.1f}".rstrip('0').rstrip('.')
+            
+            # Reconstruiește ingredientul cu unitatea convertită
+            return f"{qty_formatted}{target_unit} {rest}".strip()
+            
+        except (ValueError, ZeroDivisionError):
+            return ingredient
     
     def _normalize_quantity(self, ingredient: str, servings: int) -> str:
         """Calculează cantitatea ingredientului per porție (împarte la servings)"""
