@@ -118,9 +118,11 @@ class RecipeImporter:
             mappings_file = os.path.join(project_root, 'data', 'ingredient_mappings.json')
             with open(mappings_file, 'w', encoding='utf-8') as f:
                 json.dump(self.mappings, f, indent=2, ensure_ascii=False)
-            print(f"\n✓ {len(self.new_mappings)} mapări noi salvate în data/ingredient_mappings.json")
+            print(f"  💾 {len(self.new_mappings)} mapări salvate")
+            # Resetează mapările noi pentru următoarea rețetă
+            self.new_mappings.clear()
         except Exception as e:
-            print(f"\n⚠ Eroare la salvarea mapărilor: {e}")
+            print(f"  ⚠ Eroare la salvarea mapărilor: {e}")
         
     def parse_recipe_file(self, filepath: str) -> List[Dict]:
         """Parsează fișierul text și extrage rețetele"""
@@ -182,9 +184,29 @@ class RecipeImporter:
             # Dacă suntem în Steps, parsează instrucțiunile
             if in_method_section:
                 # Verifică dacă e un header de secțiune (text fără numerotare, nu vid)
-                if line.strip() and not re.match(r'^\d+\.', line) and len(line.strip()) > 0:
+                # Trebuie să fie: nu începe cu număr, are lungime rezonabilă (3-50 char), nu conține junk
+                stripped = line.strip()
+                
+                # Lista de cuvinte junk care indică text extras din meniuri/navigație
+                junk_words = [
+                    'subscribe', 'save recipe', 'about', 'contact', 'privacy', 'http', 'www.',
+                    'all rights', 'copyright', 'follow', 'facebook', 'instagram', 'pinterest',
+                    'twitter', 'latest', 'recipes', 'search', 'menu', 'home', 'blog', 'index',
+                    'salads', 'pasta', 'chicken', 'seafood', 'main course', 'dessert',
+                    'breakfast', 'lunch', 'dinner', 'snack', 'appetizer'
+                ]
+                
+                is_junk = any(junk in stripped.lower() for junk in junk_words)
+                is_potential_header = (
+                    stripped 
+                    and not re.match(r'^\d+\.', line)
+                    and 3 <= len(stripped) <= 50
+                    and not is_junk
+                )
+                
+                if is_potential_header:
                     # E un header de secțiune - marchează-l cu prefix special
-                    recipe['instructions'].append(f"__SECTION_HEADER__{line.strip()}")
+                    recipe['instructions'].append(f"__SECTION_HEADER__{stripped}")
                 # Parsează liniile numerotate: "1. text", "2. text", etc.
                 elif re.match(r'^\d+\.\s*(.+)$', line):
                     match = re.match(r'^\d+\.\s*(.+)$', line)
@@ -834,7 +856,9 @@ class RecipeImporter:
         
         confirm = input("Continui oricum fără conversie? (y/n): ").strip().lower()
         if confirm == 'y' or confirm == 'yes':
-            print(f"  ⚠ Se continuă cu unitate neconvertită: {ingredient['unit']}")
+            print(f"  ⚠ Cantitatea {ingredient['quantity']}{ingredient['unit']} va fi salvată în Obs (nu în Size)")
+            # Returnează True dar marchează că trebuie salvată în Obs
+            # Folosim un tuple special pentru a semnala acest caz
             return True, None, None
         
         return False, None, None
@@ -1266,6 +1290,10 @@ class RecipeImporter:
                 unity, second_unity = self.get_grocery_item_units(grocery_id)
                 use_second_unit = second_unity and self._units_match(final_unit, second_unity)
                 
+                # Verifică dacă unitatea se potrivește cu Unity sau 2nd Unity
+                unit_matches = (unity and self._units_match(final_unit, unity)) or (second_unity and self._units_match(final_unit, second_unity))
+                save_in_obs = final_unit and not unit_matches  # Salvează în Obs dacă unitatea nu se potrivește
+                
                 # Creează ingredientul
                 try:
                     properties = {
@@ -1283,17 +1311,28 @@ class RecipeImporter:
                         }
                     }
                     
-                    # Adaugă cantitatea în câmpul corespunzător
-                    if final_quantity is not None:
+                    # Adaugă cantitatea în câmpul corespunzător SAU în Obs dacă unitatea nu se potrivește
+                    if final_quantity is not None and not save_in_obs:
                         if use_second_unit:
                             properties["Size / 2nd Unit"] = {"number": final_quantity}
                         else:
                             properties["Size / Unit"] = {"number": final_quantity}
                     
-                    # Adaugă observațiile dacă există
+                    # Adaugă observațiile
+                    obs_parts = []
+                    
+                    # Dacă unitatea nu se potrivește, adaugă cantitatea în Obs
+                    if save_in_obs and final_quantity is not None:
+                        obs_parts.append(f"{final_quantity}{final_unit}")
+                    
+                    # Adaugă observațiile existente
                     if ingredient.get('observations'):
+                        obs_parts.append(ingredient['observations'])
+                    
+                    # Scrie toate observațiile în Obs
+                    if obs_parts:
                         properties["Obs"] = {
-                            "rich_text": [{"text": {"content": ingredient['observations']}}]
+                            "rich_text": [{"text": {"content": " | ".join(obs_parts)}}]
                         }
                     
                     notion.pages.create(
@@ -1304,7 +1343,8 @@ class RecipeImporter:
                     qty_str = f"{final_quantity}{final_unit}" if final_quantity else ""
                     obs_str = f" ({ingredient.get('observations')})" if ingredient.get('observations') else ""
                     conversion_note = " [convertit]" if converted_qty is not None else ""
-                    print(f"    ✓ {qty_str} {ingredient['name']}{obs_str}{conversion_note}")
+                    saved_in_obs_note = " [salvat în Obs]" if save_in_obs else ""
+                    print(f"    ✓ {qty_str} {ingredient['name']}{obs_str}{conversion_note}{saved_in_obs_note}")
                     
                 except Exception as e:
                     print(f"    ✗ Eroare la crearea ingredientului '{ingredient['name']}': {e}")
@@ -1346,6 +1386,9 @@ class RecipeImporter:
                         print(f"\n  ✓ Rețeta și ingredientele create!")
                         print(f"  📝 Aplică manual template-ul în Notion, apoi rulează:")
                         print(f"     python import_recipes.py {filepath} --steps")
+                        
+                        # Salvează mapările după fiecare rețetă
+                        self._save_mappings()
                     
             except ValueError as e:
                 # Eroare de validare unitate - oprește importul
@@ -1360,9 +1403,6 @@ class RecipeImporter:
         print(f"\n\n{'='*60}")
         print("✓ Import finalizat cu succes!")
         print(f"{'='*60}\n")
-        
-        # Salvează mapările noi
-        self._save_mappings()
 
 
 if __name__ == "__main__":
