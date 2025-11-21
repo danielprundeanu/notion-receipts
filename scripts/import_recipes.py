@@ -273,8 +273,9 @@ class RecipeImporter:
         - 500g Faina (Faina alba)  # cu grocery item specific în paranteze
         - 0.5 large tomatoes, finely chopped  # cu adjective și observații
         """
-        # Lista de adjective comune pentru ingrediente
-        adjectives = r'\b(large|small|medium|fresh|dried|chopped|diced|sliced|minced|grated|peeled|crushed|whole|canned|frozen|ripe|unripe|green|red|yellow|white|black|brown|raw|cooked)\b'
+        # Lista de adjective comune pentru ingrediente (fără culori - ele fac parte din nume)
+        # Exemplu: "black beans", "red onion", "green chilli" - culorile rămân în nume
+        adjectives = r'\b(large|small|medium|fresh|dried|chopped|diced|sliced|minced|grated|peeled|crushed|whole|canned|frozen|ripe|unripe|raw|cooked)\b'
         
         # Pattern pentru ingredient cu cantitate și unitate
         # Exemplu: "0.5 large tomatoes, finely chopped" sau "500g beef mince"
@@ -283,9 +284,33 @@ class RecipeImporter:
         
         if match:
             quantity = float(match.group(1))
-            unit = match.group(2) or ''
+            potential_unit = match.group(2) or ''
             rest = match.group(3).strip()
             grocery_item = match.group(4).strip() if match.group(4) else None
+            
+            # Validează dacă unitatea este o unitate de măsură reală
+            # Lista de unități cunoscute (extinsă)
+            known_units = ['g', 'kg', 'mg', 'ml', 'l', 'cup', 'cups', 'tsp', 'teaspoon', 'teaspoons',
+                          'tbsp', 'tablespoon', 'tablespoons', 'oz', 'ounce', 'ounces', 'lb', 'lbs',
+                          'pound', 'pounds', 'piece', 'pieces', 'slice', 'slices', 'handful', 'pinch',
+                          'scoop']
+            
+            # Containere care NU sunt unități de măsură - fac parte din numele ingredientului
+            # Exemplu: "1 tin of beans" -> quantity=1, unit='', name='tin of beans'
+            container_words = ['bottle', 'can', 'tin', 'jar', 'pack', 'packet', 'bag', 'bunch',
+                              'head', 'sprig', 'stalk', 'clove', 'stick']
+            
+            # Verifică dacă este o unitate validă (case insensitive)
+            unit = ''
+            if potential_unit and potential_unit.lower() in known_units:
+                unit = potential_unit
+            elif potential_unit and potential_unit.lower() in container_words:
+                # Este un container - include-l în nume, nu ca unitate
+                rest = f"{potential_unit} {rest}"
+            else:
+                # Nu e nici unitate, nici container - consideră-l parte din nume
+                if potential_unit:
+                    rest = f"{potential_unit} {rest}"
             
             # Separă observațiile (după virgulă)
             observations = ''
@@ -568,19 +593,30 @@ class RecipeImporter:
         
         return properties
     
-    def find_or_create_grocery_item(self, name: str) -> str:
+    def find_or_create_grocery_item(self, name: str, _visited: set = None) -> str:
         """Caută sau creează un grocery item și returnează ID-ul"""
+        # Protecție împotriva recursiunii infinite
+        if _visited is None:
+            _visited = set()
+        
+        name_lower = name.lower()
+        if name_lower in _visited:
+            print(f"  ⚠ Ciclu de mapare detectat pentru '{name}', folosesc numele original")
+            # Nu mai urmări maparea, caută direct
+            _visited = set()  # Reset pentru căutare directă
+        else:
+            _visited.add(name_lower)
+        
         # Verifică în cache
         if name in self.grocery_cache:
             return self.grocery_cache[name]
         
-        # Verifică în mapări salvate
-        name_lower = name.lower()
-        if name_lower in self.mappings.get('grocery_mappings', {}):
+        # Verifică în mapări salvate (doar dacă nu e în ciclu)
+        if len(_visited) == 1 and name_lower in self.mappings.get('grocery_mappings', {}):
             mapped_name = self.mappings['grocery_mappings'][name_lower]
             print(f"  📋 Folosesc mapare salvată: '{name}' → '{mapped_name}'")
             # Recursiv pentru a găsi mapped item
-            return self.find_or_create_grocery_item(mapped_name)
+            return self.find_or_create_grocery_item(mapped_name, _visited)
         
         try:
             # Metoda 1: Caută exact
@@ -863,6 +899,33 @@ class RecipeImporter:
         
         return False, None, None
 
+    def find_existing_recipe(self, recipe_name: str) -> Optional[str]:
+        """Caută o rețetă existentă după nume și returnează ID-ul"""
+        print(f"  🔍 Caut rețeta: '{recipe_name}'")
+        try:
+            response = notion.databases.query(
+                **{
+                    "database_id": DB_RECEIPTS,
+                    "filter": {
+                        "property": "Name",
+                        "title": {
+                            "equals": recipe_name
+                        }
+                    }
+                }
+            )
+            
+            if response.get('results'):
+                recipe_id = response['results'][0]['id']
+                print(f"  ✓ Găsită rețetă existentă: {recipe_name}")
+                return recipe_id
+            
+            print(f"  ✗ Nu am găsit rețeta '{recipe_name}' în baza de date")
+            return None
+            
+        except Exception as e:
+            print(f"  ⚠ Eroare la căutarea rețetei: {e}")
+            return None
     
     def create_recipe(self, recipe_data: Dict) -> Optional[str]:
         """Creează rețeta în baza Receipts 2.0"""
@@ -923,7 +986,7 @@ class RecipeImporter:
             
             print(f"\n✓ Rețeta '{recipe_data['name']}' a fost creată cu succes!")
             
-            # Set cover image dacă există
+            # Set cover image și icon image dacă există
             image_value = recipe_data.get('image_url')
             if image_value:
                 try:
@@ -935,7 +998,7 @@ class RecipeImporter:
                         print(f"  ⚠ Imaginea locală '{image_value}' trebuie încărcată manual în Notion")
                         print(f"    Sau folosește un serviciu de hosting pentru imagini")
                     else:
-                        # URL extern - folosește direct
+                        # URL extern - setează atât cover cât și icon
                         notion.pages.update(
                             page_id=new_page['id'],
                             cover={
@@ -943,11 +1006,17 @@ class RecipeImporter:
                                 "external": {
                                     "url": image_value
                                 }
+                            },
+                            icon={
+                                "type": "external",
+                                "external": {
+                                    "url": image_value
+                                }
                             }
                         )
-                        print(f"  ✓ Cover image setat din URL")
+                        print(f"  ✓ Cover image și icon setate din URL")
                 except Exception as e:
-                    print(f"  ⚠ Eroare la setarea cover image: {e}")
+                    print(f"  ⚠ Eroare la setarea imaginilor: {e}")
             
             return new_page['id']
             
@@ -1288,11 +1357,32 @@ class RecipeImporter:
                 
                 # Determină care câmp să folosim (Size / Unit sau Size / 2nd Unit)
                 unity, second_unity = self.get_grocery_item_units(grocery_id)
-                use_second_unit = second_unity and self._units_match(final_unit, second_unity)
                 
-                # Verifică dacă unitatea se potrivește cu Unity sau 2nd Unity
-                unit_matches = (unity and self._units_match(final_unit, unity)) or (second_unity and self._units_match(final_unit, second_unity))
-                save_in_obs = final_unit and not unit_matches  # Salvează în Obs dacă unitatea nu se potrivește
+                # Logica de decizie:
+                # 1. Dacă grocery item NU are Unity/2nd Unity definite → pune în Size / Unit
+                # 2. Dacă unitatea se potrivește cu 2nd Unity → pune în Size / 2nd Unit
+                # 3. Dacă unitatea se potrivește cu Unity → pune în Size / Unit
+                # 4. Dacă unitatea NU se potrivește cu niciunul → pune în Obs
+                
+                if not unity and not second_unity:
+                    # Grocery item fără unități definite → implicit Size / Unit
+                    use_second_unit = False
+                    save_in_obs = False
+                else:
+                    # Verifică match-uri cu unitățile definite
+                    matches_unity = unity and self._units_match(final_unit, unity)
+                    matches_second_unity = second_unity and self._units_match(final_unit, second_unity)
+                    
+                    if matches_second_unity:
+                        use_second_unit = True
+                        save_in_obs = False
+                    elif matches_unity:
+                        use_second_unit = False
+                        save_in_obs = False
+                    else:
+                        # Nu se potrivește cu niciunul → salvează în Obs
+                        use_second_unit = False
+                        save_in_obs = True
                 
                 # Creează ingredientul
                 try:
@@ -1340,7 +1430,14 @@ class RecipeImporter:
                         properties=properties
                     )
                     
-                    qty_str = f"{final_quantity}{final_unit}" if final_quantity else ""
+                    # Formatează cantitatea cu spațiu înainte de unitate (dacă există)
+                    if final_quantity and final_unit:
+                        qty_str = f"{final_quantity} {final_unit}"
+                    elif final_quantity:
+                        qty_str = str(final_quantity)
+                    else:
+                        qty_str = ""
+                    
                     obs_str = f" ({ingredient.get('observations')})" if ingredient.get('observations') else ""
                     conversion_note = " [convertit]" if converted_qty is not None else ""
                     saved_in_obs_note = " [salvat în Obs]" if save_in_obs else ""
@@ -1374,6 +1471,9 @@ class RecipeImporter:
                     recipe_id = self.find_existing_recipe(recipe['name'])
                     if recipe_id:
                         self.add_steps_to_recipe(recipe_id, recipe)
+                        print(f"\n  ✓ Steps adăugate!")
+                        # Salvează mapările după fiecare rețetă (în caz că find_existing_recipe a creat mapări)
+                        self._save_mappings()
                     else:
                         print(f"  ✗ Rețeta '{recipe['name']}' nu există. Creează-o mai întâi fără --steps.")
                 else:
@@ -1418,6 +1518,12 @@ if __name__ == "__main__":
     
     filepath = sys.argv[1]
     steps_only = '--steps' in sys.argv
+    
+    # Debug: afișează argumentele primite
+    if steps_only:
+        print(f"\n🔧 Modul: Adaugă doar Steps (--steps detectat)")
+    else:
+        print(f"\n🔧 Modul: Import complet (fără --steps)")
     
     if not os.path.exists(filepath):
         print(f"Eroare: Fișierul '{filepath}' nu există!")
