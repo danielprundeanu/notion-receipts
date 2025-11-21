@@ -15,7 +15,9 @@ alias notion-scrape='cd /Users/danielprundeanu/Documents/GitHub/notion && source
 alias notion-parse='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/parse_local_recipes.py'
 
 # Import & Steps
-alias notion-import='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py data/scraped_recipes.txt'
+notion-import() {
+    cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py "${@:-data/scraped_recipes.txt}"
+}
 alias notion-steps='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py data/scraped_recipes.txt --steps'
 
 # Testing

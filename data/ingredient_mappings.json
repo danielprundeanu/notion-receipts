@@ -3,19 +3,20 @@
     "sunflower oil": "Avocado Oil",
     "oregano": "Dried Oregano",
     "paprika": "Paprika Powder",
-    "tortilla": "Tortillas",
     "wrap": "Wholemeal wrap",
-    "corn tortillas": "Tortillas",
+    "corn tortillas": "Tortilla",
+    "corn tortilla": "Tortilla",
     "onion": "Yellow Onion",
     "chilli": "Chilli Powder",
     "clove": "Garlic clove",
-    "garlic clove": "Garlic clove",
     "bunch coriander": "Fresh Coriander",
     "coriander": "Fresh Coriander",
     "milk": "Low-fat milk",
     "cottage cheese": "Low-fat cottage cheese",
-    "rolled oat": "Rolled Oats"
-
+    "rolled oat": "Rolled Oats",
+    "rice": "Brown Rice",
+    "cheddar": "Cheddar cheese",
+    "smoked paprika": "Smoked Paprika Powder"
   },
   "unit_conversions": {
     "custom_rules": []
