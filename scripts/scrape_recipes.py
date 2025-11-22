@@ -104,9 +104,9 @@ class RecipeScraper:
                 if isinstance(data, list):
                     for item in data:
                         if self._is_recipe_schema(item):
-                            return self._parse_recipe_schema(item)
+                            return self._parse_recipe_schema(item, soup)
                 elif self._is_recipe_schema(data):
-                    return self._parse_recipe_schema(data)
+                    return self._parse_recipe_schema(data, soup)
                     
             except json.JSONDecodeError:
                 continue
@@ -123,7 +123,7 @@ class RecipeScraper:
             return 'Recipe' in schema_type
         return schema_type == 'Recipe'
     
-    def _parse_recipe_schema(self, data: Dict) -> Dict:
+    def _parse_recipe_schema(self, data: Dict, soup: BeautifulSoup = None) -> Dict:
         """Parsează datele din schema.org Recipe"""
         print("  ✓ Găsit JSON-LD Recipe schema")
         
@@ -135,9 +135,22 @@ class RecipeScraper:
         for group in ingredient_groups:
             all_ingredients.extend(group['items'])
         
+        # Extrage servings din JSON-LD
+        servings = self._extract_servings(data.get('recipeYield'))
+        
+        # Dacă nu am găsit servings în JSON-LD, caută în HTML
+        if not servings and soup:
+            page_text = soup.get_text()
+            match = re.search(r'(?:servings?|serves?|yields?|porții|portii|portions?)\s*:?\s*(\d+)', page_text, re.I)
+            if match:
+                servings = int(match.group(1))
+                pos = match.start()
+                context = page_text[max(0, pos-25):min(len(page_text), pos+35)].strip()
+                print(f"  ℹ Servings from HTML fallback: {servings} (context: '...{context}...')")
+        
         recipe = {
             'name': data.get('name', 'Untitled Recipe'),
-            'servings': self._extract_servings(data.get('recipeYield')),
+            'servings': servings,
             'time': self._extract_time(data.get('totalTime') or data.get('cookTime')),
             'difficulty': None,  # De obicei nu e în schema
             'category': self._extract_category(data.get('recipeCategory')),
@@ -594,23 +607,35 @@ class RecipeScraper:
                 if len(text) > 80 and not has_quantity and text not in descriptions:
                     descriptions.append(text)
         
-        # Metodă 1: Caută în apropierea textului "servings" sau "serves"
-        for elem in soup.find_all(['span', 'div', 'p', 'li']):
-            text = elem.get_text().strip()
-            # Pattern mai specific: caută "Servings: 6" sau "Serves 4 people" etc.
-            if re.search(r'(servings?|serves?|yields?|porții|portii)', text, re.I):
-                # Încearcă mai întâi pattern specific: "Servings: X" sau "Serves X"
-                match = re.search(r'(?:servings?|serves?|yields?|porții|portii)\s*:?\s*(\d+)', text, re.I)
-                if match:
-                    servings = int(match.group(1))
-                    print(f"  ℹ Servings from HTML (pattern match): {servings} (text: '{text[:60]}...')")
-                    break
-                # Fallback: caută primul număr după keyword
-                match = re.search(r'(servings?|serves?|yields?|porții|portii).*?(\d+)', text, re.I)
-                if match:
-                    servings = int(match.group(2))
-                    print(f"  ℹ Servings from HTML (keyword+number): {servings} (text: '{text[:60]}...')")
-                    break
+        # Metodă 1: Caută în TOT textul paginii pentru "servings", "portii", etc
+        # Pattern flexibil care acceptă și text lipit înainte (ex: "uleiPortii: 3")
+        page_text = soup.get_text()
+        match = re.search(r'(?:servings?|serves?|yields?|porții|portii|portions?)\s*:?\s*(\d+)', page_text, re.I)
+        if match:
+            servings = int(match.group(1))
+            # Găsește contextul (50 caractere înainte și după)
+            pos = match.start()
+            context = page_text[max(0, pos-25):min(len(page_text), pos+35)].strip()
+            print(f"  ℹ Servings from HTML (full page search): {servings} (context: '...{context}...')")
+        
+        # Metodă 2: Dacă nu am găsit, caută în elemente specifice
+        if not servings:
+            for elem in soup.find_all(['span', 'div', 'p', 'li', 'td', 'th']):
+                text = elem.get_text().strip()
+                # Pattern mai specific: caută "Servings: 6" sau "Serves 4 people" etc.
+                if re.search(r'(servings?|serves?|yields?|porții|portii|portions?)', text, re.I):
+                    # Încearcă mai întâi pattern specific: "Servings: X" sau "Serves X"
+                    match = re.search(r'(?:servings?|serves?|yields?|porții|portii|portions?)\s*:?\s*(\d+)', text, re.I)
+                    if match:
+                        servings = int(match.group(1))
+                        print(f"  ℹ Servings from HTML (pattern match): {servings} (text: '{text[:60]}...')")
+                        break
+                    # Fallback: caută primul număr după keyword
+                    match = re.search(r'(servings?|serves?|yields?|porții|portii|portions?).*?(\d+)', text, re.I)
+                    if match:
+                        servings = int(match.group(2))
+                        print(f"  ℹ Servings from HTML (keyword+number): {servings} (text: '{text[:60]}...')")
+                        break
         
         # Metodă 2: Dacă nu am găsit, caută meta tags
         if not servings:
@@ -981,10 +1006,7 @@ class RecipeScraper:
             return ingredient
     
     def _normalize_quantity(self, ingredient: str, servings: int) -> str:
-        """Calculează cantitatea ingredientului per porție (împarte la servings)"""
-        if not servings or servings <= 1:
-            return ingredient
-        
+        """Calculează cantitatea ingredientului per porție (împarte la servings) și formatează cu []"""
         # Mai întâi înlocuim fracțiile unicode cu text normal
         ingredient = ingredient.replace('⁄', '/')
         ingredient = ingredient.replace('½', ' 1/2')
@@ -1024,8 +1046,11 @@ class RecipeScraper:
                 # Număr întreg sau zecimal
                 quantity = float(quantity_str)
             
-            # Împarte la numărul de porții
-            normalized = quantity / servings
+            # Împarte la numărul de porții doar dacă servings > 1
+            if servings and servings > 1:
+                normalized = quantity / servings
+            else:
+                normalized = quantity
             
             # Formatează rezultatul ca număr zecimal (nu fracții)
             # Rotunjește la 2 zecimale pentru precizie, elimină zerourile finale
@@ -1035,11 +1060,15 @@ class RecipeScraper:
             # Formatează cu 2 zecimale, apoi elimină zerourile finale și punctul dacă e număr întreg
             quantity_formatted = f"{normalized:.2f}".rstrip('0').rstrip('.')
             
-            # Reconstruiește ingredientul cu spațiu între cantitate și unitate
+            # Curăță rest_of_ingredient - elimină " . " și " of " de la început
+            rest_of_ingredient = rest_of_ingredient.lstrip('. ')
+            rest_of_ingredient = re.sub(r'^of\s+', '', rest_of_ingredient)
+            
+            # Reconstruiește ingredientul cu cantitate și unitate între []
             if unit:
-                return f"{quantity_formatted} {unit} {rest_of_ingredient}".strip()
+                return f"[{quantity_formatted} {unit}] {rest_of_ingredient}".strip()
             else:
-                return f"{quantity_formatted} {rest_of_ingredient}".strip()
+                return f"[{quantity_formatted}] {rest_of_ingredient}".strip()
                 
         except (ValueError, ZeroDivisionError):
             # Dacă parsarea eșuează, returnează ingredientul neschimbat
