@@ -696,8 +696,11 @@ class RecipeImporter:
                 # Permite utilizatorului să specifice un nume diferit
                 new_name = input(f"  Introdu numele corect sau ENTER pentru a sări: ").strip()
                 if new_name:
+                    # Salvează maparea pentru viitor
+                    self.new_mappings[name_lower] = new_name
+                    print(f"  💾 Mapare salvată: '{name}' → '{new_name}'")
                     # Recursiv - încearcă să găsești/creezi cu numele nou
-                    return self.find_or_create_grocery_item(new_name)
+                    return self.find_or_create_grocery_item(new_name, _visited)
                 else:
                     print(f"  ⚠ Sărit grocery item pentru '{name}'")
                     return None
@@ -975,8 +978,8 @@ class RecipeImporter:
             #     properties["Favorite"] = {"checkbox": recipe_data['favorite']}
             
             # Adaugă Link (URL) - doar dacă proprietatea există în baza de date
-            if recipe_data.get('link') and 'Link' in available_props:
-                properties["Link"] = {"url": recipe_data['link']}
+            if recipe_data.get('link') and 'link' in available_props:
+                properties["link"] = {"url": recipe_data['link']}
             
             # Creează pagina fără template (template-ul va fi aplicat la final)
             new_page = notion.pages.create(
