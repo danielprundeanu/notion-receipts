@@ -266,18 +266,79 @@ class RecipeImporter:
         """
         Parsează o linie de ingredient.
         Formate acceptate:
-        - 500g Faina
-        - 2 buc Oua
-        - 1 lingura Zahar
+        - [500 g] Faina
+        - [2] Oua
+        - [1 tbsp] Zahar
+        - 500g Faina (format vechi)
         - Sare (fără cantitate)
-        - 500g Faina (Faina alba)  # cu grocery item specific în paranteze
-        - 0.5 large tomatoes, finely chopped  # cu adjective și observații
+        - [500 g] Faina (Faina alba)  # cu grocery item specific în paranteze
+        - [0.5] large tomatoes, finely chopped  # cu adjective și observații
         """
         # Lista de adjective comune pentru ingrediente (fără culori - ele fac parte din nume)
         # Exemplu: "black beans", "red onion", "green chilli" - culorile rămân în nume
         adjectives = r'\b(large|small|medium|fresh|dried|chopped|diced|sliced|minced|grated|peeled|crushed|whole|canned|frozen|ripe|unripe|raw|cooked)\b'
         
-        # Pattern pentru ingredient cu cantitate și unitate
+        # Pattern pentru formatul nou cu [] - [cantitate unitate] nume
+        # Exemplu: "[0.5 g] large tomatoes" sau "[2] eggs"
+        pattern_brackets = r'^\[(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?\]\s+(.+?)(?:\s*\((.+?)\))?$'
+        match = re.match(pattern_brackets, line)
+        
+        if match:
+            quantity = float(match.group(1))
+            unit = match.group(2) or ''
+            rest = match.group(3).strip()
+            grocery_item = match.group(4).strip() if match.group(4) else None
+            
+            # Separă observațiile (după virgulă)
+            observations = ''
+            name = rest
+            if ',' in rest:
+                parts = rest.split(',', 1)
+                name = parts[0].strip()
+                observations = parts[1].strip()
+            
+            # Elimină adjectivele din nume și le adaugă la observații
+            name_words = name.split()
+            cleaned_words = []
+            removed_adjectives = []
+            
+            for word in name_words:
+                if re.match(adjectives, word, re.IGNORECASE):
+                    removed_adjectives.append(word)
+                else:
+                    cleaned_words.append(word)
+            
+            # Reconstituie numele fără adjective
+            if cleaned_words:
+                name = ' '.join(cleaned_words)
+            
+            # Adaugă adjectivele eliminate la începutul observațiilor
+            if removed_adjectives:
+                adj_text = ' '.join(removed_adjectives)
+                if observations:
+                    observations = f"{adj_text}, {observations}"
+                else:
+                    observations = adj_text
+            
+            # Singularizează numele (tomatoes -> tomato)
+            name = self._singularize(name)
+            
+            # Capitalizează prima literă
+            name = name.capitalize()
+            
+            # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
+            if not grocery_item:
+                grocery_item = name
+            
+            return {
+                'quantity': quantity,
+                'unit': unit,
+                'name': name,
+                'grocery_item': grocery_item,
+                'observations': observations
+            }
+        
+        # Pattern pentru formatul vechi (fără brackets) - pentru compatibilitate
         # Exemplu: "0.5 large tomatoes, finely chopped" sau "500g beef mince"
         pattern = r'^(\d+(?:\.\d+)?)\s*([a-zA-Z]+)?\s+(.+?)(?:\s*\((.+?)\))?$'
         match = re.match(pattern, line)
