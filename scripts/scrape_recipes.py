@@ -6,6 +6,7 @@ Suportă:
 - Schema.org Recipe markup (JSON-LD)
 - Parsare HTML generică
 - Multiple URL-uri dintr-un fișier
+- Traducere automată din română în engleză
 """
 
 import requests
@@ -19,6 +20,7 @@ import os
 from urllib.parse import urlparse
 import hashlib
 from ingredient_processor import get_ingredient_processor
+from deep_translator import GoogleTranslator
 
 
 class RecipeScraper:
@@ -27,6 +29,29 @@ class RecipeScraper:
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
         }
         self.ingredient_processor = get_ingredient_processor(use_notion=True)
+        self.translator = GoogleTranslator(source='ro', target='en')
+    
+    def _translate_text(self, text: str) -> str:
+        """Traduce text din română în engleză"""
+        if not text or not text.strip():
+            return text
+        
+        try:
+            # Verifică dacă textul este deja în engleză (conține mai mult de 50% cuvinte englezești)
+            words = text.lower().split()
+            english_indicators = ['the', 'and', 'or', 'with', 'for', 'to', 'of', 'in', 'on', 'at']
+            english_word_count = sum(1 for word in words if word in english_indicators)
+            
+            # Dacă mai mult de 30% sunt cuvinte englezești, nu traduce
+            if len(words) > 0 and (english_word_count / len(words)) > 0.3:
+                return text
+            
+            # Traduce textul
+            translated = self.translator.translate(text)
+            return translated if translated else text
+        except Exception as e:
+            print(f"  ⚠ Eroare la traducere: {e}")
+            return text
     
     def scrape_recipe(self, url: str) -> Optional[Dict]:
         """Extrage rețeta de la URL dat"""
@@ -122,9 +147,35 @@ class RecipeScraper:
             'image_url': self._extract_image_url(data.get('image'))
         }
         
+        # Traduce numele rețetei
+        recipe['name'] = self._translate_text(recipe['name'])
+        
+        # Traduce ingredientele din fiecare grup
+        for group in recipe['ingredient_groups']:
+            # Traduce numele grupului dacă există
+            if group['name']:
+                group['name'] = self._translate_text(group['name'])
+            # Traduce fiecare ingredient
+            group['items'] = [self._translate_text(item) for item in group['items']]
+        
+        # Actualizează lista plată de ingrediente
+        recipe['ingredients'] = []
+        for group in recipe['ingredient_groups']:
+            recipe['ingredients'].extend(group['items'])
+        
+        # Traduce instrucțiunile
+        translated_instructions = []
+        for step in recipe['instructions']:
+            if isinstance(step, dict) and 'text' in step:
+                step['text'] = self._translate_text(step['text'])
+                translated_instructions.append(step)
+            else:
+                translated_instructions.append(self._translate_text(step))
+        recipe['instructions'] = translated_instructions
+        
         total_groups = len(ingredient_groups)
         print(f"  ✓ Titlu: {recipe['name']}")
-        print(f"  ✓ Ingrediente: {len(all_ingredients)} ({total_groups} grup{'uri' if total_groups != 1 else ''})")
+        print(f"  ✓ Ingrediente: {len(recipe['ingredients'])} ({total_groups} grup{'uri' if total_groups != 1 else ''})")
         print(f"  ✓ Pași: {len(recipe['instructions'])}")
         
         return recipe
