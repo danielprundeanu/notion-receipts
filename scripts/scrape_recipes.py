@@ -239,9 +239,9 @@ class RecipeScraper:
                     # Procesează ingredientul pentru a separa adjectivele
                     processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_translated)
                     
-                    # Dacă am găsit adjective, adaugă-le ca observații în paranteze
+                    # Dacă am găsit adjective, adaugă-le ca observații după virgulă
                     if adjectives:
-                        current_ingredients.append(f"{processed} ({adjectives})")
+                        current_ingredients.append(f"{processed}, {adjectives}")
                     else:
                         current_ingredients.append(processed)
                 continue
@@ -624,9 +624,9 @@ class RecipeScraper:
             # Procesează ingredientul pentru a separa adjectivele
             processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_text)
             
-            # Dacă am găsit adjective, adaugă-le ca observații
+            # Dacă am găsit adjective, adaugă-le ca observații după virgulă
             if adjectives:
-                ingredients.append(f"{processed} ({adjectives})")
+                ingredients.append(f"{processed}, {adjectives}")
             else:
                 ingredients.append(processed)
         
@@ -643,7 +643,10 @@ class RecipeScraper:
         elif isinstance(instructions_data, list):
             for item in instructions_data:
                 if isinstance(item, str):
-                    steps.append(item.strip())
+                    # Elimină caractere speciale (checkboxes, bullets, etc.)
+                    text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', item.strip())
+                    text = re.sub(r'\s+', ' ', text).strip()
+                    steps.append(text)
                 elif isinstance(item, dict):
                     item_type = item.get('@type', '')
                     
@@ -659,14 +662,23 @@ class RecipeScraper:
                             if isinstance(sub_item, dict):
                                 sub_text = sub_item.get('text') or sub_item.get('name') or ''
                                 if sub_text:
-                                    steps.append(sub_text.strip())
+                                    # Elimină caractere speciale (checkboxes, bullets, etc.)
+                                    sub_text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', sub_text.strip())
+                                    sub_text = re.sub(r'\s+', ' ', sub_text).strip()
+                                    steps.append(sub_text)
                             elif isinstance(sub_item, str):
-                                steps.append(sub_item.strip())
+                                # Elimină caractere speciale (checkboxes, bullets, etc.)
+                                text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', sub_item.strip())
+                                text = re.sub(r'\s+', ' ', text).strip()
+                                steps.append(text)
                     else:
                         # E un pas simplu (HowToStep)
                         text = item.get('text') or item.get('name') or ''
                         if text:
-                            steps.append(text.strip())
+                            # Elimină caractere speciale (checkboxes, bullets, etc.)
+                            text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text.strip())
+                            text = re.sub(r'\s+', ' ', text).strip()
+                            steps.append(text)
         
         return steps
     
@@ -869,8 +881,12 @@ class RecipeScraper:
                 text = li.get_text().strip()
                 has_quantity = any(char.isdigit() for char in text) or any(unit in text.lower() for unit in ['cup', 'tsp', 'tbsp', 'oz', 'g', 'ml', 'kg', 'pinch', 'handful', 'bunch'])
                 
-                # Dacă e text lung fără cantități și nu e deja în descrieri
-                if len(text) > 80 and not has_quantity and text not in descriptions:
+                # Pattern pentru note/tips: "Word: Description" (de ex: "Panko: The breadcrumbs...")
+                # Acestea sunt notițe, nu descrieri ale rețetei
+                is_note_pattern = bool(re.match(r'^[A-Z][a-z]+\s*:\s+.+', text))
+                
+                # Dacă e text lung fără cantități, nu e notă pattern, și nu e deja în descrieri
+                if len(text) > 80 and not has_quantity and not is_note_pattern and text not in descriptions:
                     descriptions.append(text)
         
         # Metodă 1: Caută în TOT textul paginii pentru "servings", "portii", etc
@@ -942,13 +958,18 @@ class RecipeScraper:
                 # Caută în ordinea copiilor pentru a păstra structura cu headere
                 for child in container.find_all(['h4', 'h5', 'h6', 'strong', 'li', 'p'], recursive=True):
                     text = child.get_text().strip()
-                    text = re.sub(r'\s+', ' ', text)
+                    # Elimină caractere speciale (checkboxes, bullets, etc.) de oriunde
+                    text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text)
+                    text = re.sub(r'\s+', ' ', text).strip()
                     
                     # Verifică dacă e heading (scurt, fără verbe multe)
                     is_heading = child.name in ['h4', 'h5', 'h6', 'strong'] or (len(text.split()) <= 6 and not '.' in text)
-                    has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse)\b', text.lower()))
+                    has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse|prepare|divide|process|blend|whisk)\b', text.lower()))
                     
-                    if text and text not in seen_instructions:
+                    # Exclude linii care par să fie liste de ingrediente opționale (fără verbe active)
+                    looks_like_ingredient_list = bool(re.search(r'\btortillas?\b|\bchips?\b|\blettuce\b|\bcheese\b|\bavocado\b|\btoppings?\b', text.lower()))  and not has_action_verb
+                    
+                    if text and text not in seen_instructions and not looks_like_ingredient_list:
                         # Dacă e heading fără verbe prea multe, adaugă ca secțiune
                         if is_heading and len(text.split()) <= 6 and not text in seen_instructions:
                             instructions.append(f"## {text}")
@@ -973,9 +994,11 @@ class RecipeScraper:
                         items = next_container.find_all(['li', 'p'], recursive=True)
                         for item in items:
                             text = item.get_text().strip()
-                            text = re.sub(r'\s+', ' ', text)
+                            # Elimină caractere speciale (checkboxes, bullets, etc.) de oriunde
+                            text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text)
+                            text = re.sub(r'\s+', ' ', text).strip()
                             if text and len(text) > 20 and text not in seen_instructions:
-                                has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse)\b', text.lower()))
+                                has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse|prepare|divide|process|blend|whisk)\b', text.lower()))
                                 is_title = text.endswith(':') or (len(text.split()) <= 5 and not has_action_verb)
                                 if not is_title and has_action_verb:
                                     instructions.append(text)
@@ -989,9 +1012,11 @@ class RecipeScraper:
                 potential_instructions = []
                 for li in ol.find_all('li', recursive=False):
                     text = li.get_text().strip()
-                    text = re.sub(r'\s+', ' ', text)
+                    # Elimină caractere speciale (checkboxes, bullets, etc.) de oriunde
+                    text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text)
+                    text = re.sub(r'\s+', ' ', text).strip()
                     if text and len(text) > 20:
-                        has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse)\b', text.lower()))
+                        has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|boil|drain|rinse|prepare|divide|process|blend|whisk)\b', text.lower()))
                         if has_action_verb:
                             potential_instructions.append(text)
                 
@@ -1008,10 +1033,44 @@ class RecipeScraper:
         
         print(f"  ✓ Parsare HTML: {total_ingredients} ingrediente ({len(ingredient_groups)} grupuri), {len(instructions)} instrucțiuni găsite")
         
-        # Adaugă descrierile la începutul instrucțiunilor (dacă există)
+        # Filtru ÎNAINTE de a adăuga descriptions: Elimină instrucțiuni care nu au verbe de acțiune
+        filtered_instructions = []
+        for inst in instructions:
+            # Păstrează headerele (încep cu ##) DOAR dacă au sens (> 3 cuvinte, nu sunt măsurători)
+            if inst.startswith('##'):
+                header_text = inst[3:].strip()
+                # Elimină headere scurte sau care par ingrediente/note
+                is_too_short = len(header_text.split()) <= 2
+                looks_like_note = bool(re.search(r'^\w+:?\s*$', header_text))
+                has_measurement = bool(re.search(r'\d+(/\d+)?\s*(tsp|tbsp|cup|oz|g|ml|kg|lb)', header_text.lower()))
+                
+                if not is_too_short and not looks_like_note and not has_measurement:
+                    filtered_instructions.append(inst)
+                continue
+            
+            # Pentru instrucțiuni normale, verifică dacă au verbe de acțiune
+            has_action_verb = bool(re.search(r'\b(add|cook|heat|place|combine|mix|stir|pour|bring|simmer|serve|warm|fold|cut|chop|dice|slice|preheat|bake|fry|saute|sauté|boil|drain|rinse|blend|process|whisk|season|top|layer|arrange|spread|drizzle|garnish|transfer|remove|divide|toss|prepare)\b', inst.lower()))
+            
+            # Elimină linii care par să fie liste de ingrediente sau note scurte fără verbe
+            looks_like_single_word = bool(re.search(r'^\w+:?\s*$', inst))  # Un singur cuvânt urmat opțional de :
+            has_measurement = bool(re.search(r'\d+(/\d+)?\s*(tsp|tbsp|cup|oz|g|ml|kg|lb)', inst.lower()))
+            
+            # Păstrează liniile cu verbe de acțiune SAU linii lungi (probabil descrieri)
+            # Elimină doar linii scurte (<= 6 cuvinte) cu măsurători sau cuvinte singure fără verbe
+            if has_action_verb:
+                filtered_instructions.append(inst)
+            elif not looks_like_single_word and not has_measurement:
+                filtered_instructions.append(inst)
+        
+        instructions = filtered_instructions
+        
+        # Adaugă descrierile la începutul instrucțiunilor (dacă există) - doar dacă sunt lungi
         if descriptions:
-            print(f"    + {len(descriptions)} descrieri mutate la Method")
-            instructions = descriptions + instructions
+            # Filtru pentru descriptions: doar linii lungi descriptive
+            valid_descriptions = [d for d in descriptions if len(d.split()) > 15]
+            if valid_descriptions:
+                print(f"    + {len(valid_descriptions)} descrieri mutate la Method")
+                instructions = valid_descriptions + instructions
         
         # Extrage imaginea (og:image sau prima img mare)
         image_url = None
@@ -1092,7 +1151,12 @@ class RecipeScraper:
         ingredient_groups = recipe.get('ingredient_groups', [])
         seen_ingredients = set()  # Pentru deduplicare globală
         
-        for group_idx, group in enumerate(ingredient_groups, 1):
+        # Sortează grupurile: grupurile fără nume (main ingredients) primele, apoi cele cu nume
+        groups_without_name = [g for g in ingredient_groups if not g.get('name')]
+        groups_with_name = [g for g in ingredient_groups if g.get('name')]
+        sorted_groups = groups_without_name + groups_with_name
+        
+        for group_idx, group in enumerate(sorted_groups, 1):
             # Scrie numele grupului în brackets, sau numărul dacă nu are nume
             group_name = group.get('name')
             if group_name:
@@ -1146,7 +1210,12 @@ class RecipeScraper:
         if recipe.get('instructions'):
             lines.append("Steps:")
             step_number = 1
+            
             for step in recipe['instructions']:
+                # Elimină newlines din interior (pot fi adăugate de HTML parsing)
+                step = step.replace('\n', ' ').replace('\r', ' ')
+                step = re.sub(r'\s+', ' ', step).strip()  # Normalizează spațiile
+                
                 # Verifică dacă e header de secțiune (începe cu ##)
                 if step.startswith('## '):
                     # Adaugă header fără numerotare
@@ -1461,7 +1530,14 @@ class RecipeScraper:
         ingredient = ingredient.replace('⅓', '1/3')
         ingredient = ingredient.replace('⅔', '2/3')
         
-        return ingredient
+        # Procesează ingredientul pentru a separa adjectivele și descrierile
+        processed, descriptions = self.ingredient_processor.process_ingredient_line(ingredient)
+        
+        # Dacă am găsit descrieri, adaugă-le ca observații
+        if descriptions:
+            return f"{processed}, {descriptions}"
+        
+        return processed
 
 
 def scrape_recipes_from_file(mode: str):
