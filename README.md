@@ -58,6 +58,35 @@ Scriptul va:
 /Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python import_recipes.py scraped_recipes.txt
 ```
 
+Sau folosește aliasurile (vezi `setup_aliases.sh`):
+```bash
+notion-import          # Import din data/urls/scraped_recipe_urls.txt
+notion-import-local    # Import din data/local/scraped_local_recipes.txt
+```
+
+#### 4. Aplică template în Notion (manual)
+
+După import, deschide fiecare rețetă în Notion și aplică template-ul dorit pentru structura paginii.
+
+#### 5. Adaugă pașii de preparare
+
+După ce ai aplicat template-ul, rulează:
+
+```bash
+/Users/danielprundeanu/Documents/GitHub/notion/.venv/bin/python scripts/add_recipe_steps.py
+```
+
+Sau folosește aliasul:
+```bash
+notion-steps           # Adaugă steps pentru data/urls/scraped_recipe_urls.txt
+notion-steps-local     # Adaugă steps pentru data/local/scraped_local_recipes.txt
+```
+
+Scriptul va:
+- ✓ Găsi rețetele în Notion după titlu
+- ✓ Verifica dacă pagina are deja conținut (skip dacă da)
+- ✓ Adăuga pașii ca secțiune "Instructions" cu pași numerotați
+
 ### Metoda 2: Scriere manuală în fișier text
 
 #### 1. Creează fișierul cu rețete
@@ -179,6 +208,27 @@ Scriptul verifică automat dacă unitatea folosită pentru un ingredient se potr
 - Dacă scrii `500ml Faina` → ❌ EROARE - oprește și cere conversie
 
 **După ce rezolvi eroarea**, rulează din nou scriptul - rețetele deja importate nu vor fi duplicate.
+
+## Actualizare Rețete Existente
+
+Când rulezi import pentru o rețetă care există deja în Notion, scriptul va întreba dacă vrei să actualizezi ingredientele.
+
+**Smart Update** - Ingredientele sunt actualizate inteligent:
+- ✓ **Păstrează** ingredientele existente care nu s-au schimbat
+- ↻ **Actualizează** cantitatea/observațiile pentru ingredientele modificate
+- + **Adaugă** doar ingredientele noi
+- − **Șterge** doar ingredientele care nu mai există
+
+**Exemplu**:
+- Rețeta veche: `200g Faina, 2 Oua, Sare`
+- Rețeta nouă: `250g Faina, 2 Oua, 100ml Lapte`
+- **Rezultat**:
+  - `Faina` - actualizată cantitate 200g → 250g
+  - `Oua` - neschimbat (cantitatea e aceeași)
+  - `Lapte` - adăugat nou
+  - `Sare` - șters
+
+Acest lucru previne duplicatele și păstrează integritatea datelor în Notion!
 
 ## Troubleshooting
 

@@ -24,8 +24,8 @@ alias notion-import-url='cd /Users/danielprundeanu/Documents/GitHub/notion && so
 alias notion-import-local='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py -local'
 alias notion-import='notion-import-url'  # Default: import URLs
 
-alias notion-steps-url='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py -url --steps'
-alias notion-steps-local='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/import_recipes.py -local --steps'
+alias notion-steps-url='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/add_recipe_steps.py data/urls/scraped_recipe_urls.txt'
+alias notion-steps-local='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/add_recipe_steps.py data/local/scraped_local_recipes.txt'
 alias notion-steps='notion-steps-url'  # Default: steps for URLs
 
 # Update metadata
