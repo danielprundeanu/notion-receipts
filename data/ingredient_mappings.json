@@ -24,7 +24,18 @@
     "plain greek yogurt": "Greek Yogurt 2%",
     ". lemon juice": "Lemon",
     ". finely dill": "Fresh Dill",
-    ". extra-virgin olive oil": "n"
+    ". extra-virgin olive oil": "n",
+    "lemon juice": "Lemon",
+    "finely dill": "Fresh Dill",
+    "to 2 tbsp. extra-virgin olive oil": "Olive Oil",
+    "extra-virgin olive oil": "Olive Oil",
+    "globe eggplant cut into 1/2-inch cube": "Eggplant",
+    "tamari": "Tamari Sauce",
+    "halloumi cheese cut into 1/3-in.-thick slice": "Halloumi",
+    "halloumi": "Halloumi cheese",
+    "or 1/2 english cucumber": "Cucumber",
+    "caper": "Capers",
+    "grains of choice (farro": "Quinoa"
   },
   "unit_conversions": {
     "custom_rules": []
