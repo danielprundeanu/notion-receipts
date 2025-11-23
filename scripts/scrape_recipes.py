@@ -54,6 +54,10 @@ class RecipeScraper:
             print(f"  ⚠ Eroare la traducere: {e}")
             return text
     
+    def _is_local_file(self, path: str) -> bool:
+        """Verifică dacă path-ul este un fișier local"""
+        return os.path.isfile(path)
+    
     def _parse_local_file(self, filepath: str) -> Optional[Dict]:
         """Parsează rețetă din fișier text local (același format ca parse_local_recipes.py)"""
         print(f"\n{'='*60}")
@@ -101,12 +105,17 @@ class RecipeScraper:
             'description': [],
             'ingredient_groups': [],
             'instructions': [],
-            'image_url': None
+            'image_url': None,
+            'extra_sections': []  # Pentru secțiuni extra cu #
         }
         
         current_section = None
         current_group_name = None
         current_ingredients = []
+        current_instructions = []
+        current_description = []
+        current_extra_section = None
+        current_extra_content = []
         
         for line in lines[start_idx:]:
             if not line:
@@ -114,8 +123,72 @@ class RecipeScraper:
             
             line_lower = line.lower()
             
+            # Detectează secțiuni cu # (# Ingredients, # Steps, # Description, etc.)
+            if line.startswith('#'):
+                # Salvează secțiunea anterioară
+                if current_section == 'extra' and current_extra_section and current_extra_content:
+                    recipe['extra_sections'].append({
+                        'title': current_extra_section,
+                        'content': current_extra_content
+                    })
+                    current_extra_content = []
+                
+                section_title = line.lstrip('#').strip().rstrip(':')
+                section_lower = section_title.lower()
+                
+                # Verifică tip secțiune
+                if re.search(r'(ingredient|ingrediente)', section_lower):
+                    if current_ingredients:
+                        recipe['ingredient_groups'].append({
+                            'name': current_group_name or '1',
+                            'items': current_ingredients
+                        })
+                        current_ingredients = []
+                    current_section = 'ingredients'
+                    print(f"  ✓ Secțiune: {section_title}")
+                
+                elif re.search(r'(step|method|preparare|mod de preparare|instructions|directions)', section_lower):
+                    if current_ingredients:
+                        recipe['ingredient_groups'].append({
+                            'name': current_group_name or '1',
+                            'items': current_ingredients
+                        })
+                        current_ingredients = []
+                    if current_description:
+                        recipe['description'] = current_description
+                        current_description = []
+                    current_section = 'instructions'
+                    print(f"  ✓ Secțiune: {section_title}")
+                
+                elif re.search(r'(description|descriere)', section_lower):
+                    if current_ingredients:
+                        recipe['ingredient_groups'].append({
+                            'name': current_group_name or '1',
+                            'items': current_ingredients
+                        })
+                        current_ingredients = []
+                    current_section = 'description'
+                    print(f"  ✓ Secțiune: {section_title}")
+                
+                else:
+                    # Altă secțiune (ex: # Serve, # Tips, etc.)
+                    if current_ingredients:
+                        recipe['ingredient_groups'].append({
+                            'name': current_group_name or '1',
+                            'items': current_ingredients
+                        })
+                        current_ingredients = []
+                    if current_description:
+                        recipe['description'] = current_description
+                        current_description = []
+                    current_section = 'extra'
+                    current_extra_section = self._translate_text(section_title)
+                    print(f"  ✓ Secțiune extra: {current_extra_section}")
+                
+                continue
+            
             # Servings
-            if re.search(r'(servings?|por[țt]ii|yields?)', line_lower):
+            if re.search(r'(servings?|por[țt]ii|yields?)\s*:', line_lower):
                 match = re.search(r'(\d+)', line)
                 if match:
                     recipe['servings'] = int(match.group(1))
@@ -123,14 +196,14 @@ class RecipeScraper:
                 continue
             
             # Link
-            if re.search(r'^(link|url)\s*:', line_lower):
-                link_match = re.search(r'(?:link|url)\s*:\s*(.+)', line, re.I)
+            if line_lower.startswith('link:'):
+                link_match = re.search(r'link\s*:\s*(.+)', line, re.I)
                 if link_match:
                     recipe['link'] = link_match.group(1).strip()
-                    print(f"  ℹ Link: {recipe['link'][:50]}...")
+                    print(f"  ℹ Link: {recipe['link'][:60]}...")
                 continue
             
-            # Slices
+            # Slices / Receipe
             if re.search(r'slice\s*/\s*receipe\s*:', line_lower):
                 match = re.search(r'(\d+)', line)
                 if match:
@@ -139,7 +212,7 @@ class RecipeScraper:
                 continue
             
             # Time
-            if re.search(r'(timp|time|durat)', line_lower):
+            if re.search(r'(prep time|cook time|total time|timp|time|durat)\s*:', line_lower):
                 hours = re.search(r'(\d+)\s*(?:h|ore|ora|hour)', line, re.I)
                 minutes = re.search(r'(\d+)\s*(?:m|min|minute)', line, re.I)
                 
@@ -154,67 +227,45 @@ class RecipeScraper:
                         print(f"  ℹ Time: {total} min")
                 continue
             
-            # Secțiune Ingrediente
-            if re.search(r'^(ingredient[e]?s?|ingrediente)[\s:]*$', line_lower):
-                current_section = 'ingredients'
-                print(f"  ✓ Secțiune Ingrediente")
-                continue
-            
-            # Secțiune Instrucțiuni
-            if re.search(r'^(instructions?|directions?|mod[ul]*\s+de\s+preparare|preparare|steps?|method|pa[șs]i)[\s:]*$', line_lower):
-                if current_ingredients:
-                    recipe['ingredient_groups'].append({
-                        'name': current_group_name or '1',
-                        'items': current_ingredients
-                    })
-                    current_ingredients = []
-                
-                current_section = 'instructions'
-                print(f"  ✓ Secțiune Instrucțiuni")
-                continue
-            
-            # Subsecțiune ingrediente
-            if current_section == 'ingredients' and line.endswith(':') and len(line.split()) <= 4:
-                if current_ingredients:
-                    recipe['ingredient_groups'].append({
-                        'name': current_group_name or '1',
-                        'items': current_ingredients
-                    })
-                    current_ingredients = []
-                
-                current_group_name = line.rstrip(':')
-                # Traduce numele grupului
-                group_translated = self._translate_text(current_group_name)
-                if group_translated != current_group_name:
-                    print(f"  ℹ Grup: {current_group_name} → {group_translated}")
-                    current_group_name = group_translated
-                else:
-                    print(f"  ℹ Grup: {current_group_name}")
-                continue
-            
-            # Procesare ingrediente
+            # Procesare pe baza secțiunii curente
             if current_section == 'ingredients':
                 # Curăță bullet points
                 clean = re.sub(r'^[\-–•*▢☐□▪◦✓✔︎→◆■●○]\s*', '', line).strip()
                 
                 # Verifică dacă arată ca ingredient
-                if re.match(r'^\d', clean) or re.search(r'\b\d+\s*(?:g|kg|ml|l|cup|tsp|tbsp|oz|lb|buc|lingur)', clean, re.I):
-                    # Traduce ingredientul
+                if clean and (re.match(r'^\d', clean) or re.search(r'\b\d+', clean) or len(clean.split()) <= 6):
                     ingredient_translated = self._translate_text(clean)
-                    current_ingredients.append(ingredient_translated)
+                    
+                    # Procesează ingredientul pentru a separa adjectivele
+                    processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_translated)
+                    
+                    # Dacă am găsit adjective, adaugă-le ca observații în paranteze
+                    if adjectives:
+                        current_ingredients.append(f"{processed} ({adjectives})")
+                    else:
+                        current_ingredients.append(processed)
                 continue
             
-            # Procesare instrucțiuni
-            if current_section == 'instructions':
-                # Curăță numerotare
+            elif current_section == 'instructions':
                 clean = re.sub(r'^[\d.)\-–•*]\s*', '', line).strip()
                 if len(clean) >= 10:
-                    # Traduce instrucțiunea
                     instruction_translated = self._translate_text(clean)
-                    recipe['instructions'].append(instruction_translated)
+                    current_instructions.append(instruction_translated)
                 continue
             
-            # Auto-detectare
+            elif current_section == 'description':
+                if len(line) > 10:
+                    desc_translated = self._translate_text(line)
+                    current_description.append(desc_translated)
+                continue
+            
+            elif current_section == 'extra':
+                if len(line) > 5:
+                    extra_translated = self._translate_text(line)
+                    current_extra_content.append(extra_translated)
+                continue
+            
+            # Auto-detectare (dacă nu suntem în nicio secțiune)
             if not current_section:
                 clean = re.sub(r'^[\-–•*]\s*', '', line).strip()
                 
@@ -224,21 +275,39 @@ class RecipeScraper:
                     print(f"  ℹ Auto-detectat Ingrediente")
                     ingredient_translated = self._translate_text(clean)
                     current_ingredients.append(ingredient_translated)
-                # Descriere
-                elif len(line) > 20:
-                    desc_translated = self._translate_text(line)
-                    recipe['description'].append(desc_translated)
+                # Skip linii de metadata
+                elif not any(x in line_lower for x in ['nutrition', 'calories', 'prep', 'cook', 'total', 'servings', 'link']):
+                    # Presupune că e descriere
+                    if len(line) > 20:
+                        desc_translated = self._translate_text(line)
+                        current_description.append(desc_translated)
         
-        # Adaugă ultimul grup
+        # Salvează ultimele secțiuni
         if current_ingredients:
             recipe['ingredient_groups'].append({
                 'name': current_group_name or '1',
                 'items': current_ingredients
             })
         
+        if current_description:
+            recipe['description'] = current_description
+        
+        if current_instructions:
+            recipe['instructions'] = current_instructions
+        
+        if current_section == 'extra' and current_extra_section and current_extra_content:
+            recipe['extra_sections'].append({
+                'title': current_extra_section,
+                'content': current_extra_content
+            })
+        
         total_ingredients = sum(len(g['items']) for g in recipe['ingredient_groups'])
         print(f"  ✓ {total_ingredients} ingrediente ({len(recipe['ingredient_groups'])} grupuri)")
         print(f"  ✓ {len(recipe['instructions'])} instrucțiuni")
+        if recipe['description']:
+            print(f"  ✓ {len(recipe['description'])} paragrafe descriere")
+        if recipe['extra_sections']:
+            print(f"  ✓ {len(recipe['extra_sections'])} secțiuni extra")
         
         if not recipe['ingredient_groups']:
             print(f"  ⚠ Niciun ingredient găsit")
@@ -992,9 +1061,15 @@ class RecipeScraper:
         
         lines.append(f"Favorite: No")
         
-        # Link (URL)
-        if recipe.get('source_url'):
+        # Link (URL) - prioritizează link din fișier, apoi source_url
+        if recipe.get('link'):
+            lines.append(f"Link: {recipe['link']}")
+        elif recipe.get('source_url'):
             lines.append(f"Link: {recipe['source_url']}")
+        
+        # Slices (dacă există)
+        if recipe.get('slices'):
+            lines.append(f"Slices: {recipe['slices']}")
         
         # Image (Cover) - salvează path-ul local dacă există
         if recipe.get('image_path'):
@@ -1003,6 +1078,15 @@ class RecipeScraper:
             lines.append(f"Image: {recipe['image_url']}")
         
         lines.append("")
+        
+        # Descriere (dacă există) - ÎNAINTE de ingrediente
+        if recipe.get('description'):
+            if isinstance(recipe['description'], list):
+                for para in recipe['description']:
+                    lines.append(para)
+            else:
+                lines.append(recipe['description'])
+            lines.append("")
         
         # Ingrediente - grupate cu numele lor sau [1], [2], etc.
         ingredient_groups = recipe.get('ingredient_groups', [])
@@ -1073,6 +1157,14 @@ class RecipeScraper:
                     step_number += 1
             lines.append("")
         
+        # Adaugă secțiunile extra (# Serve, # Tips, etc.) DUPĂ Steps
+        if recipe.get('extra_sections'):
+            for section in recipe['extra_sections']:
+                lines.append(f"## {section['title']}")
+                for content_line in section['content']:
+                    lines.append(content_line)
+                lines.append("")
+        
         lines.append("")
         
         return '\n'.join(lines)
@@ -1109,6 +1201,18 @@ class RecipeScraper:
     
     def _convert_units(self, ingredient: str) -> str:
         """Convertește unitățile nestandard la unitățile disponibile în Notion"""
+        # Dacă ingredientul are deja format bracket [quantity unit] ingredient, skip conversie
+        if ingredient.strip().startswith('['):
+            return ingredient
+        
+        # Dacă ingredientul are observații în paranteze, extrage-le temporar
+        observations = ''
+        obs_match = re.search(r'\(([^)]+)\)\s*$', ingredient)
+        if obs_match:
+            observations = obs_match.group(1)
+            ingredient_original = ingredient
+            ingredient = ingredient[:obs_match.start()].strip()
+        
         # Dicționar de conversii - mapează la unitățile din Notion
         # Notion units: piece, tsp, tbsp, g, slice, handful, pinch, ml, scoop, bottle, cup
         conversions = {
@@ -1147,6 +1251,9 @@ class RecipeScraper:
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
         if not match:
+            # Nu are format de convertit, returnează cu observațiile
+            if observations:
+                return f"{ingredient} ({observations})"
             return ingredient
         
         quantity_str = match.group(1).strip()
@@ -1168,6 +1275,9 @@ class RecipeScraper:
                 break
         
         if not target_unit:
+            # Nu trebuie convertit, returnează cu observațiile
+            if observations:
+                return f"{ingredient} ({observations})"
             return ingredient
         
         # Parsează cantitatea
@@ -1197,13 +1307,29 @@ class RecipeScraper:
                 qty_formatted = f"{converted_qty:.1f}".rstrip('0').rstrip('.')
             
             # Reconstruiește ingredientul cu unitatea convertită
-            return f"{qty_formatted}{target_unit} {rest}".strip()
+            result = f"{qty_formatted}{target_unit} {rest}".strip()
+            
+            # Adaugă observațiile înapoi (dacă exist)
+            if observations:
+                result = f"{result} ({observations})"
+            
+            return result
             
         except (ValueError, ZeroDivisionError):
+            # Eroare, returnează original cu observațiile
+            if observations:
+                return f"{ingredient} ({observations})"
             return ingredient
     
     def _normalize_quantity(self, ingredient: str, servings: int) -> str:
         """Calculează cantitatea ingredientului per porție (împarte la servings) și formatează cu []"""
+        # Extrage observațiile din paranteze (dacă există) pentru a le păstra
+        observations = ''
+        obs_match = re.search(r'\(([^)]+)\)\s*$', ingredient)
+        if obs_match:
+            observations = obs_match.group(1)
+            ingredient = ingredient[:obs_match.start()].strip()
+        
         # Mai întâi înlocuim fracțiile unicode cu text normal
         ingredient = ingredient.replace('⁄', '/')
         ingredient = ingredient.replace('½', ' 1/2')
@@ -1220,6 +1346,9 @@ class RecipeScraper:
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
         if not match:
+            # Dacă nu are cantitate, returnează cu observațiile (dacă există)
+            if observations:
+                return f"{ingredient} ({observations})"
             return ingredient
         
         quantity_str = match.group(1).strip()
@@ -1252,6 +1381,8 @@ class RecipeScraper:
             # Formatează rezultatul ca număr zecimal (nu fracții)
             # Rotunjește la 2 zecimale pentru precizie, elimină zerourile finale
             if normalized == 0:
+                if observations:
+                    return f"{ingredient} ({observations})"
                 return ingredient  # Skip dacă e 0
             
             # Formatează cu 2 zecimale, apoi elimină zerourile finale și punctul dacă e număr întreg
@@ -1262,13 +1393,22 @@ class RecipeScraper:
             rest_of_ingredient = re.sub(r'^of\s+', '', rest_of_ingredient)
             
             # Reconstruiește ingredientul cu cantitate și unitate între []
+            result = ''
             if unit:
-                return f"[{quantity_formatted} {unit}] {rest_of_ingredient}".strip()
+                result = f"[{quantity_formatted} {unit}] {rest_of_ingredient}".strip()
             else:
-                return f"[{quantity_formatted}] {rest_of_ingredient}".strip()
+                result = f"[{quantity_formatted}] {rest_of_ingredient}".strip()
+            
+            # Adaugă observațiile la sfârșit (dacă există)
+            if observations:
+                result = f"{result} ({observations})"
+            
+            return result
                 
         except (ValueError, ZeroDivisionError):
-            # Dacă parsarea eșuează, returnează ingredientul neschimbat
+            # Dacă parsarea eșuează, returnează ingredientul cu observațiile (dacă există)
+            if observations:
+                return f"{ingredient} ({observations})"
             return ingredient
     
     def _clean_ingredient(self, ingredient: str) -> str:
@@ -1369,11 +1509,31 @@ def scrape_recipes_from_file(mode: str):
     recipes = []
     
     if is_local:
-        # Mod local - parsează fișier text
-        print(f"Procesez fișier text local\n")
-        recipe = scraper._parse_local_file(input_file)
-        if recipe:
-            recipes.append(recipe)
+        # Mod local - split în rețete multiple
+        # Împarte după separator: ---- (4+ liniuțe) sau === sau 3+ linii goale
+        recipe_blocks = re.split(r'(?:^|\n)\s*-{4,}\s*\n|\n\s*={3,}\s*\n|\n(?:\s*\n){5,}', content)
+        
+        print(f"Găsite {len(recipe_blocks)} blocuri potențiale de rețete\n")
+        
+        for block_num, block in enumerate(recipe_blocks, 1):
+            if not block.strip():
+                continue
+            
+            print(f"\n{'─'*60}")
+            print(f"Procesez blocul {block_num}")
+            print(f"{'─'*60}")
+            
+            # Scrie blocul temporar într-un fișier
+            temp_file = f"/tmp/recipe_block_{block_num}.txt"
+            with open(temp_file, 'w', encoding='utf-8') as f:
+                f.write(block.strip())
+            
+            recipe = scraper._parse_local_file(temp_file)
+            if recipe:
+                recipes.append(recipe)
+            
+            # Șterge fișierul temporar
+            os.remove(temp_file)
     else:
         # Mod URL - scrape web
         lines = [line.strip() for line in content.split('\n')]
