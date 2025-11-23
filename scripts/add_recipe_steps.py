@@ -167,9 +167,9 @@ class RecipeStepsAdder:
                 # Heading nou
                 children.append({
                     "object": "block",
-                    "type": "heading_2",
-                    "heading_2": {
-                        "rich_text": [{"type": "text", "text": {"content": "Instructions"}}]
+                    "type": "heading_1",
+                    "heading_1": {
+                        "rich_text": [{"type": "text", "text": {"content": "Steps"}}]
                     }
                 })
                 
@@ -217,9 +217,9 @@ class RecipeStepsAdder:
             # Adaugă heading
             children.append({
                 "object": "block",
-                "type": "heading_2",
-                "heading_2": {
-                    "rich_text": [{"type": "text", "text": {"content": "Instructions"}}]
+                "type": "heading_1",
+                "heading_1": {
+                    "rich_text": [{"type": "text", "text": {"content": "Steps"}}]
                 }
             })
             
