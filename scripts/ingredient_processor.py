@@ -21,20 +21,29 @@ class IngredientProcessor:
         'ripe', 'unripe', 'fresh', 'stale', 'raw', 'cooked',
         # Temperatură
         'cold', 'hot', 'warm', 'chilled', 'frozen', 'thawed',
-        # Procesare
+        # Procesare - tăiere
         'whole', 'halved', 'quartered', 'chopped', 'diced', 'sliced', 
         'minced', 'grated', 'shredded', 'crushed', 'ground', 'mashed',
         'peeled', 'unpeeled', 'pitted', 'seeded', 'trimmed', 'cleaned',
+        'finely', 'coarsely', 'roughly', 'thinly', 'thickly',
+        # Procesare - gătire
         'blanched', 'roasted', 'toasted', 'fried', 'boiled', 'steamed',
+        'baked', 'grilled', 'sautéed', 'sauteed', 'poached', 'braised',
+        # Procesare - stare
+        'freshly', 'newly', 'just',
         # Ambalare
         'canned', 'jarred', 'bottled', 'packaged', 'boxed',
         'dried', 'dehydrated', 'freeze-dried',
         # Calitate
         'organic', 'natural', 'free-range', 'grass-fed', 'wild',
         'extra', 'premium', 'quality', 'good',
+        # Procesare lichide
+        'squeezed', 'pressed', 'filtered', 'strained',
+        # Curățare
+        'rinsed', 'drained', 'washed', 'scrubbed',
         # Altele
-        'optional', 'additional', 'extra', 'leftover', 'remaining',
-        'rinsed', 'drained', 'squeezed', 'pressed',
+        'optional', 'additional', 'leftover', 'remaining',
+        'dry', 'wet', 'soft', 'hard', 'firm', 'tender',
     }
     
     def __init__(self, use_notion: bool = True):
@@ -141,12 +150,28 @@ class IngredientProcessor:
         Procesează o linie completă de ingredient și returnează versiunea procesată
         
         Args:
-            line: "1 large ripe banana"
+            line: "1 large ripe banana" SAU "[1] large ripe banana" SAU "[1 cup] large ripe banana"
             
         Returns:
             Tuple[processed_line, extracted_adjectives]:
-                ("1 banana", "large, ripe")
+                ("1 banana", "large, ripe") SAU ("[1] banana", "large, ripe")
         """
+        # Verifică dacă are format bracket [quantity] sau [quantity unit]
+        bracket_match = re.match(r'^\[([^\]]+)\]\s*(.+)$', line.strip())
+        
+        if bracket_match:
+            # Format: [1] ingredient sau [1 cup] ingredient
+            bracket_content = bracket_match.group(1).strip()
+            rest = bracket_match.group(2).strip()
+            
+            # Separă adjectivele din ingredient name
+            clean_name, adjectives = self.separate_adjectives(rest)
+            
+            # Reconstruiește cu bracket
+            processed = f"[{bracket_content}] {clean_name}"
+            return processed, adjectives
+        
+        # Format standard fără brackets
         # Unități de măsură cunoscute
         KNOWN_UNITS = {
             'cup', 'cups', 'tsp', 'tsp.', 'tsps', 'teaspoon', 'teaspoons',
