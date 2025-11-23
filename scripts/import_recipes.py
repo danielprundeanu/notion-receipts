@@ -984,12 +984,75 @@ class RecipeImporter:
                 print(f"  ✓ Găsită rețetă existentă: {recipe_name}")
                 return recipe_id
             
-            print(f"  ✗ Nu am găsit rețeta '{recipe_name}' în baza de date")
             return None
             
         except Exception as e:
             print(f"  ⚠ Eroare la căutarea rețetei: {e}")
             return None
+    
+    def get_existing_ingredients(self, recipe_id: str) -> List[Dict]:
+        """Obține ingredientele existente pentru o rețetă"""
+        try:
+            response = notion.databases.query(
+                database_id=DB_INGREDIENTS,
+                filter={
+                    "property": "Receipt",
+                    "relation": {
+                        "contains": recipe_id
+                    }
+                }
+            )
+            
+            ingredients = []
+            for result in response.get('results', []):
+                props = result['properties']
+                
+                # Extrage numele ingredientului
+                name = ''
+                if 'Ingredient' in props and props['Ingredient']['title']:
+                    name = props['Ingredient']['title'][0]['text']['content']
+                
+                # Extrage Grocery Item ID
+                grocery_id = None
+                if 'Grocery - Item' in props and props['Grocery - Item']['relation']:
+                    grocery_id = props['Grocery - Item']['relation'][0]['id']
+                
+                ingredients.append({
+                    'id': result['id'],
+                    'name': name,
+                    'grocery_id': grocery_id
+                })
+            
+            return ingredients
+            
+        except Exception as e:
+            print(f"  ⚠ Eroare la obținerea ingredientelor: {e}")
+            return []
+    
+    def update_recipe_ingredients(self, recipe_id: str, recipe_data: Dict):
+        """Actualizează ingredientele unei rețete existente"""
+        print(f"\n  Actualizare ingrediente pentru: {recipe_data['name']}")
+        
+        # Obține ingredientele existente
+        existing = self.get_existing_ingredients(recipe_id)
+        print(f"  ℹ Găsite {len(existing)} ingrediente existente")
+        
+        # Șterge toate ingredientele existente
+        for ing in existing:
+            try:
+                notion.pages.update(
+                    page_id=ing['id'],
+                    archived=True
+                )
+            except Exception as e:
+                print(f"    ⚠ Eroare la ștergerea ingredientului '{ing['name']}': {e}")
+        
+        if existing:
+            print(f"  ✓ Șterse {len(existing)} ingrediente vechi")
+        
+        # Creează noile ingrediente
+        print(f"  → Creez ingrediente noi...")
+        self.create_ingredients(recipe_id, recipe_data)
     
     def create_recipe(self, recipe_data: Dict) -> Optional[str]:
         """Creează rețeta în baza Receipts 2.0"""
@@ -1541,18 +1604,47 @@ class RecipeImporter:
                     else:
                         print(f"  ✗ Rețeta '{recipe['name']}' nu există. Creează-o mai întâi fără --steps.")
                 else:
-                    # Modul normal: creează rețeta + ingredientele
-                    recipe_id = self.create_recipe(recipe)
+                    # Verifică dacă rețeta există deja
+                    existing_recipe_id = self.find_existing_recipe(recipe['name'])
                     
-                    if recipe_id:
-                        # Creează ingredientele
-                        self.create_ingredients(recipe_id, recipe)
-                        print(f"\n  ✓ Rețeta și ingredientele create!")
-                        print(f"  📝 Aplică manual template-ul în Notion, apoi rulează:")
-                        print(f"     python import_recipes.py {filepath} --steps")
+                    if existing_recipe_id:
+                        # Rețeta există - întreabă utilizatorul dacă vrea să o actualizeze
+                        print(f"\n  ⚠ Rețeta '{recipe['name']}' există deja în Notion!")
+                        print(f"  Vrei să actualizezi ingredientele? (da/nu): ", end='')
                         
-                        # Salvează mapările după fiecare rețetă
-                        self._save_mappings()
+                        response = input().strip().lower()
+                        
+                        if response in ['da', 'yes', 'y', 'd']:
+                            # Actualizează ingredientele
+                            self.update_recipe_ingredients(existing_recipe_id, recipe)
+                            print(f"\n  ✓ Ingrediente actualizate!")
+                            
+                            # Întreabă dacă vrea să actualizeze și Steps
+                            print(f"\n  Vrei să actualizezi și Steps? (da/nu): ", end='')
+                            response_steps = input().strip().lower()
+                            
+                            if response_steps in ['da', 'yes', 'y', 'd']:
+                                self.add_steps_to_recipe(existing_recipe_id, recipe)
+                                print(f"  ✓ Steps actualizate!")
+                            
+                            # Salvează mapările
+                            self._save_mappings()
+                        else:
+                            print(f"  → Rețeta '{recipe['name']}' sărită (nu se actualizează)")
+                            continue
+                    else:
+                        # Modul normal: creează rețeta + ingredientele
+                        recipe_id = self.create_recipe(recipe)
+                        
+                        if recipe_id:
+                            # Creează ingredientele
+                            self.create_ingredients(recipe_id, recipe)
+                            print(f"\n  ✓ Rețeta și ingredientele create!")
+                            print(f"  📝 Aplică manual template-ul în Notion, apoi rulează:")
+                            print(f"     python import_recipes.py {filepath} --steps")
+                            
+                            # Salvează mapările după fiecare rețetă
+                            self._save_mappings()
                     
             except ValueError as e:
                 # Eroare de validare unitate - oprește importul

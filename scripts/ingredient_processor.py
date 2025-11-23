@@ -13,6 +13,41 @@ from dotenv import load_dotenv
 class IngredientProcessor:
     """Procesează ingrediente pentru a separa adjective de numele de bază"""
     
+    # Ingrediente de bază comune (fallback când Notion nu le are)
+    COMMON_BASE_INGREDIENTS = {
+        # Legume
+        'onion', 'onions', 'garlic', 'tomato', 'tomatoes', 'potato', 'potatoes',
+        'carrot', 'carrots', 'celery', 'pepper', 'peppers', 'bell pepper', 'bell peppers',
+        'cucumber', 'cucumbers', 'lettuce', 'spinach', 'kale', 'cabbage',
+        'broccoli', 'cauliflower', 'zucchini', 'eggplant', 'mushroom', 'mushrooms',
+        'corn', 'peas', 'beans', 'lentils', 'chickpeas',
+        # Fructe
+        'apple', 'apples', 'banana', 'bananas', 'orange', 'oranges',
+        'lemon', 'lemons', 'lime', 'limes', 'peach', 'peaches',
+        'strawberry', 'strawberries', 'blueberry', 'blueberries',
+        'mango', 'mangos', 'pineapple', 'avocado', 'avocados',
+        # Proteine
+        'egg', 'eggs', 'chicken', 'beef', 'pork', 'fish', 'salmon',
+        'tuna', 'shrimp', 'tofu', 'tempeh',
+        # Lactate
+        'milk', 'cream', 'butter', 'cheese', 'yogurt', 'sour cream',
+        'mozzarella', 'parmesan', 'cheddar', 'feta', 'ricotta',
+        # Cereale
+        'rice', 'pasta', 'bread', 'flour', 'oats', 'quinoa',
+        'couscous', 'bulgur', 'barley', 'farro',
+        # Condimente
+        'salt', 'pepper', 'sugar', 'oil', 'olive oil', 'vinegar',
+        'soy sauce', 'honey', 'maple syrup',
+        # Lichide
+        'water', 'broth', 'stock', 'wine', 'juice', 'orange juice',
+        # Plante aromatice
+        'parsley', 'cilantro', 'basil', 'thyme', 'rosemary', 'dill',
+        'mint', 'oregano', 'sage',
+        # Nuci și semințe
+        'almond', 'almonds', 'walnut', 'walnuts', 'cashew', 'cashews',
+        'peanut', 'peanuts', 'sesame', 'sunflower',
+    }
+    
     # Adjective culinare comune (backup când Notion nu ajută)
     COMMON_ADJECTIVES = {
         # Mărime
@@ -52,7 +87,11 @@ class IngredientProcessor:
             use_notion: Dacă True, încarcă grocery items din Notion
         """
         self.grocery_items: Set[str] = set()
+        self.all_ingredients: Set[str] = set()  # Notion + Common ingredients
         self.use_notion = use_notion
+        
+        # Adaugă ingredientele comune de bază
+        self.all_ingredients.update(self.COMMON_BASE_INGREDIENTS)
         
         if use_notion:
             self._load_grocery_items_from_notion()
@@ -78,12 +117,17 @@ class IngredientProcessor:
                     name = title[0].get('text', {}).get('content', '').strip()
                     if name:
                         # Adaugă variante: singular, plural, lowercase
-                        self.grocery_items.add(name.lower())
+                        name_lower = name.lower()
+                        self.grocery_items.add(name_lower)
+                        self.all_ingredients.add(name_lower)
+                        
                         # Adaugă și varianta fără 's' final (aproximare plural)
-                        if name.lower().endswith('s'):
-                            self.grocery_items.add(name.lower()[:-1])
+                        if name_lower.endswith('s'):
+                            self.grocery_items.add(name_lower[:-1])
+                            self.all_ingredients.add(name_lower[:-1])
             
             print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din Notion")
+            print(f"  ℹ Total {len(self.all_ingredients)} ingrediente disponibile pentru matching")
             
         except Exception as e:
             print(f"  ⚠ Nu pot încărca grocery items din Notion: {e}")
@@ -91,59 +135,136 @@ class IngredientProcessor:
     
     def separate_adjectives(self, ingredient_name: str) -> Tuple[str, Optional[str]]:
         """
-        Separă adjectivele de numele ingredientului
+        Separă adjectivele și descrierile de numele ingredientului
         
         Args:
-            ingredient_name: "large ripe banana" sau "red onion"
+            ingredient_name: "small-medium globe eggplant cut into 1/2-inch cubes"
             
         Returns:
-            Tuple[name, adjectives]: ("banana", "large, ripe") sau ("red onion", None)
+            Tuple[name, descriptions]: ("eggplant", "small-medium globe cut into 1/2-inch cubes")
         """
         if not ingredient_name:
             return ingredient_name, None
         
-        original = ingredient_name.strip()
-        words = original.lower().split()
+        # Strip punctuation de la sfârșit (virgule, puncte) și curăță virgule extra din interior
+        original = ingredient_name.strip().rstrip(',.;:')
+        # Înlocuiește ", " din interior cu doar " " pentru procesare
+        original = re.sub(r',\s+', ' ', original)
+        words_lower = original.lower().split()
+        words_original = original.split()
         
-        if len(words) <= 1:
+        if len(words_lower) <= 1:
             return original, None
         
-        # Strategie: încearcă să găsească match-uri în Notion, altfel folosește adjective
-        adjectives = []
-        
-        # 1. Verifică dacă numele complet există în Notion
-        if self.use_notion and original.lower() in self.grocery_items:
+        # 1. Verifică dacă numele complet există în lista de ingrediente (exact match)
+        if original.lower() in self.all_ingredients:
             return original, None
         
-        # 2. Încearcă să elimine cuvinte de la început până găsește match
-        for i in range(len(words)):
-            candidate = ' '.join(words[i:])
+        # 2. Strategie îmbunătățită: caută ingredientul de bază scanând toate combinațiile
+        # Preferă match-uri din Notion, apoi din lista comună
+        best_match = None
+        best_match_start = -1
+        best_match_end = -1
+        best_match_priority = 0  # 2 = Notion, 1 = Common ingredients
+        
+        # Încearcă toate combinațiile posibile de cuvinte consecutive
+        for length in range(len(words_lower), 0, -1):  # De la cel mai lung la cel mai scurt
+            for start in range(len(words_lower) - length + 1):
+                end = start + length
+                candidate = ' '.join(words_lower[start:end])
+                
+                # Verifică în Notion items (prioritate mare)
+                if candidate in self.grocery_items:
+                    priority = 2
+                # Verifică în ingrediente comune (prioritate medie)
+                elif candidate in self.COMMON_BASE_INGREDIENTS:
+                    priority = 1
+                else:
+                    continue
+                
+                # Salvează dacă e mai bun decât match-ul curent
+                if priority > best_match_priority or \
+                   (priority == best_match_priority and length > (best_match_end - best_match_start)):
+                    best_match = ' '.join(words_original[start:end])
+                    best_match_start = start
+                    best_match_end = end
+                    best_match_priority = priority
+        
+        if best_match:
+            # Colectează tot ce e înainte și după match ca descriere
+            descriptions = []
+            if best_match_start > 0:
+                descriptions.extend(words_original[:best_match_start])
+            if best_match_end < len(words_original):
+                descriptions.extend(words_original[best_match_end:])
             
-            # Verifică dacă candidatul există în Notion
-            if self.use_notion and candidate in self.grocery_items:
-                # Găsit! Tot ce e înaintea lui sunt adjective
-                if i > 0:
-                    adjectives = words[:i]
-                    return ' '.join(words[i:]), ', '.join(adjectives)
-                return original, None
+            if descriptions:
+                return best_match, ' '.join(descriptions)
+            return best_match, None
         
-        # 3. Dacă Notion nu a ajutat, folosește lista de adjective
+        # 3. Dacă nu am găsit match, folosește strategia bazată pe adjective
+        # Caută primul substantiv (primul cuvânt care nu e adjectiv)
+        adjectives_before = []
+        noun_start = -1
+        noun_end = -1
+        
         # Extrage adjective de la început
-        noun_start = 0
-        for i, word in enumerate(words):
+        for i, word in enumerate(words_lower):
             if word in self.COMMON_ADJECTIVES:
-                adjectives.append(word)
-                noun_start = i + 1
+                adjectives_before.append(words_original[i])
             else:
-                # Primul cuvânt care nu e adjectiv → începe substantivul
+                noun_start = i
                 break
         
-        if adjectives:
-            noun = ' '.join(words[noun_start:])
-            return noun, ', '.join(adjectives)
+        if noun_start == -1:
+            # Toate cuvintele sunt adjective? Puțin probabil
+            return original, None
         
-        # 4. Nu am găsit adjective clare → returnează original
-        return original, None
+        # Găsește sfârșitul substantivului (primul adjectiv/prepoziție după substantiv)
+        # sau cuvinte care indică procesare/pregătire
+        PREP_INDICATORS = {
+            'cut', 'into', 'chopped', 'diced', 'sliced', 'minced',
+            'grated', 'shredded', 'crushed', 'peeled', 'pitted',
+            'halved', 'quartered', 'removed', 'trimmed', 'cleaned',
+            'about', 'roughly', 'finely', 'thinly', 'thickly',
+            'and', 'with', 'without', 'for', 'to',
+        }
+        
+        # Pattern special pentru "X of Y" (ex: "cloves of garlic", "cup of water")
+        # În astfel de cazuri, "of" face parte din ingredient, nu din descriere
+        UNIT_OF_PATTERN = r'\b(cup|cups|clove|cloves|piece|pieces|slice|slices|pinch|dash|handful|bunch|can|bottle|jar|package)\s+of\b'
+        
+        # Presupune că substantivul are 1-3 cuvinte
+        # Caută indicatori de procesare/pregătire
+        noun_end = len(words_lower)  # Default: până la sfârșit
+        
+        for i in range(noun_start, len(words_lower)):
+            word = words_lower[i]
+            
+            # Verifică pattern special "X of Y"
+            remaining_text = ' '.join(words_lower[noun_start:i+2]) if i+1 < len(words_lower) else ''
+            if re.search(UNIT_OF_PATTERN, remaining_text):
+                # Include "of" și următorul cuvânt în ingredient
+                continue
+            
+            if word in PREP_INDICATORS or word in self.COMMON_ADJECTIVES:
+                noun_end = i
+                break
+            # Dacă am trecut de 3 cuvinte fără indicator, oprește-te
+            if i - noun_start >= 3:
+                noun_end = i + 1
+                break
+        
+        # Extrage ingredientul și descrierile
+        ingredient_words = words_original[noun_start:noun_end]
+        descriptions_after = words_original[noun_end:] if noun_end < len(words_original) else []
+        
+        all_descriptions = adjectives_before + descriptions_after
+        
+        if all_descriptions:
+            return ' '.join(ingredient_words), ' '.join(all_descriptions)
+        
+        return ' '.join(ingredient_words), None
     
     def process_ingredient_line(self, line: str) -> Tuple[str, Optional[str]]:
         """
@@ -208,6 +329,12 @@ class IngredientProcessor:
         if words and words[0].lower() in KNOWN_UNITS:
             unit = words[0]
             ingredient_start = 1
+            
+            # Tratează pattern-ul "unit of ingredient" (ex: "cloves of garlic")
+            if ingredient_start < len(words) and words[ingredient_start].lower() == 'of':
+                # Include "of" în unitate
+                unit = f"{unit} of"
+                ingredient_start = 2
         
         # Restul cuvintelor = ingredient name
         if ingredient_start < len(words):
