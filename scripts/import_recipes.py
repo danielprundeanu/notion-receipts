@@ -1573,21 +1573,37 @@ if __name__ == "__main__":
     import sys
     
     if len(sys.argv) < 2:
-        print("Utilizare: python import_recipes.py <fisier_retete.txt> [--steps]")
-        print("\nExemplu (import complet):")
-        print("  python import_recipes.py scraped_recipes.txt")
-        print("\nExemplu (adaugă doar Steps după aplicarea template-ului):")
-        print("  python import_recipes.py scraped_recipes.txt --steps")
+        print("Utilizare:")
+        print("  python import_recipes.py -url [--steps]      # Import din data/urls/scraped_recipe_urls.txt")
+        print("  python import_recipes.py -local [--steps]    # Import din data/local/scraped_local_recipes.txt")
+        print("  python import_recipes.py <file> [--steps]    # Import din fișier custom")
+        print("\nExemple:")
+        print("  python import_recipes.py -url                # Import complet URL-uri")
+        print("  python import_recipes.py -url --steps        # Adaugă Steps pentru URL-uri")
+        print("  python import_recipes.py -local              # Import complet local")
+        print("  python import_recipes.py -local --steps      # Adaugă Steps pentru local")
         sys.exit(1)
     
-    filepath = sys.argv[1]
+    # Detectează modul
+    first_arg = sys.argv[1]
+    
+    if first_arg == '-url':
+        filepath = 'data/urls/scraped_recipe_urls.txt'
+        mode_name = 'URL-uri web'
+    elif first_arg == '-local':
+        filepath = 'data/local/scraped_local_recipes.txt'
+        mode_name = 'Rețete locale'
+    else:
+        filepath = first_arg
+        mode_name = 'Fișier custom'
+    
     steps_only = '--steps' in sys.argv
     
     # Debug: afișează argumentele primite
     if steps_only:
-        print(f"\n🔧 Modul: Adaugă doar Steps (--steps detectat)")
+        print(f"\n🔧 Modul: Adaugă doar Steps ({mode_name})")
     else:
-        print(f"\n🔧 Modul: Import complet (fără --steps)")
+        print(f"\n🔧 Modul: Import complet ({mode_name})")
     
     if not os.path.exists(filepath):
         print(f"Eroare: Fișierul '{filepath}' nu există!")

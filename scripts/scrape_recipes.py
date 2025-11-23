@@ -30,6 +30,7 @@ class RecipeScraper:
         }
         self.ingredient_processor = get_ingredient_processor(use_notion=True)
         self.translator = GoogleTranslator(source='ro', target='en')
+        self.image_dir = 'img'  # Default, poate fi suprascris
     
     def _translate_text(self, text: str) -> str:
         """Traduce text din română în engleză"""
@@ -53,14 +54,211 @@ class RecipeScraper:
             print(f"  ⚠ Eroare la traducere: {e}")
             return text
     
-    def scrape_recipe(self, url: str) -> Optional[Dict]:
-        """Extrage rețeta de la URL dat"""
+    def _parse_local_file(self, filepath: str) -> Optional[Dict]:
+        """Parsează rețetă din fișier text local (același format ca parse_local_recipes.py)"""
+        print(f"\n{'='*60}")
+        print(f"Procesez fișier local: {filepath}")
+        print(f"{'='*60}\n")
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+        except Exception as e:
+            print(f"  ✗ Eroare la citire fișier: {e}")
+            return None
+        
+        lines = [l.strip() for l in content.split('\n')]
+        
+        # Prima linie non-goală = titlu
+        title = None
+        start_idx = 0
+        for i, line in enumerate(lines):
+            if line:
+                title = re.sub(r'^[\d.\-–•*]+\s*', '', line).strip()
+                start_idx = i + 1
+                break
+        
+        if not title:
+            print("  ✗ Nu s-a găsit titlu")
+            return None
+        
+        print(f"  📝 Titlu: {title}")
+        
+        # Traduce titlul
+        title_translated = self._translate_text(title)
+        if title_translated != title:
+            print(f"  🌐 Tradus: {title_translated}")
+        
+        recipe = {
+            'name': title_translated,
+            'servings': None,
+            'time': None,
+            'difficulty': 'Easy',
+            'category': None,
+            'favorite': False,
+            'link': None,
+            'slices': None,
+            'description': [],
+            'ingredient_groups': [],
+            'instructions': [],
+            'image_url': None
+        }
+        
+        current_section = None
+        current_group_name = None
+        current_ingredients = []
+        
+        for line in lines[start_idx:]:
+            if not line:
+                continue
+            
+            line_lower = line.lower()
+            
+            # Servings
+            if re.search(r'(servings?|por[țt]ii|yields?)', line_lower):
+                match = re.search(r'(\d+)', line)
+                if match:
+                    recipe['servings'] = int(match.group(1))
+                    print(f"  ℹ Servings: {recipe['servings']}")
+                continue
+            
+            # Link
+            if re.search(r'^(link|url)\s*:', line_lower):
+                link_match = re.search(r'(?:link|url)\s*:\s*(.+)', line, re.I)
+                if link_match:
+                    recipe['link'] = link_match.group(1).strip()
+                    print(f"  ℹ Link: {recipe['link'][:50]}...")
+                continue
+            
+            # Slices
+            if re.search(r'slice\s*/\s*receipe\s*:', line_lower):
+                match = re.search(r'(\d+)', line)
+                if match:
+                    recipe['slices'] = int(match.group(1))
+                    print(f"  ℹ Slices: {recipe['slices']}")
+                continue
+            
+            # Time
+            if re.search(r'(timp|time|durat)', line_lower):
+                hours = re.search(r'(\d+)\s*(?:h|ore|ora|hour)', line, re.I)
+                minutes = re.search(r'(\d+)\s*(?:m|min|minute)', line, re.I)
+                
+                if hours or minutes:
+                    total = 0
+                    if hours:
+                        total += int(hours.group(1)) * 60
+                    if minutes:
+                        total += int(minutes.group(1))
+                    if total > 0:
+                        recipe['time'] = total
+                        print(f"  ℹ Time: {total} min")
+                continue
+            
+            # Secțiune Ingrediente
+            if re.search(r'^(ingredient[e]?s?|ingrediente)[\s:]*$', line_lower):
+                current_section = 'ingredients'
+                print(f"  ✓ Secțiune Ingrediente")
+                continue
+            
+            # Secțiune Instrucțiuni
+            if re.search(r'^(instructions?|directions?|mod[ul]*\s+de\s+preparare|preparare|steps?|method|pa[șs]i)[\s:]*$', line_lower):
+                if current_ingredients:
+                    recipe['ingredient_groups'].append({
+                        'name': current_group_name or '1',
+                        'items': current_ingredients
+                    })
+                    current_ingredients = []
+                
+                current_section = 'instructions'
+                print(f"  ✓ Secțiune Instrucțiuni")
+                continue
+            
+            # Subsecțiune ingrediente
+            if current_section == 'ingredients' and line.endswith(':') and len(line.split()) <= 4:
+                if current_ingredients:
+                    recipe['ingredient_groups'].append({
+                        'name': current_group_name or '1',
+                        'items': current_ingredients
+                    })
+                    current_ingredients = []
+                
+                current_group_name = line.rstrip(':')
+                # Traduce numele grupului
+                group_translated = self._translate_text(current_group_name)
+                if group_translated != current_group_name:
+                    print(f"  ℹ Grup: {current_group_name} → {group_translated}")
+                    current_group_name = group_translated
+                else:
+                    print(f"  ℹ Grup: {current_group_name}")
+                continue
+            
+            # Procesare ingrediente
+            if current_section == 'ingredients':
+                # Curăță bullet points
+                clean = re.sub(r'^[\-–•*▢☐□▪◦✓✔︎→◆■●○]\s*', '', line).strip()
+                
+                # Verifică dacă arată ca ingredient
+                if re.match(r'^\d', clean) or re.search(r'\b\d+\s*(?:g|kg|ml|l|cup|tsp|tbsp|oz|lb|buc|lingur)', clean, re.I):
+                    # Traduce ingredientul
+                    ingredient_translated = self._translate_text(clean)
+                    current_ingredients.append(ingredient_translated)
+                continue
+            
+            # Procesare instrucțiuni
+            if current_section == 'instructions':
+                # Curăță numerotare
+                clean = re.sub(r'^[\d.)\-–•*]\s*', '', line).strip()
+                if len(clean) >= 10:
+                    # Traduce instrucțiunea
+                    instruction_translated = self._translate_text(clean)
+                    recipe['instructions'].append(instruction_translated)
+                continue
+            
+            # Auto-detectare
+            if not current_section:
+                clean = re.sub(r'^[\-–•*]\s*', '', line).strip()
+                
+                # Arată ca ingredient?
+                if re.match(r'^\d', clean) or re.search(r'\b\d+\s*(?:g|kg|ml|l|cup|tsp|tbsp)', clean, re.I):
+                    current_section = 'ingredients'
+                    print(f"  ℹ Auto-detectat Ingrediente")
+                    ingredient_translated = self._translate_text(clean)
+                    current_ingredients.append(ingredient_translated)
+                # Descriere
+                elif len(line) > 20:
+                    desc_translated = self._translate_text(line)
+                    recipe['description'].append(desc_translated)
+        
+        # Adaugă ultimul grup
+        if current_ingredients:
+            recipe['ingredient_groups'].append({
+                'name': current_group_name or '1',
+                'items': current_ingredients
+            })
+        
+        total_ingredients = sum(len(g['items']) for g in recipe['ingredient_groups'])
+        print(f"  ✓ {total_ingredients} ingrediente ({len(recipe['ingredient_groups'])} grupuri)")
+        print(f"  ✓ {len(recipe['instructions'])} instrucțiuni")
+        
+        if not recipe['ingredient_groups']:
+            print(f"  ⚠ Niciun ingredient găsit")
+            return None
+        
+        return recipe
+    
+    def scrape_recipe(self, url_or_file: str) -> Optional[Dict]:
+        """Extrage rețeta de la URL sau din fișier local .txt"""
+        # Verifică dacă e fișier local
+        if self._is_local_file(url_or_file):
+            return self._parse_local_file(url_or_file)
+        
+        # Altfel, procesează ca URL
         try:
             print(f"\n{'='*60}")
-            print(f"Procesez: {url}")
+            print(f"Procesez: {url_or_file}")
             print(f"{'='*60}\n")
             
-            response = requests.get(url, headers=self.headers, timeout=10)
+            response = requests.get(url_or_file, headers=self.headers, timeout=10)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.content, 'lxml')
@@ -74,7 +272,7 @@ class RecipeScraper:
                 recipe = self._extract_from_html(soup)
             
             if recipe:
-                recipe['source_url'] = url
+                recipe['source_url'] = url_or_file
                 
                 # Descarcă imaginea local dacă există URL
                 if recipe.get('image_url'):
@@ -222,9 +420,8 @@ class RecipeScraper:
             return None
         
         try:
-            # Creează directorul img/ dacă nu există
-            img_dir = 'img'
-            os.makedirs(img_dir, exist_ok=True)
+            # Creează directorul pentru imagini dacă nu există
+            os.makedirs(self.image_dir, exist_ok=True)
             
             # Generează nume de fișier unic bazat pe URL
             url_hash = hashlib.md5(image_url.encode()).hexdigest()[:8]
@@ -241,7 +438,7 @@ class RecipeScraper:
             safe_name = safe_name[:50]  # Limitează lungimea
             
             filename = f"{safe_name}_{url_hash}{ext}"
-            filepath = os.path.join(img_dir, filename)
+            filepath = os.path.join(self.image_dir, filename)
             
             # Descarcă imaginea
             print(f"  📥 Descarc imaginea...")
@@ -1127,34 +1324,70 @@ class RecipeScraper:
         return ingredient
 
 
-def scrape_recipes_from_file(input_file: str, output_file: str):
-    """Citește URL-uri dintr-un fișier și scrie rețetele în formatul txt"""
+def scrape_recipes_from_file(mode: str):
+    """Citește URL-uri sau rețete text și scrie în formatul txt
+    
+    Args:
+        mode: '-url' pentru web scraping sau '-local' pentru fișiere locale
+    """
     scraper = RecipeScraper()
     
+    # Configurare paths în funcție de mod
+    if mode == '-url':
+        input_file = 'data/urls/recipe_urls.txt'
+        output_file = 'data/urls/scraped_recipe_urls.txt'
+        img_dir = 'data/urls/img'
+        mode_name = 'Web URLs'
+        is_local = False
+    elif mode == '-local':
+        input_file = 'data/local/local_recipes.txt'
+        output_file = 'data/local/scraped_local_recipes.txt'
+        img_dir = 'data/local/img'
+        mode_name = 'Local Text'
+        is_local = True
+    else:
+        print(f"✗ Mod invalid: {mode}")
+        print("Utilizare: notion-scrape -url SAU notion-scrape -local")
+        return
+    
+    # Setează directorul pentru imagini
+    scraper.image_dir = img_dir
+    
     print(f"\n{'='*60}")
-    print(f"Recipe Web Scraper")
+    print(f"Recipe Scraper - {mode_name}")
     print(f"{'='*60}\n")
     
-    # Citește URL-urile
+    # Citește conținutul
     try:
         with open(input_file, 'r', encoding='utf-8') as f:
-            urls = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+            content = f.read()
     except FileNotFoundError:
         print(f"✗ Fișierul '{input_file}' nu a fost găsit!")
+        print(f"Creează fișierul și adaugă {'URL-uri (un URL per linie)' if not is_local else 'rețete text'}")
         return
     
-    if not urls:
-        print(f"✗ Nu s-au găsit URL-uri în '{input_file}'")
-        return
-    
-    print(f"Găsite {len(urls)} URL-uri în fișier\n")
-    
-    # Extrage rețetele
     recipes = []
-    for url in urls:
-        recipe = scraper.scrape_recipe(url)
+    
+    if is_local:
+        # Mod local - parsează fișier text
+        print(f"Procesez fișier text local\n")
+        recipe = scraper._parse_local_file(input_file)
         if recipe:
             recipes.append(recipe)
+    else:
+        # Mod URL - scrape web
+        lines = [line.strip() for line in content.split('\n')]
+        urls = [line for line in lines if line and not line.startswith('#') and (line.startswith('http://') or line.startswith('https://'))]
+        
+        if not urls:
+            print(f"✗ Nu s-au găsit URL-uri în '{input_file}'")
+            return
+        
+        print(f"Găsite {len(urls)} URL-uri\n")
+        for url in urls:
+            recipe = scraper.scrape_recipe(url)
+            if recipe:
+                recipes.append(recipe)
     
     # Scrie în fișier
     if recipes:
@@ -1168,7 +1401,7 @@ def scrape_recipes_from_file(input_file: str, output_file: str):
         print(f"✓ {len(recipes)} rețete salvate în '{output_file}'")
         print(f"{'='*60}\n")
         print(f"Pentru a importa în Notion, rulează:")
-        print(f"  python import_recipes.py {output_file}")
+        print(f"  notion-import {output_file}")
     else:
         print(f"\n✗ Nu s-au putut extrage rețete")
 
@@ -1176,15 +1409,25 @@ def scrape_recipes_from_file(input_file: str, output_file: str):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Utilizare:")
-        print("  python scrape_recipes.py <fisier_urls.txt> [output.txt]")
-        print("\nExemplu:")
-        print("  python scrape_recipes.py recipe_urls.txt scraped_recipes.txt")
-        print("\nFișierul cu URL-uri trebuie să conțină un URL per linie:")
-        print("  https://example.com/recipe1")
-        print("  https://example.com/recipe2")
+        print("  python scrape_recipes.py -url     # Scrape URL-uri web")
+        print("  python scrape_recipes.py -local   # Parsează fișiere text locale")
+        print("\nStructură foldere:")
+        print("  data/urls/recipe_urls.txt         → data/urls/scraped_recipe_urls.txt")
+        print("  data/local/local_recipes.txt      → data/local/scraped_local_recipes.txt")
+        print("\nImagini salvate în:")
+        print("  data/urls/img/                    (pentru -url)")
+        print("  data/local/img/                   (pentru -local)")
+        print("\nAmbele moduri folosesc:")
+        print("  • Traducere automată română → engleză")
+        print("  • Format cu bracket [cantitate unitate]")
+        print("  • Normalizare per porție")
         sys.exit(1)
     
-    input_file = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else 'scraped_recipes.txt'
+    mode = sys.argv[1]
     
-    scrape_recipes_from_file(input_file, output_file)
+    if mode not in ['-url', '-local']:
+        print(f"✗ Flag invalid: {mode}")
+        print("Utilizare: python scrape_recipes.py -url SAU python scrape_recipes.py -local")
+        sys.exit(1)
+    
+    scrape_recipes_from_file(mode)

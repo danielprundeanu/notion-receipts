@@ -1,7 +1,5 @@
-# Recipe URLs - un URL per linie
-# Liniile care încep cu # sunt ignorate
+# Add recipe URLs here (one per line)
 
-# URL-uri de test:
 # https://holymolydips.com/recipes/three-chilli-guac-recipe/
 # https://holymolydips.com/recipes/black-bean-burrito-recipe-2
 # https://holymolydips.com/recipes/crispy-potatoes-poached-eggs-with-original-guacamole/
