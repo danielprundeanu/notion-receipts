@@ -991,7 +991,7 @@ class RecipeImporter:
             return None
     
     def get_existing_ingredients(self, recipe_id: str) -> List[Dict]:
-        """Obține ingredientele existente pentru o rețetă"""
+        """Obține ingredientele existente pentru o rețetă (versiune simplă pentru compatibilitate)"""
         try:
             response = notion.databases.query(
                 database_id=DB_INGREDIENTS,
@@ -1029,30 +1029,287 @@ class RecipeImporter:
             print(f"  ⚠ Eroare la obținerea ingredientelor: {e}")
             return []
     
+    def _get_existing_ingredients_detailed(self, recipe_id: str) -> List[Dict]:
+        """Obține ingredientele existente pentru o rețetă cu toate detaliile (pentru smart update)"""
+        try:
+            response = notion.databases.query(
+                database_id=DB_INGREDIENTS,
+                filter={
+                    "property": "Receipt",
+                    "relation": {
+                        "contains": recipe_id
+                    }
+                }
+            )
+            
+            ingredients = []
+            for result in response.get('results', []):
+                props = result['properties']
+                
+                # Extrage numele ingredientului
+                name = ''
+                if 'Ingredient' in props and props['Ingredient']['title']:
+                    name = props['Ingredient']['title'][0]['text']['content']
+                
+                # Extrage Grocery Item ID
+                grocery_id = None
+                if 'Grocery - Item' in props and props['Grocery - Item']['relation']:
+                    grocery_id = props['Grocery - Item']['relation'][0]['id']
+                
+                # Extrage cantitățile
+                size_unit = None
+                if 'Size / Unit' in props and props['Size / Unit']['number'] is not None:
+                    size_unit = props['Size / Unit']['number']
+                
+                size_2nd_unit = None
+                if 'Size / 2nd Unit' in props and props['Size / 2nd Unit']['number'] is not None:
+                    size_2nd_unit = props['Size / 2nd Unit']['number']
+                
+                # Extrage observațiile
+                obs = ''
+                if 'Obs' in props and props['Obs']['rich_text']:
+                    obs = props['Obs']['rich_text'][0]['plain_text']
+                
+                # Extrage separator
+                separator = ''
+                if 'Receipt separator' in props and props['Receipt separator']['select']:
+                    separator = props['Receipt separator']['select']['name']
+                
+                ingredients.append({
+                    'id': result['id'],
+                    'name': name,
+                    'grocery_id': grocery_id,
+                    'size_unit': size_unit,
+                    'size_2nd_unit': size_2nd_unit,
+                    'obs': obs,
+                    'separator': separator
+                })
+            
+            return ingredients
+            
+        except Exception as e:
+            print(f"  ⚠ Eroare la obținerea ingredientelor detaliate: {e}")
+            return []
+    
     def update_recipe_ingredients(self, recipe_id: str, recipe_data: Dict):
-        """Actualizează ingredientele unei rețete existente"""
-        print(f"\n  Actualizare ingrediente pentru: {recipe_data['name']}")
+        """Actualizează ingredientele unei rețete existente (smart update - păstrează existente, update doar ce s-a schimbat)"""
+        print(f"\n  Actualizare inteligentă ingrediente pentru: {recipe_data['name']}")
         
-        # Obține ingredientele existente
-        existing = self.get_existing_ingredients(recipe_id)
+        # Obține ingredientele existente cu toate detaliile
+        existing = self._get_existing_ingredients_detailed(recipe_id)
         print(f"  ℹ Găsite {len(existing)} ingrediente existente")
         
-        # Șterge toate ingredientele existente
+        # Creează un dict pentru ingredientele existente (key = grocery_id + name)
+        existing_map = {}
         for ing in existing:
-            try:
-                notion.pages.update(
-                    page_id=ing['id'],
-                    archived=True
+            key = f"{ing['grocery_id']}:{ing['name']}"
+            existing_map[key] = ing
+        
+        # Procesează ingredientele noi
+        separator_counter = 1
+        new_ingredients_keys = set()
+        updated_count = 0
+        created_count = 0
+        
+        for group in recipe_data['ingredient_groups']:
+            print(f"\n  Grup: [{group['name']}]")
+            
+            for ingredient in group['ingredients']:
+                # Găsește/creează grocery item
+                grocery_id = self.find_or_create_grocery_item(ingredient['grocery_item'])
+                
+                if not grocery_id:
+                    continue
+                
+                # Validează unitatea și verifică dacă e nevoie de conversie
+                is_valid, converted_qty, converted_unit = self.validate_unit(
+                    ingredient, grocery_id, ingredient['grocery_item']
                 )
-            except Exception as e:
-                print(f"    ⚠ Eroare la ștergerea ingredientului '{ing['name']}': {e}")
+                
+                if not is_valid:
+                    print(f"    ✗ Import anulat pentru '{ingredient['name']}'")
+                    continue
+                
+                # Folosește cantitatea și unitatea convertite dacă există
+                final_quantity = converted_qty if converted_qty is not None else ingredient['quantity']
+                final_unit = converted_unit if converted_unit is not None else ingredient['unit']
+                
+                # Creează key pentru acest ingredient
+                ingredient_key = f"{grocery_id}:{ingredient['name']}"
+                new_ingredients_keys.add(ingredient_key)
+                
+                # Verifică dacă ingredientul există deja
+                if ingredient_key in existing_map:
+                    # Update ingredient existent
+                    existing_ing = existing_map[ingredient_key]
+                    
+                    # Verifică dacă s-a schimbat ceva (cantitate, unitate, obs)
+                    needs_update = False
+                    updates = {}
+                    
+                    # Determină care câmp să folosim (Size / Unit sau Size / 2nd Unit)
+                    unity, second_unity = self.get_grocery_item_units(grocery_id)
+                    use_second_unit = False
+                    save_in_obs = False
+                    
+                    if not unity and not second_unity:
+                        use_second_unit = False
+                        save_in_obs = False
+                    else:
+                        matches_unity = unity and self._units_match(final_unit, unity)
+                        matches_second_unity = second_unity and self._units_match(final_unit, second_unity)
+                        
+                        if matches_second_unity:
+                            use_second_unit = True
+                            save_in_obs = False
+                        elif matches_unity:
+                            use_second_unit = False
+                            save_in_obs = False
+                        else:
+                            use_second_unit = False
+                            save_in_obs = True
+                    
+                    # Compară cantitatea
+                    if use_second_unit:
+                        if existing_ing.get('size_2nd_unit') != final_quantity:
+                            updates["Size / 2nd Unit"] = {"number": final_quantity} if final_quantity else {"number": None}
+                            needs_update = True
+                        # Clear Size / Unit dacă era setat
+                        if existing_ing.get('size_unit') is not None:
+                            updates["Size / Unit"] = {"number": None}
+                            needs_update = True
+                    else:
+                        if not save_in_obs and existing_ing.get('size_unit') != final_quantity:
+                            updates["Size / Unit"] = {"number": final_quantity} if final_quantity else {"number": None}
+                            needs_update = True
+                        # Clear Size / 2nd Unit dacă era setat
+                        if existing_ing.get('size_2nd_unit') is not None:
+                            updates["Size / 2nd Unit"] = {"number": None}
+                            needs_update = True
+                    
+                    # Construiește noul Obs
+                    obs_parts = []
+                    if save_in_obs and final_quantity is not None:
+                        obs_parts.append(f"{final_quantity}{final_unit}")
+                    if ingredient.get('observations'):
+                        obs_parts.append(ingredient['observations'])
+                    
+                    new_obs = " | ".join(obs_parts) if obs_parts else ""
+                    
+                    # Compară Obs
+                    if existing_ing.get('obs', '') != new_obs:
+                        updates["Obs"] = {"rich_text": [{"text": {"content": new_obs}}]} if new_obs else {"rich_text": []}
+                        needs_update = True
+                    
+                    # Update separator
+                    if existing_ing.get('separator') != str(separator_counter):
+                        updates["Receipt separator"] = {"select": {"name": str(separator_counter)}}
+                        needs_update = True
+                    
+                    # Aplică update-urile dacă există
+                    if needs_update:
+                        try:
+                            notion.pages.update(
+                                page_id=existing_ing['id'],
+                                properties=updates
+                            )
+                            print(f"    ↻ Actualizat: {ingredient['name']}")
+                            updated_count += 1
+                        except Exception as e:
+                            print(f"    ⚠ Eroare la actualizare '{ingredient['name']}': {e}")
+                    else:
+                        print(f"    = Neschimbat: {ingredient['name']}")
+                else:
+                    # Creează ingredient nou
+                    try:
+                        properties = {
+                            "Ingredient": {
+                                "title": [{"text": {"content": ingredient['name']}}]
+                            },
+                            "Grocery - Item": {
+                                "relation": [{"id": grocery_id}]
+                            },
+                            "Receipt": {
+                                "relation": [{"id": recipe_id}]
+                            },
+                            "Receipt separator": {
+                                "select": {"name": str(separator_counter)}
+                            }
+                        }
+                        
+                        # Determină care câmp să folosim
+                        unity, second_unity = self.get_grocery_item_units(grocery_id)
+                        use_second_unit = False
+                        save_in_obs = False
+                        
+                        if not unity and not second_unity:
+                            use_second_unit = False
+                            save_in_obs = False
+                        else:
+                            matches_unity = unity and self._units_match(final_unit, unity)
+                            matches_second_unity = second_unity and self._units_match(final_unit, second_unity)
+                            
+                            if matches_second_unity:
+                                use_second_unit = True
+                                save_in_obs = False
+                            elif matches_unity:
+                                use_second_unit = False
+                                save_in_obs = False
+                            else:
+                                use_second_unit = False
+                                save_in_obs = True
+                        
+                        # Adaugă cantitatea
+                        if final_quantity is not None and not save_in_obs:
+                            if use_second_unit:
+                                properties["Size / 2nd Unit"] = {"number": final_quantity}
+                            else:
+                                properties["Size / Unit"] = {"number": final_quantity}
+                        
+                        # Adaugă observațiile
+                        obs_parts = []
+                        if save_in_obs and final_quantity is not None:
+                            obs_parts.append(f"{final_quantity}{final_unit}")
+                        if ingredient.get('observations'):
+                            obs_parts.append(ingredient['observations'])
+                        
+                        if obs_parts:
+                            properties["Obs"] = {
+                                "rich_text": [{"text": {"content": " | ".join(obs_parts)}}]
+                            }
+                        
+                        notion.pages.create(
+                            parent={"database_id": DB_INGREDIENTS},
+                            properties=properties
+                        )
+                        print(f"    + Creat: {ingredient['name']}")
+                        created_count += 1
+                        
+                    except Exception as e:
+                        print(f"    ✗ Eroare la crearea ingredientului '{ingredient['name']}': {e}")
+                
+                separator_counter += 1
         
-        if existing:
-            print(f"  ✓ Șterse {len(existing)} ingrediente vechi")
+        # Șterge ingredientele care nu mai există în versiunea nouă
+        deleted_count = 0
+        for key, ing in existing_map.items():
+            if key not in new_ingredients_keys:
+                try:
+                    notion.pages.update(
+                        page_id=ing['id'],
+                        archived=True
+                    )
+                    print(f"    - Șters: {ing['name']}")
+                    deleted_count += 1
+                except Exception as e:
+                    print(f"    ⚠ Eroare la ștergerea ingredientului '{ing['name']}': {e}")
         
-        # Creează noile ingrediente
-        print(f"  → Creez ingrediente noi...")
-        self.create_ingredients(recipe_id, recipe_data)
+        # Sumar
+        print(f"\n  ✓ Actualizare completă:")
+        print(f"    + {created_count} noi")
+        print(f"    ↻ {updated_count} actualizate")
+        print(f"    - {deleted_count} șterse")
+        print(f"    = {len(new_ingredients_keys) - created_count - updated_count} neschimbate")
     
     def create_recipe(self, recipe_data: Dict) -> Optional[str]:
         """Creează rețeta în baza Receipts 2.0"""
