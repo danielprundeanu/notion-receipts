@@ -28,6 +28,9 @@ alias notion-steps-url='cd /Users/danielprundeanu/Documents/GitHub/notion && sou
 alias notion-steps-local='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/add_recipe_steps.py data/local/scraped_local_recipes.txt'
 alias notion-steps='notion-steps-url'  # Default: steps for URLs
 
+# Cleanup duplicate ingredients
+alias notion-cleanup='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/cleanup_duplicate_ingredients.py'
+
 # Update metadata
 alias notion-update-metadata='cd /Users/danielprundeanu/Documents/GitHub/notion && source .venv/bin/activate && python scripts/update_recipe_metadata.py data/scraped_recipes.txt'
 
