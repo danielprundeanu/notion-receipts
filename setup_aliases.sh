@@ -1,12 +1,8 @@
 #!/bin/zsh
 # Setup script pentru Notion Recipes aliases
 
-# Elimină vechile aliasuri
-sed -i.backup '/# Notion Recipes/,/^$/d' ~/.zshrc
-
-# Adaugă noile aliasuri
-cat << 'EOF' >> ~/.zshrc
-
+# Creează fișierul .notion_aliases
+cat > ~/.notion_aliases << 'EOF'
 # Notion Recipes - Workflow aliases
 alias notion-cd='cd /Users/danielprundeanu/Documents/GitHub/notion'
 
@@ -55,8 +51,17 @@ alias notion-images='cd /Users/danielprundeanu/Documents/GitHub/notion && source
 
 # Help
 alias notion-help='cat /Users/danielprundeanu/Documents/GitHub/notion/COMMANDS.md'
-
 EOF
 
-echo "✅ Aliasuri actualizate în ~/.zshrc"
+# Verifică dacă .zshrc deja include .notion_aliases
+if ! grep -q "source ~/.notion_aliases" ~/.zshrc; then
+    echo '' >> ~/.zshrc
+    echo '# Load Notion aliases' >> ~/.zshrc
+    echo 'if [ -f ~/.notion_aliases ]; then' >> ~/.zshrc
+    echo '    source ~/.notion_aliases' >> ~/.zshrc
+    echo 'fi' >> ~/.zshrc
+    echo "✅ Adăugat source pentru .notion_aliases în ~/.zshrc"
+fi
+
+echo "✅ Aliasuri Notion actualizate în ~/.notion_aliases"
 echo "🔄 Rulează: source ~/.zshrc"
