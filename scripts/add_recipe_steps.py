@@ -65,8 +65,8 @@ class RecipeStepsAdder:
         recipe_key = recipe_name.lower()
         return self.recipes_cache.get(recipe_key)
     
-    def _parse_scraped_file(self, filepath: str) -> Dict[str, List[str]]:
-        """Parsează fișierul scraped și extrage pașii pentru fiecare rețetă"""
+    def _parse_scraped_file(self, filepath: str) -> Dict[str, Dict[str, List[str]]]:
+        """Parsează fișierul scraped și extrage pașii și notele pentru fiecare rețetă"""
         print(f"\n📖 Procesez fișier: {filepath}")
         
         if not os.path.exists(filepath):
@@ -86,7 +86,7 @@ class RecipeStepsAdder:
         # recipes_raw[4] = conținut a doua rețetă
         # etc.
         
-        recipes_with_steps = {}
+        recipes_with_content = {}
         
         for i in range(1, len(recipes_raw), 2):
             if i + 1 >= len(recipes_raw):
@@ -95,31 +95,48 @@ class RecipeStepsAdder:
             recipe_name = recipes_raw[i].strip()
             recipe_content = recipes_raw[i + 1]
             
-            # Extrage pașii
-            steps_match = re.search(r'Steps:\s*\n((?:\d+\..+?\n)+)', recipe_content, re.MULTILINE)
+            # Extrage pașii (Steps)
+            steps_match = re.search(r'Steps:\s*\n((?:(?:\d+\.|[A-Za-z][\w\s-]*:)\s*.+?\n)+)', recipe_content, re.MULTILINE | re.DOTALL)
             
+            steps = []
             if steps_match:
                 steps_text = steps_match.group(1)
-                # Împarte în pași individuali
-                steps = re.findall(r'\d+\.\s*(.+?)(?=\n\d+\.|\n\n|\Z)', steps_text, re.DOTALL)
-                # Curăță fiecare pas
-                steps = [step.strip() for step in steps if step.strip()]
-                
-                if steps:
-                    recipes_with_steps[recipe_name] = steps
+                # Împarte în pași individuali (numerotați sau headere)
+                steps = re.findall(r'(?:\d+\.\s*(.+?)|([A-Za-z][\w\s-]*:.*?))(?=\n\d+\.|\n[A-Za-z][\w\s-]*:|\n\n|\Z)', steps_text, re.DOTALL)
+                # Curăță fiecare pas - ia primul grup nevid
+                steps = [(match[0] if match[0] else match[1]).strip() for match in steps if any(match)]
+            
+            # Extrage notele (Notes) - după Steps, până la următoarea secțiune sau EOF
+            notes = []
+            notes_match = re.search(r'Notes:\s*\n((?:(?!^##|\n\n\n).)+)', recipe_content, re.MULTILINE | re.DOTALL)
+            
+            if notes_match:
+                notes_text = notes_match.group(1).strip()
+                # Împarte în note individuale (paragrafe separate prin linie goală sau fiecare linie)
+                # Dacă notele sunt pe mai multe linii consecutive, le păstrăm împreună
+                notes = [note.strip() for note in notes_text.split('\n') if note.strip()]
+            
+            if steps or notes:
+                recipes_with_content[recipe_name] = {
+                    'steps': steps,
+                    'notes': notes
+                }
         
-        print(f"  ✓ Găsite {len(recipes_with_steps)} rețete cu pași")
-        return recipes_with_steps
+        total_with_steps = sum(1 for r in recipes_with_content.values() if r['steps'])
+        total_with_notes = sum(1 for r in recipes_with_content.values() if r['notes'])
+        print(f"  ✓ Găsite {total_with_steps} rețete cu pași")
+        print(f"  ✓ Găsite {total_with_notes} rețete cu note")
+        return recipes_with_content
     
-    def _add_steps_to_page(self, page_id: str, steps: List[str]) -> bool:
-        """Adaugă pașii în secțiunea Instructions/Steps din pagina Notion"""
+    def _add_steps_to_page(self, page_id: str, steps: List[str], notes: List[str] = None) -> bool:
+        """Adaugă pașii și notele în secțiunea Instructions/Steps din pagina Notion"""
         try:
             # Obține toate blocurile din pagină
             blocks = notion.blocks.children.list(block_id=page_id)
             
             if not blocks['results']:
                 print(f"    ℹ Pagină goală - creez secțiune nouă")
-                return self._create_steps_section(page_id, steps)
+                return self._create_steps_section(page_id, steps, notes)
             
             # Caută heading-ul "Instructions" sau "Steps"
             instructions_block_index = None
@@ -160,11 +177,11 @@ class RecipeStepsAdder:
                 
                 print(f"    ↻ Șterse {len(blocks_to_delete)} blocuri (heading + conținut)")
                 
-                # Creează noua secțiune Instructions cu pașii
+                # Creează noua secțiune Instructions cu pașii și notele
                 # API-ul Notion va adăuga la sfârșitul paginii, dar asta e OK
                 children = []
                 
-                # Heading nou
+                # Heading Steps
                 children.append({
                     "object": "block",
                     "type": "heading_1",
@@ -186,6 +203,39 @@ class RecipeStepsAdder:
                         }
                     })
                 
+                # Adaugă Notes dacă există
+                if notes:
+                    # Linie goală înainte de Notes
+                    children.append({
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": []
+                        }
+                    })
+                    
+                    # Heading Notes
+                    children.append({
+                        "object": "block",
+                        "type": "heading_1",
+                        "heading_1": {
+                            "rich_text": [{"type": "text", "text": {"content": "Notes"}}]
+                        }
+                    })
+                    
+                    # Notele
+                    for note in notes:
+                        children.append({
+                            "object": "block",
+                            "type": "paragraph",
+                            "paragraph": {
+                                "rich_text": [{
+                                    "type": "text",
+                                    "text": {"content": note}
+                                }]
+                            }
+                        })
+                
                 # Adaugă la pagină (va apărea la final, dar e OK - conținutul e corect)
                 notion.blocks.children.append(block_id=page_id, children=children)
                 
@@ -193,7 +243,7 @@ class RecipeStepsAdder:
             else:
                 # Nu există secțiune Instructions - adaugă la final
                 print(f"    ℹ Nu există secțiune Instructions - adaug la final")
-                return self._create_steps_section(page_id, steps, at_end=True)
+                return self._create_steps_section(page_id, steps, notes, at_end=True)
             
         except Exception as e:
             print(f"    ✗ Eroare: {e}")
@@ -201,8 +251,8 @@ class RecipeStepsAdder:
             traceback.print_exc()
             return False
     
-    def _create_steps_section(self, page_id: str, steps: List[str], at_end: bool = False) -> bool:
-        """Creează o secțiune nouă Instructions cu pașii"""
+    def _create_steps_section(self, page_id: str, steps: List[str], notes: List[str] = None, at_end: bool = False) -> bool:
+        """Creează o secțiune nouă Instructions cu pașii și notele"""
         try:
             children = []
             
@@ -214,7 +264,7 @@ class RecipeStepsAdder:
                     "divider": {}
                 })
             
-            # Adaugă heading
+            # Adaugă heading Steps
             children.append({
                 "object": "block",
                 "type": "heading_1",
@@ -236,6 +286,39 @@ class RecipeStepsAdder:
                     }
                 })
             
+            # Adaugă Notes dacă există
+            if notes:
+                # Linie goală înainte de Notes
+                children.append({
+                    "object": "block",
+                    "type": "paragraph",
+                    "paragraph": {
+                        "rich_text": []
+                    }
+                })
+                
+                # Heading Notes
+                children.append({
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {
+                        "rich_text": [{"type": "text", "text": {"content": "Notes"}}]
+                    }
+                })
+                
+                # Notele
+                for note in notes:
+                    children.append({
+                        "object": "block",
+                        "type": "paragraph",
+                        "paragraph": {
+                            "rich_text": [{
+                                "type": "text",
+                                "text": {"content": note}
+                            }]
+                        }
+                    })
+            
             notion.blocks.children.append(block_id=page_id, children=children)
             return True
             
@@ -253,18 +336,23 @@ class RecipeStepsAdder:
         self._load_receipts_database()
         
         # Parsează fișierul cu rețete
-        recipes_with_steps = self._parse_scraped_file(filepath)
+        recipes_with_content = self._parse_scraped_file(filepath)
         
-        if not recipes_with_steps:
+        if not recipes_with_content:
             print("\n⚠ Nu s-au găsit rețete cu pași în fișier")
             return
         
-        print(f"\n📝 Procesez {len(recipes_with_steps)} rețete...\n")
+        print(f"\n📝 Procesez {len(recipes_with_content)} rețete...\n")
         
         # Procesează fiecare rețetă
-        for recipe_name, steps in recipes_with_steps.items():
+        for recipe_name, content in recipes_with_content.items():
+            steps = content.get('steps', [])
+            notes = content.get('notes', [])
+            
             print(f"🍳 {recipe_name}")
             print(f"  📋 {len(steps)} pași")
+            if notes:
+                print(f"  📝 {len(notes)} note")
             
             # Găsește pagina în Notion
             page_id = self._find_recipe_page(recipe_name)
@@ -274,8 +362,8 @@ class RecipeStepsAdder:
                 self.skipped_count += 1
                 continue
             
-            # Adaugă pașii
-            if self._add_steps_to_page(page_id, steps):
+            # Adaugă pașii și notele
+            if self._add_steps_to_page(page_id, steps, notes):
                 print(f"  ✓ Adăugat cu succes")
                 self.processed_count += 1
             else:

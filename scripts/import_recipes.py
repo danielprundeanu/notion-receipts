@@ -262,6 +262,32 @@ class RecipeImporter:
         
         return recipe
     
+    def _normalize_unit(self, unit: str) -> str:
+        """
+        Normalizează unitățile de măsură la forma standard
+        Exemple: cups -> cup, teaspoons -> tsp, tablespoons -> tbsp
+        """
+        unit_lower = unit.lower()
+        
+        # Mapare unități plurale -> singular
+        unit_mappings = {
+            'cups': 'cup',
+            'teaspoons': 'tsp',
+            'tablespoons': 'tbsp',
+            'tsps': 'tsp',
+            'tbsps': 'tbsp',
+            'ounces': 'oz',
+            'pounds': 'lb',
+            'grams': 'g',
+            'kilograms': 'kg',
+            'milliliters': 'ml',
+            'liters': 'l',
+            'cloves': 'clove',
+            'pieces': 'piece',
+        }
+        
+        return unit_mappings.get(unit_lower, unit)
+    
     def _parse_ingredient(self, line: str) -> Optional[Dict]:
         """
         Parsează o linie de ingredient.
@@ -286,6 +312,9 @@ class RecipeImporter:
         if match:
             quantity = float(match.group(1))
             unit = match.group(2) or ''
+            # Normalizează unitățile (cups -> cup, teaspoons -> tsp, etc.)
+            if unit:
+                unit = self._normalize_unit(unit)
             rest = match.group(3).strip()
             grocery_item = match.group(4).strip() if match.group(4) else None
             
@@ -297,33 +326,9 @@ class RecipeImporter:
                 name = parts[0].strip()
                 observations = parts[1].strip()
             
-            # Elimină adjectivele din nume și le adaugă la observații
-            name_words = name.split()
-            cleaned_words = []
-            removed_adjectives = []
-            
-            for word in name_words:
-                if re.match(adjectives, word, re.IGNORECASE):
-                    removed_adjectives.append(word)
-                else:
-                    cleaned_words.append(word)
-            
-            # Reconstituie numele fără adjective
-            if cleaned_words:
-                name = ' '.join(cleaned_words)
-            
-            # Adaugă adjectivele eliminate la începutul observațiilor
-            if removed_adjectives:
-                adj_text = ' '.join(removed_adjectives)
-                if observations:
-                    observations = f"{adj_text}, {observations}"
-                else:
-                    observations = adj_text
-            
-            # Singularizează numele (tomatoes -> tomato)
+            # Procesare simplă - ingredientele vin deja procesate de la scraping
+            # Singularizează și capitalizează numele
             name = self._singularize(name)
-            
-            # Capitalizează prima literă
             name = name.capitalize()
             
             # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
@@ -364,7 +369,7 @@ class RecipeImporter:
             # Verifică dacă este o unitate validă (case insensitive)
             unit = ''
             if potential_unit and potential_unit.lower() in known_units:
-                unit = potential_unit
+                unit = self._normalize_unit(potential_unit)
             elif potential_unit and potential_unit.lower() in container_words:
                 # Este un container - include-l în nume, nu ca unitate
                 rest = f"{potential_unit} {rest}"
@@ -381,33 +386,8 @@ class RecipeImporter:
                 name = parts[0].strip()
                 observations = parts[1].strip()
             
-            # Elimină adjectivele din nume și le adaugă la observații
-            name_words = name.split()
-            cleaned_words = []
-            removed_adjectives = []
-            
-            for word in name_words:
-                if re.match(adjectives, word, re.IGNORECASE):
-                    removed_adjectives.append(word)
-                else:
-                    cleaned_words.append(word)
-            
-            # Reconstituie numele fără adjective
-            if cleaned_words:
-                name = ' '.join(cleaned_words)
-            
-            # Adaugă adjectivele eliminate la începutul observațiilor
-            if removed_adjectives:
-                adj_text = ' '.join(removed_adjectives)
-                if observations:
-                    observations = f"{adj_text}, {observations}"
-                else:
-                    observations = adj_text
-            
-            # Singularizează numele (tomatoes -> tomato)
+            # Procesare simplă - ingredientele vin deja procesate de la scraping
             name = self._singularize(name)
-            
-            # Capitalizează prima literă
             name = name.capitalize()
             
             # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
@@ -438,28 +418,7 @@ class RecipeImporter:
                 name = parts[0].strip()
                 observations = parts[1].strip()
             
-            # Elimină adjectivele din nume
-            name_words = name.split()
-            cleaned_words = []
-            removed_adjectives = []
-            
-            for word in name_words:
-                if re.match(adjectives, word, re.IGNORECASE):
-                    removed_adjectives.append(word)
-                else:
-                    cleaned_words.append(word)
-            
-            if cleaned_words:
-                name = ' '.join(cleaned_words)
-            
-            if removed_adjectives:
-                adj_text = ' '.join(removed_adjectives)
-                if observations:
-                    observations = f"{adj_text}, {observations}"
-                else:
-                    observations = adj_text
-            
-            # Singularizează și capitalizează
+            # Procesare simplă - ingredientele vin deja procesate de la scraping
             name = self._singularize(name)
             name = name.capitalize()
             
@@ -794,21 +753,203 @@ class RecipeImporter:
             page = notion.pages.retrieve(page_id=page_id)
             props = page.get('properties', {})
             
-            unity = props.get('unity', {})
+            # Unity este de tip select, nu rich_text
+            unity = props.get('Unity', {})
             unity_val = ''
-            if unity.get('type') == 'rich_text' and unity.get('rich_text'):
-                unity_val = unity['rich_text'][0]['plain_text']
+            if unity.get('type') == 'select' and unity.get('select'):
+                unity_val = unity['select']['name']
             
-            second_unity = props.get('2nd unity', {})
+            # 2nd Unity este de tip select, nu rich_text
+            second_unity = props.get('2nd Unity', {})
             second_unity_val = ''
-            if second_unity.get('type') == 'rich_text' and second_unity.get('rich_text'):
-                second_unity_val = second_unity['rich_text'][0]['plain_text']
+            if second_unity.get('type') == 'select' and second_unity.get('select'):
+                second_unity_val = second_unity['select']['name']
             
             return unity_val, second_unity_val
             
         except Exception as e:
             print(f"  ⚠ Eroare la obținerea unităților: {e}")
             return '', ''
+    
+    def _add_2nd_unity_to_grocery(self, grocery_item_id: str, unit: str, grocery_name: str) -> bool:
+        """
+        Adaugă 2nd Unity la un Grocery Item existent (fără Conversion)
+        DEPRECATED: Folosește _add_2nd_unity_with_conversion în schimb
+        """
+        try:
+            if unit not in self.AVAILABLE_2ND_UNITS:
+                print(f"  ⚠ '{unit}' nu e în lista AVAILABLE_2ND_UNITS: {self.AVAILABLE_2ND_UNITS}")
+                return False
+            
+            notion.pages.update(
+                page_id=grocery_item_id,
+                properties={
+                    "2nd Unity": {
+                        "select": {"name": unit}
+                    }
+                }
+            )
+            
+            print(f"  ✓ Actualizat '{grocery_name}': 2nd Unity = '{unit}'")
+            return True
+            
+        except Exception as e:
+            print(f"  ✗ Eroare la actualizarea Grocery Item: {e}")
+            return False
+    
+    def _select_2nd_unity_dialog(self, recipe_unit: str) -> Optional[str]:
+        """
+        Afișează dialog pentru selectarea 2nd Unity
+        
+        Args:
+            recipe_unit: Unitatea din rețetă (pentru a o marca în listă)
+        
+        Returns:
+            Unitatea selectată sau None dacă s-a anulat
+        """
+        print(f"\n📏 Selectează 2nd Unity:")
+        for idx, unit in enumerate(self.AVAILABLE_2ND_UNITS, 1):
+            marker = " ← (din rețetă)" if unit == recipe_unit else ""
+            print(f"    {idx}. {unit}{marker}")
+        print(f"    0. Anulează")
+        
+        while True:
+            choice = input(f"\n  Selectează 2nd Unity (0-{len(self.AVAILABLE_2ND_UNITS)}): ").strip()
+            try:
+                choice_num = int(choice)
+                if choice_num == 0:
+                    print(f"  ⊗ Anulat")
+                    return None
+                elif 1 <= choice_num <= len(self.AVAILABLE_2ND_UNITS):
+                    selected = self.AVAILABLE_2ND_UNITS[choice_num - 1]
+                    print(f"  ✓ Selectat: {selected}")
+                    return selected
+                else:
+                    print(f"  ⚠ Opțiune invalidă")
+            except ValueError:
+                print(f"  ⚠ Te rog introdu un număr")
+    
+    def _add_2nd_unity_with_conversion(self, grocery_item_id: str, unit: str, grocery_name: str) -> bool:
+        """
+        Adaugă 2nd Unity la un Grocery Item + cere valoarea Conversion
+        
+        Args:
+            grocery_item_id: ID-ul Grocery Item-ului
+            unit: Unitatea care va fi setată ca 2nd Unity
+            grocery_name: Numele Grocery Item-ului (pentru logging)
+        
+        Returns:
+            True dacă actualizarea a avut succes, False altfel
+        """
+        try:
+            if unit not in self.AVAILABLE_2ND_UNITS:
+                print(f"  ⚠ '{unit}' nu e în lista AVAILABLE_2ND_UNITS: {self.AVAILABLE_2ND_UNITS}")
+                return False
+            
+            # Obține Unity pentru a afișa în prompt
+            unity, _ = self.get_grocery_item_units(grocery_item_id)
+            
+            # Cere valoarea Conversion
+            print(f"\n🔄 Conversion factor: câte {unity} sunt într-un {unit}?")
+            print(f"   Exemplu: dacă 1 {unit} = 240{unity}, introduce 240")
+            conv_input = input(f"   Conversion (sau ENTER pentru skip): ").strip()
+            
+            conversion = None
+            if conv_input:
+                try:
+                    conversion = float(conv_input)
+                    print(f"  ✓ Conversion: 1 {unit} = {conversion} {unity}")
+                except ValueError:
+                    print(f"  ⚠ Conversion invalid, se salvează fără conversion")
+            
+            # Actualizează Grocery Item
+            properties = {
+                "2nd Unity": {
+                    "select": {"name": unit}
+                }
+            }
+            
+            if conversion is not None:
+                properties["Conversion"] = {"number": conversion}
+            
+            notion.pages.update(
+                page_id=grocery_item_id,
+                properties=properties
+            )
+            
+            conv_text = f" + Conversion: 1 {unit} = {conversion} {unity}" if conversion else ""
+            print(f"  ✓ Actualizat '{grocery_name}': 2nd Unity = '{unit}'{conv_text}")
+            return True
+            
+        except Exception as e:
+            print(f"  ✗ Eroare la actualizarea Grocery Item: {e}")
+            return False
+    
+    def _manual_conversion_dialog(self, ingredient: Dict, unity: str, second_unity: str) -> Tuple[Optional[float], Optional[str]]:
+        """
+        Dialog pentru introducerea manuală a conversiei
+        
+        Args:
+            ingredient: Dicționarul ingredientului cu unit și quantity
+            unity: Unity din Grocery Item
+            second_unity: 2nd Unity din Grocery Item
+        
+        Returns:
+            Tuple (cantitate_convertită, unitate_țintă) sau (None, None) dacă s-a anulat
+        """
+        print(f"\n🔢 Conversie manuală pentru {ingredient['quantity']} {ingredient['unit']}:")
+        
+        options = []
+        if unity:
+            options.append((unity, 'principală'))
+        if second_unity:
+            options.append((second_unity, 'secundară'))
+        
+        if not options:
+            print(f"  ⚠ Nu există unități disponibile în Grocery Item")
+            return None, None
+        
+        print(f"\nAlege unitatea țintă:")
+        for idx, (unit, unit_type) in enumerate(options, 1):
+            print(f"  {idx}. Convertește la {unit} (unitate {unit_type})")
+        print(f"  0. Anulează")
+        
+        target_unit = None
+        while not target_unit:
+            choice = input(f"\nSelectează unitate (0-{len(options)}): ").strip()
+            try:
+                choice_num = int(choice)
+                if choice_num == 0:
+                    return None, None
+                elif 1 <= choice_num <= len(options):
+                    target_unit = options[choice_num - 1][0]
+                else:
+                    print(f"  ⚠ Opțiune invalidă")
+            except ValueError:
+                print(f"  ⚠ Te rog introdu un număr")
+        
+        # Cere factorul de conversie (câte unități țintă sunt într-o unitate din rețetă)
+        print(f"\n🔄 Factor de conversie:")
+        print(f"   Câte {target_unit} sunt într-un {ingredient['unit']}?")
+        print(f"   Exemplu: dacă 1 {ingredient['unit']} = 5{target_unit}, introdu 5")
+        
+        while True:
+            factor_input = input(f"\nFactor de conversie (sau ENTER pentru anulare): ").strip()
+            if not factor_input:
+                return None, None
+            try:
+                conversion_factor = float(factor_input)
+                if conversion_factor <= 0:
+                    print(f"  ⚠ Factorul trebuie să fie pozitiv")
+                    continue
+                
+                # Calculează cantitatea finală
+                converted_qty = ingredient['quantity'] * conversion_factor
+                print(f"  ✓ Conversie: {ingredient['quantity']} {ingredient['unit']} × {conversion_factor} = {converted_qty:.4g} {target_unit}")
+                
+                return converted_qty, target_unit
+            except ValueError:
+                print(f"  ⚠ Te rog introdu un număr valid")
     
     def _normalize_unit(self, unit: str) -> str:
         """Normalizează o unitate la forma ei canonică"""
@@ -840,21 +981,25 @@ class RecipeImporter:
         if from_normalized == to_normalized:
             return quantity
         
+        # Caută în UNIT_CONVERSIONS folosind forma RAW (nu normalizată)
         # Încearcă conversie prin dicționar
-        if from_normalized in self.UNIT_CONVERSIONS:
-            target_unit, factor = self.UNIT_CONVERSIONS[from_normalized]
+        from_raw = from_unit.lower().strip()
+        to_raw = to_unit.lower().strip()
+        
+        if from_raw in self.UNIT_CONVERSIONS:
+            target_unit, factor = self.UNIT_CONVERSIONS[from_raw]
             
             # Convertește la unitatea intermediară
             intermediate_value = quantity * factor
             
             # Verifică dacă unitatea țintă este compatibilă
-            if self._normalize_unit(target_unit) == to_normalized:
+            if target_unit.lower() == to_raw:
                 return intermediate_value
             
             # Dacă to_unit e în conversii și are aceeași unitate intermediară
-            if to_normalized in self.UNIT_CONVERSIONS:
-                to_target, to_factor = self.UNIT_CONVERSIONS[to_normalized]
-                if self._normalize_unit(to_target) == self._normalize_unit(target_unit):
+            if to_raw in self.UNIT_CONVERSIONS:
+                to_target, to_factor = self.UNIT_CONVERSIONS[to_raw]
+                if to_target.lower() == target_unit.lower():
                     return intermediate_value / to_factor
         
         return None
@@ -920,10 +1065,27 @@ class RecipeImporter:
             for idx, (conv_qty, conv_unit, unit_type) in enumerate(conversions, 1):
                 print(f"{idx}. Convertește la {conv_qty:.2f} {conv_unit} (unitate {unit_type})")
             
+            # Adaugă ÎNTOTDEAUNA opțiunea de conversie manuală
+            next_option = len(conversions) + 1
+            print(f"\n{next_option}. INTRODUCE conversie manuală")
+            if unity:
+                print(f"   - Câte {unity} sunt într-un {ingredient['unit']}?")
+            if second_unity and unity:
+                print(f"   - SAU câte {second_unity} sunt într-un {ingredient['unit']}?")
+            elif second_unity:
+                print(f"   - Câte {second_unity} sunt într-un {ingredient['unit']}?")
+            
+            # Adaugă opțiunea de a seta 2nd Unity (doar dacă nu există deja)
+            can_add_2nd = not second_unity
+            if can_add_2nd:
+                next_option += 1
+                print(f"\n{next_option}. ADAUGĂ 2nd Unity la '{grocery_name}' (alegi manual din listă)")
+            
             print(f"\n0. Anulează - oprește importul")
             
             while True:
-                choice = input(f"\nAlege conversie (0-{len(conversions)}): ").strip()
+                max_option = len(conversions) + 1 + (1 if can_add_2nd else 0)
+                choice = input(f"\nAlege opțiune (0-{max_option}): ").strip()
                 
                 try:
                     choice_num = int(choice)
@@ -934,34 +1096,110 @@ class RecipeImporter:
                         conv_qty, conv_unit, _ = conversions[choice_num - 1]
                         print(f"  ✓ Se va folosi {conv_qty:.2f} {conv_unit}")
                         return True, conv_qty, conv_unit
+                    elif choice_num == len(conversions) + 1:
+                        # Opțiune: INTRODUCE conversie manuală
+                        conv_qty, conv_unit = self._manual_conversion_dialog(ingredient, unity, second_unity)
+                        if conv_qty is not None:
+                            print(f"  ✓ Se va folosi {conv_qty} {conv_unit}")
+                            return True, conv_qty, conv_unit
+                        else:
+                            print(f"  ⊗ Conversie anulată, alege altă opțiune")
+                            continue
+                    elif can_add_2nd and choice_num == len(conversions) + 2:
+                        # Dialog pentru adăugare 2nd Unity
+                        selected_unit = self._select_2nd_unity_dialog(ingredient['unit'])
+                        if selected_unit:
+                            success = self._add_2nd_unity_with_conversion(grocery_item_id, selected_unit, grocery_name)
+                            if success:
+                                if self._units_match(ingredient['unit'], selected_unit):
+                                    print(f"  ✓ Se va folosi {ingredient['quantity']} {ingredient['unit']}")
+                                    return True, None, None
+                                else:
+                                    print(f"  ⚠ Unitatea '{ingredient['unit']}' NU match-uiește cu '{selected_unit}'")
+                                    print(f"  ℹ Alege din nou ce să faci")
+                                    continue
+                            else:
+                                continue
+                        else:
+                            continue
                     else:
-                        print(f"  ⚠ Opțiune invalidă, alege 0-{len(conversions)}")
+                        print(f"  ⚠ Opțiune invalidă")
                 except ValueError:
-                    print(f"  ⚠ Input invalid, alege 0-{len(conversions)}")
+                    print(f"  ⚠ Input invalid")
         
         # Nu există conversii disponibile
         print(f"\n{'─'*60}")
         print("❌ Nu există conversii automate disponibile!")
         print(f"{'─'*60}")
         print(f"\nSOLUȚII:")
-        print(f"\n1. MODIFICĂ rețeta:")
+        print(f"\n1. INTRODUCE conversie manuală")
         if unity:
-            print(f"   - Convertește manual cantitatea în '{unity}' în fișierul text")
+            print(f"   - Convertește cantitatea la '{unity}' și introdu valoarea")
         if second_unity:
-            print(f"   - SAU convertește manual cantitatea în '{second_unity}' în fișierul text")
-        print(f"\n2. ACTUALIZARE Grocery Item în Notion:")
-        print(f"   - Deschide '{grocery_name}' în Grocery List 2.0")
-        print(f"   - Setează 'unity' sau '2nd unity' la '{ingredient['unit']}'")
+            print(f"   - SAU convertește cantitatea la '{second_unity}' și introdu valoarea")
+        
+        # Verifică dacă poate adăuga 2nd Unity (doar dacă nu există deja)
+        can_add_2nd_unity = not second_unity
+        
+        if can_add_2nd_unity:
+            print(f"\n2. ADAUGĂ 2nd Unity la '{grocery_name}'")
+            print(f"   - Vei alege manual din lista AVAILABLE_2ND_UNITS")
+        else:
+            print(f"\n2. ACTUALIZARE manuală Grocery Item în Notion:")
+            print(f"   - Deschide '{grocery_name}' în Grocery List 2.0")
+            print(f"   - Modifică '2nd Unity' la unitatea dorită")
+        
+        print(f"\n3. SARI acest ingredient (va fi salvat în Obs)")
+        print(f"\n0. ANULEAZĂ importul pentru acest ingredient")
         print(f"\n{'='*60}\n")
         
-        confirm = input("Continui oricum fără conversie? (y/n): ").strip().lower()
-        if confirm == 'y' or confirm == 'yes':
-            print(f"  ⚠ Cantitatea {ingredient['quantity']}{ingredient['unit']} va fi salvată în Obs (nu în Size)")
-            # Returnează True dar marchează că trebuie salvată în Obs
-            # Folosim un tuple special pentru a semnala acest caz
-            return True, None, None
-        
-        return False, None, None
+        while True:
+            if can_add_2nd_unity:
+                choice = input("Alege opțiune (0-3): ").strip()
+            else:
+                choice = input("Alege opțiune (0, 1 sau 3): ").strip()
+            
+            if choice == '0':
+                print(f"  ✗ Import anulat pentru '{ingredient['name']}'")
+                return False, None, None
+            elif choice == '1':
+                # Dialog pentru conversie manuală
+                conv_qty, conv_unit = self._manual_conversion_dialog(ingredient, unity, second_unity)
+                if conv_qty is not None:
+                    print(f"  ✓ Se va folosi {conv_qty} {conv_unit}")
+                    return True, conv_qty, conv_unit
+                else:
+                    print(f"  ⊗ Conversie anulată, alege altă opțiune")
+                    continue
+            elif choice == '2' and can_add_2nd_unity:
+                # Selectează manual 2nd Unity din listă
+                selected_unit = self._select_2nd_unity_dialog(ingredient['unit'])
+                
+                if selected_unit:
+                    # Adaugă 2nd Unity selectat la Grocery Item + Conversion
+                    success = self._add_2nd_unity_with_conversion(grocery_item_id, selected_unit, grocery_name)
+                    if success:
+                        print(f"  ✓ 2nd Unity '{selected_unit}' adăugat la '{grocery_name}'")
+                        
+                        # Verifică dacă unitatea selectată match-uiește cu cea din rețetă
+                        if self._units_match(ingredient['unit'], selected_unit):
+                            print(f"  ✓ Se va folosi {ingredient['quantity']} {ingredient['unit']}")
+                            return True, None, None
+                        else:
+                            print(f"  ⚠ Unitatea din rețetă '{ingredient['unit']}' NU match-uiește cu '{selected_unit}'")
+                            print(f"  ℹ Te rog alege din nou ce să faci cu acest ingredient")
+                            continue
+                    else:
+                        print(f"  ✗ Nu s-a putut adăuga 2nd Unity, alege altă opțiune")
+                        continue
+                else:
+                    continue
+            elif choice == '3':
+                print(f"  ⚠ Cantitatea {ingredient['quantity']}{ingredient['unit']} va fi salvată în Obs (nu în Size)")
+                return True, None, None
+            else:
+                print(f"  ⚠ Opțiune invalidă")
+                continue
 
     def find_existing_recipe(self, recipe_name: str) -> Optional[str]:
         """Caută o rețetă existentă după nume și returnează ID-ul"""
@@ -1287,8 +1525,9 @@ class RecipeImporter:
                         
                     except Exception as e:
                         print(f"    ✗ Eroare la crearea ingredientului '{ingredient['name']}': {e}")
-                
-                separator_counter += 1
+            
+            # Incrementează separator după procesarea tuturor ingredientelor din grup
+            separator_counter += 1
         
         # Șterge ingredientele care nu mai există în versiunea nouă
         deleted_count = 0

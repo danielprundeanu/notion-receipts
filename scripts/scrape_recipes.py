@@ -946,6 +946,7 @@ class RecipeScraper:
         
         # Caută instrucțiuni - mai multe metode
         instructions = []
+        notes = []  # Secțiune separată pentru Notes
         seen_instructions = set()
         
         # Metodă 1: Caută containere cu "instruction", "method", "direction" în class/id
@@ -1025,6 +1026,24 @@ class RecipeScraper:
                     instructions = potential_instructions
                     break
         
+        # Caută secțiunea Notes - poate fi după Instructions sau într-o secțiune separată
+        for heading in soup.find_all(['h2', 'h3', 'h4', 'h5', 'h6', 'strong', 'b']):
+            heading_text = heading.get_text().strip().lower()
+            if re.search(r'^notes?:?$', heading_text):
+                # Găsit heading Notes, caută următorul container cu text
+                next_container = heading.find_next(['ul', 'ol', 'div', 'p', 'section'])
+                if next_container:
+                    # Caută toate paragrafele și list items
+                    for elem in next_container.find_all(['li', 'p'], recursive=True):
+                        text = elem.get_text().strip()
+                        text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text)
+                        text = re.sub(r'\s+', ' ', text).strip()
+                        if text and len(text) > 10 and text not in notes:
+                            notes.append(text)
+                    if notes:
+                        print(f"  ✓ {len(notes)} note găsite")
+                        break
+        
         # Calculează numărul total de ingrediente
         total_ingredients = sum(len(group['items']) for group in ingredient_groups)
         
@@ -1032,6 +1051,8 @@ class RecipeScraper:
             return None
         
         print(f"  ✓ Parsare HTML: {total_ingredients} ingrediente ({len(ingredient_groups)} grupuri), {len(instructions)} instrucțiuni găsite")
+        if notes:
+            print(f"  ✓ {len(notes)} note găsite")
         
         # Filtru ÎNAINTE de a adăuga descriptions: Elimină instrucțiuni care nu au verbe de acțiune
         filtered_instructions = []
@@ -1093,6 +1114,7 @@ class RecipeScraper:
             'category': None,
             'ingredient_groups': ingredient_groups,  # Lista de grupuri
             'instructions': instructions,
+            'notes': notes,  # Adaugă notes
             'image_url': image_url
         }
     
@@ -1226,10 +1248,24 @@ class RecipeScraper:
                     step_number += 1
             lines.append("")
         
-        # Adaugă secțiunile extra (# Serve, # Tips, etc.) DUPĂ Steps
+        # Adaugă secțiunea Notes (dacă există) DUPĂ Steps
+        if recipe.get('notes'):
+            lines.append("Notes:")
+            for note in recipe['notes']:
+                # Elimină newlines și normalizează spațiile
+                note = note.replace('\n', ' ').replace('\r', ' ')
+                note = re.sub(r'\s+', ' ', note).strip()
+                lines.append(note)
+            lines.append("")
+        
+        # Adaugă secțiunile extra (# Serve, # Tips, etc.) DUPĂ Notes
         if recipe.get('extra_sections'):
             for section in recipe['extra_sections']:
-                lines.append(f"## {section['title']}")
+                section_title = section['title']
+                # Skip Notes dacă a fost deja adăugată separat
+                if section_title.lower() == 'notes':
+                    continue
+                lines.append(f"## {section_title}")
                 for content_line in section['content']:
                     lines.append(content_line)
                 lines.append("")
