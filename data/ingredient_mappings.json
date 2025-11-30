@@ -127,7 +127,9 @@
     "roasted peanut": "Peanut",
     "peanut": "Peanuts",
     "cumin": "Ground cumin",
-    "lentil": "Red Lentils"
+    "lentil": "Red Lentils",
+    "red lentil": "Red Lentils",
+    "-4 tablespoons fresh lemon juice": "Lemon"
   },
   "unit_conversions": {
     "custom_rules": []

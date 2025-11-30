@@ -107,24 +107,38 @@ class IngredientProcessor:
                 print("  ⚠ DB_GROCERIES_ID nu este setat - folosesc doar lista de adjective")
                 return
             
-            # Fetch toate grocery items
-            results = notion.databases.query(database_id=db_groceries)
+            # Fetch toate grocery items (cu paginare pentru >100 items)
+            has_more = True
+            start_cursor = None
             
-            for item in results.get('results', []):
-                name_prop = item.get('properties', {}).get('Name', {})
-                title = name_prop.get('title', [])
-                if title and len(title) > 0:
-                    name = title[0].get('text', {}).get('content', '').strip()
-                    if name:
-                        # Adaugă variante: singular, plural, lowercase
-                        name_lower = name.lower()
-                        self.grocery_items.add(name_lower)
-                        self.all_ingredients.add(name_lower)
-                        
-                        # Adaugă și varianta fără 's' final (aproximare plural)
-                        if name_lower.endswith('s'):
-                            self.grocery_items.add(name_lower[:-1])
-                            self.all_ingredients.add(name_lower[:-1])
+            while has_more:
+                if start_cursor:
+                    results = notion.databases.query(
+                        database_id=db_groceries,
+                        start_cursor=start_cursor
+                    )
+                else:
+                    results = notion.databases.query(database_id=db_groceries)
+                
+                for item in results.get('results', []):
+                    name_prop = item.get('properties', {}).get('Name', {})
+                    title = name_prop.get('title', [])
+                    if title and len(title) > 0:
+                        name = title[0].get('text', {}).get('content', '').strip()
+                        if name:
+                            # Adaugă variante: singular, plural, lowercase
+                            name_lower = name.lower()
+                            self.grocery_items.add(name_lower)
+                            self.all_ingredients.add(name_lower)
+                            
+                            # Adaugă și varianta fără 's' final (aproximare plural)
+                            if name_lower.endswith('s'):
+                                self.grocery_items.add(name_lower[:-1])
+                                self.all_ingredients.add(name_lower[:-1])
+                
+                # Verifică dacă mai sunt pagini
+                has_more = results.get('has_more', False)
+                start_cursor = results.get('next_cursor')
             
             print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din Notion")
             print(f"  ℹ Total {len(self.all_ingredients)} ingrediente disponibile pentru matching")
