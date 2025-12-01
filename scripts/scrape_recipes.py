@@ -54,6 +54,76 @@ class RecipeScraper:
             print(f"  ⚠ Eroare la traducere: {e}")
             return text
     
+    def _translate_ingredient_line(self, line: str) -> str:
+        """
+        Traduce doar numele ingredientului dintr-o linie, păstrând cantitatea și unitatea în engleză.
+        Exemplu: "500 g făină" → "500 g flour"
+        """
+        if not line or not line.strip():
+            return line
+        
+        # Pattern pentru a identifica cantitate + unitate la început
+        # Exemplu: "500 g", "2 cani", "1 lingura", etc.
+        pattern = r'^(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|cup|cups|tsp|tbsp|teaspoon|teaspoons|tablespoon|tablespoons|oz|lb|lingura|linguri|lingurita|lingurite|cana|cani|bucata|bucati)?)\s+(.+)$'
+        match = re.match(pattern, line, re.I)
+        
+        if match:
+            quantity_unit = match.group(1)  # Ex: "500 g" sau "2 linguri"
+            ingredient_name = match.group(2)  # Ex: "făină"
+            
+            # Traduce unitățile românești la engleză și normalizează totul
+            quantity_unit_en = quantity_unit.lower()
+            
+            # Traduce unitățile românești
+            quantity_unit_en = re.sub(r'\blingura\b', 'tbsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\blinguri\b', 'tbsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\blingurita\b', 'tsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\blingurite\b', 'tsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bcana\b', 'cup', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bcani\b', 'cup', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bbucata\b', 'piece', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bbucati\b', 'piece', quantity_unit_en)
+            
+            # Normalizează toate unitățile englezești la forma scurtă/singular cu litere mici
+            quantity_unit_en = re.sub(r'\bcups?\b', 'cup', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\btablespoons?\b', 'tbsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bteaspoons?\b', 'tsp', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bounces?\b', 'oz', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bpounds?\b', 'lb', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bpieces?\b', 'piece', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bgrams?\b', 'g', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bkilograms?\b', 'kg', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bmilliliters?\b', 'ml', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bliters?\b', 'l', quantity_unit_en)
+            
+            # Traduce doar numele ingredientului
+            ingredient_name_en = self._translate_text(ingredient_name)
+            
+            return f"{quantity_unit_en} {ingredient_name_en}"
+        else:
+            # Dacă nu e în format cantitate+unitate, traduce tot
+            return self._translate_text(line)
+    
+    def _normalize_units_in_text(self, text: str) -> str:
+        """
+        Normalizează toate unitățile de măsură dintr-un text la formă scurtă/singular cu litere mici.
+        Exemplu: "2 tablespoons" → "2 tbsp", "3 cups" → "3 cup"
+        """
+        # Normalizează toate unitățile la forma scurtă/singular cu litere mici
+        text = re.sub(r'\bcups?\b', 'cup', text, flags=re.I)
+        text = re.sub(r'\btablespoons?\b', 'tbsp', text, flags=re.I)
+        text = re.sub(r'\bteaspoons?\b', 'tsp', text, flags=re.I)
+        text = re.sub(r'\bounces?\b', 'oz', text, flags=re.I)
+        text = re.sub(r'\bpounds?\b', 'lb', text, flags=re.I)
+        text = re.sub(r'\bpieces?\b', 'piece', text, flags=re.I)
+        text = re.sub(r'\bgrams?\b', 'g', text, flags=re.I)
+        text = re.sub(r'\bkilograms?\b', 'kg', text, flags=re.I)
+        text = re.sub(r'\bmilliliters?\b', 'ml', text, flags=re.I)
+        text = re.sub(r'\bliters?\b', 'l', text, flags=re.I)
+        text = re.sub(r'\btbsp\b', 'tbsp', text, flags=re.I)  # Normalizează și majusculele (Tbsp → tbsp)
+        text = re.sub(r'\btsp\b', 'tsp', text, flags=re.I)
+        return text
+    
     def _is_local_file(self, path: str) -> bool:
         """Verifică dacă path-ul este un fișier local"""
         return os.path.isfile(path)
@@ -88,13 +158,8 @@ class RecipeScraper:
         
         print(f"  📝 Titlu: {title}")
         
-        # Traduce titlul
-        title_translated = self._translate_text(title)
-        if title_translated != title:
-            print(f"  🌐 Tradus: {title_translated}")
-        
         recipe = {
-            'name': title_translated,
+            'name': title,
             'servings': None,
             'time': None,
             'difficulty': 'Easy',
@@ -182,7 +247,8 @@ class RecipeScraper:
                         recipe['description'] = current_description
                         current_description = []
                     current_section = 'extra'
-                    current_extra_section = self._translate_text(section_title)
+                    # Nu traduce titlul secțiunii extra - păstrează-l în limba originală
+                    current_extra_section = section_title
                     print(f"  ✓ Secțiune extra: {current_extra_section}")
                 
                 continue
@@ -234,7 +300,8 @@ class RecipeScraper:
                 
                 # Verifică dacă arată ca ingredient
                 if clean and (re.match(r'^\d', clean) or re.search(r'\b\d+', clean) or len(clean.split()) <= 6):
-                    ingredient_translated = self._translate_text(clean)
+                    # Traduce doar numele ingredientului, păstrează unitățile în engleză
+                    ingredient_translated = self._translate_ingredient_line(clean)
                     
                     # Procesează ingredientul pentru a separa adjectivele
                     processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_translated)
@@ -249,20 +316,20 @@ class RecipeScraper:
             elif current_section == 'instructions':
                 clean = re.sub(r'^[\d.)\-–•*]\s*', '', line).strip()
                 if len(clean) >= 10:
-                    instruction_translated = self._translate_text(clean)
-                    current_instructions.append(instruction_translated)
+                    # Nu traduce instrucțiunile - păstrează-le în limba originală
+                    current_instructions.append(clean)
                 continue
             
             elif current_section == 'description':
                 if len(line) > 10:
-                    desc_translated = self._translate_text(line)
-                    current_description.append(desc_translated)
+                    # Nu traduce descrierea - păstrează-o în limba originală
+                    current_description.append(line)
                 continue
             
             elif current_section == 'extra':
                 if len(line) > 5:
-                    extra_translated = self._translate_text(line)
-                    current_extra_content.append(extra_translated)
+                    # Nu traduce secțiunile extra - păstrează-le în limba originală
+                    current_extra_content.append(line)
                 continue
             
             # Auto-detectare (dacă nu suntem în nicio secțiune)
@@ -273,14 +340,15 @@ class RecipeScraper:
                 if re.match(r'^\d', clean) or re.search(r'\b\d+\s*(?:g|kg|ml|l|cup|tsp|tbsp)', clean, re.I):
                     current_section = 'ingredients'
                     print(f"  ℹ Auto-detectat Ingrediente")
-                    ingredient_translated = self._translate_text(clean)
+                    # Traduce doar numele ingredientului, păstrează unitățile în engleză
+                    ingredient_translated = self._translate_ingredient_line(clean)
                     current_ingredients.append(ingredient_translated)
                 # Skip linii de metadata
                 elif not any(x in line_lower for x in ['nutrition', 'calories', 'prep', 'cook', 'total', 'servings', 'link']):
                     # Presupune că e descriere
                     if len(line) > 20:
-                        desc_translated = self._translate_text(line)
-                        current_description.append(desc_translated)
+                        # Nu traduce descrierea - păstrează-o în limba originală
+                        current_description.append(line)
         
         # Salvează ultimele secțiuni
         if current_ingredients:
@@ -342,6 +410,14 @@ class RecipeScraper:
             
             if recipe:
                 recipe['source_url'] = url_or_file
+                
+                # Normalizează toate unitățile în toate ingredientele
+                if 'ingredient_groups' in recipe:
+                    for group in recipe['ingredient_groups']:
+                        if 'items' in group:
+                            group['items'] = [self._normalize_units_in_text(item) for item in group['items']]
+                if 'ingredients' in recipe:
+                    recipe['ingredients'] = [self._normalize_units_in_text(item) for item in recipe['ingredients']]
                 
                 # Descarcă imaginea local dacă există URL
                 if recipe.get('image_url'):
@@ -427,31 +503,36 @@ class RecipeScraper:
             'image_url': self._extract_image_url(data.get('image'))
         }
         
-        # Traduce numele rețetei
-        recipe['name'] = self._translate_text(recipe['name'])
+        # Nu traduce titlul - păstrează-l în limba originală
+        # recipe['name'] = self._translate_text(recipe['name'])
         
-        # Traduce ingredientele din fiecare grup
+        # Traduce DOAR ingredientele din fiecare grup (pentru matching cu Notion)
         for group in recipe['ingredient_groups']:
-            # Traduce numele grupului dacă există
-            if group['name']:
-                group['name'] = self._translate_text(group['name'])
-            # Traduce fiecare ingredient
-            group['items'] = [self._translate_text(item) for item in group['items']]
+            # Nu traduce numele grupului - păstrează-l în limba originală
+            # if group['name']:
+            #     group['name'] = self._translate_text(group['name'])
+            # Traduce doar numele ingredientului, păstrează unitățile în engleză
+            group['items'] = [self._translate_ingredient_line(item) for item in group['items']]
+        
+        # Normalizează toate unitățile în ingrediente (pentru cazurile când vin direct din HTML fără traducere)
+        for group in recipe['ingredient_groups']:
+            group['items'] = [self._normalize_units_in_text(item) for item in group['items']]
         
         # Actualizează lista plată de ingrediente
         recipe['ingredients'] = []
         for group in recipe['ingredient_groups']:
             recipe['ingredients'].extend(group['items'])
         
-        # Traduce instrucțiunile
-        translated_instructions = []
-        for step in recipe['instructions']:
-            if isinstance(step, dict) and 'text' in step:
-                step['text'] = self._translate_text(step['text'])
-                translated_instructions.append(step)
-            else:
-                translated_instructions.append(self._translate_text(step))
-        recipe['instructions'] = translated_instructions
+        # NU traduce instrucțiunile - păstrează-le în limba originală
+        # Instrucțiunile rămân așa cum sunt din JSON-LD
+        # translated_instructions = []
+        # for step in recipe['instructions']:
+        #     if isinstance(step, dict) and 'text' in step:
+        #         step['text'] = self._translate_text(step['text'])
+        #         translated_instructions.append(step)
+        #     else:
+        #         translated_instructions.append(self._translate_text(step))
+        # recipe['instructions'] = translated_instructions
         
         total_groups = len(ingredient_groups)
         print(f"  ✓ Titlu: {recipe['name']}")

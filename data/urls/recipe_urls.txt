@@ -14,10 +14,10 @@
 https://www.e-retete.ro/retete/pastai-scazute-cu-usturoi
 https://reciperunner.com/creamy-red-lentil-soup/
 https://dishingouthealth.com/mediterranean-eggplant-and-halloumi-bowls-with-lemon-dill-sauce/
-https://dishingouthealth.com/chickpea-quinoa-bowls/
-https://dishingouthealth.com/30-minute-greek-shrimp-farro-bowls/
-https://dishingouthealth.com/bbq-salmon-bowls/
-https://dishingouthealth.com/chicken-zucchini-meatballs/
-https://dishingouthealth.com/falafel-bowls-with-cashew-tzatziki/
-https://dishingouthealth.com/cauliflower-burrito-bowls-with-jalapeno-ranch/
-https://dishingouthealth.com/summer-vegetable-curry/
+# https://dishingouthealth.com/chickpea-quinoa-bowls/
+# https://dishingouthealth.com/30-minute-greek-shrimp-farro-bowls/
+# https://dishingouthealth.com/bbq-salmon-bowls/
+# https://dishingouthealth.com/chicken-zucchini-meatballs/
+# https://dishingouthealth.com/falafel-bowls-with-cashew-tzatziki/
+# https://dishingouthealth.com/summer-vegetable-curry/
+# https://dishingouthealth.com/cauliflower-burrito-bowls-with-jalapeno-ranch/
