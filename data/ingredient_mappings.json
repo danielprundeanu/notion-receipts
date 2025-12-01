@@ -37,7 +37,7 @@
     "caper": "Capers",
     "grains of choice (farro": "Quinoa",
     "yellow bean": "Yellow Beans",
-    "pepper": " Red Bell Pepper",
+    "pepper": " Black Pepper",
     "bunch parsley": "Fresh Parsley",
     "oil": "Olive Oil",
     "cashew": "Cashew Nuts",
@@ -129,7 +129,14 @@
     "cumin": "Ground cumin",
     "lentil": "Red Lentils",
     "red lentil": "Red Lentils",
-    "-4 tablespoons fresh lemon juice": "Lemon"
+    "-4 tablespoons fresh lemon juice": "Lemon",
+    "sprigs of dill": "Fresh Dill",
+    "gr yellow pod": "yellow beans",
+    "-4 tbsp fresh lemon juice": "Lemon",
+    "cherry tomatoe": "Cherry tomatoes",
+    "yogurt": "Greek Yogurt 2%",
+    "garlic": "Garlic clove",
+    "to 2 tbsp. olive oil": "Olive Oil"
   },
   "unit_conversions": {
     "custom_rules": []

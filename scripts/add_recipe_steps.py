@@ -76,8 +76,8 @@ class RecipeStepsAdder:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Împarte în rețete
-        recipes_raw = re.split(r'\n=== (.+?) ===\n', content)
+        # Împarte în rețete - permite === la începutul fișierului sau după \n
+        recipes_raw = re.split(r'(?:^|\n)=== (.+?) ===\n', content, flags=re.MULTILINE)
         
         # recipes_raw[0] = conținut înainte de prima rețetă (ignorăm)
         # recipes_raw[1] = titlu primă rețetă
@@ -95,16 +95,17 @@ class RecipeStepsAdder:
             recipe_name = recipes_raw[i].strip()
             recipe_content = recipes_raw[i + 1]
             
-            # Extrage pașii (Steps)
-            steps_match = re.search(r'Steps:\s*\n((?:(?:\d+\.|[A-Za-z][\w\s-]*:)\s*.+?\n)+)', recipe_content, re.MULTILINE | re.DOTALL)
+            # Extrage pașii (Steps) - tot conținutul după "Steps:" până la "Notes:" sau sfârșitul rețetei
+            steps_match = re.search(r'Steps:\s*\n(.+?)(?=\n\nNotes:|\n\n===|\Z)', recipe_content, re.MULTILINE | re.DOTALL)
             
             steps = []
             if steps_match:
-                steps_text = steps_match.group(1)
-                # Împarte în pași individuali (numerotați sau headere)
-                steps = re.findall(r'(?:\d+\.\s*(.+?)|([A-Za-z][\w\s-]*:.*?))(?=\n\d+\.|\n[A-Za-z][\w\s-]*:|\n\n|\Z)', steps_text, re.DOTALL)
-                # Curăță fiecare pas - ia primul grup nevid
-                steps = [(match[0] if match[0] else match[1]).strip() for match in steps if any(match)]
+                steps_text = steps_match.group(1).strip()
+                # Împarte în pași individuali - începe cu număr sau heading cu :
+                # Pattern: 1. text SAU Heading: text
+                steps = re.split(r'\n(?=\d+\.|\n[A-Z][A-Za-z\s\-()]+:)', steps_text)
+                # Curăță fiecare pas
+                steps = [step.strip() for step in steps if step.strip()]
             
             # Extrage notele (Notes) - după Steps, până la următoarea secțiune sau EOF
             notes = []
@@ -275,13 +276,15 @@ class RecipeStepsAdder:
             
             # Adaugă pașii
             for idx, step in enumerate(steps, 1):
+                # Șterge numerotarea dacă există (e.g., "1. text" -> "text")
+                clean_step = re.sub(r'^\d+\.\s*', '', step)
                 children.append({
                     "object": "block",
                     "type": "paragraph",
                     "paragraph": {
                         "rich_text": [{
                             "type": "text",
-                            "text": {"content": f"{idx}. {step}"}
+                            "text": {"content": f"{idx}. {clean_step}"}
                         }]
                     }
                 })

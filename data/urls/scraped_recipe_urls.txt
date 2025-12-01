@@ -1,26 +1,26 @@
-=== Baked beans with garlic ===
+=== Pastai scazute cu usturoi ===
 Servings: 3
 Difficulty: Easy
 Favorite: No
 Link: https://www.e-retete.ro/retete/pastai-scazute-cu-usturoi
-Image: data/urls/img/Baked_beans_with_garlic_c1c5e959.jpg
+Image: data/urls/img/Pastai_scazute_cu_usturoi_c1c5e959.jpg
 
 [1]
-[266.67 g] yellow beans
+[266.67] gr yellow pods
 [2.67] cloves of garlic
-[0.33 teaspoon] sweet paprika
-[0.17 teaspoon] pepper
+[0.33 tsp] sweet paprika
+[0.17 tsp] pepper
 salt
 [0.08] bunch parsley
-[0.67] sprigs of dill (optional)
-[1.33 tablespoons] oil
+[0.67] dill (optional)
+[1.33 tbsp] oil
 
 Steps:
-1. Clean the pods from the ends and break them into 23 pieces.
-2. Add 6 crushed cloves of garlic to the hot oil and fry quickly. Then add the pods and continue to cook for another 23 minutes, stirring often.
-3. Cover the pods with 2 cups of water, add the spices and finely chopped greens. Put the lid on and cook on medium heat for about 2530 minutes. The checks should be cooked after this time and if they are not ready, leave them to cook with the lid on.
-4. Add the remaining 2 cloves of crushed garlic and cook for another 5 minutes without the lid, to reduce the sauce from the pods.
-5. Serve simply with toasted bread or as a side dish.
+1. Curatati pastaile de capete si rupetile in 23 bucati.
+2. In uleiul incins adaugati 6 catei de usturoi striviti si caliti rapid. Adaugati apoi pastaile si continuati sa caliti inca 23 minute, amestecand des.
+3. Acoperiti pastaile cu 2 cani de apa, adaugati condimentele si verdeturile tocate marunt. Puneti capacul si fierbeti la foc mediu pentru cca 2530 minute. Verificatile sa fie fierte dupa acest timp si daca nu sunt gata le mai lasati la fiert cu capac.
+4. Adaugati restul de 2 catei de usturoi striviti si fierbeti inca 5 minute fara capac, sa scada sosul de pe pastai.
+5. Serviti simplu cu paine prajita sau ca si garnitura.
 
 
 === Creamy Red Lentil Soup ===
@@ -31,30 +31,30 @@ Link: https://reciperunner.com/creamy-red-lentil-soup/
 Image: data/urls/img/Creamy_Red_Lentil_Soup_ced80dca.jpg
 
 [1]
-[0.2 tablespoon] olive oil
+[0.2 tbsp] olive oil
 [0.2 cup] yellow onion, diced
 [0.2 cup] carrots, diced
 [0.2 cup] celery, diced
 [0.4] cloves of garlic, grated
-[0.2 tablespoon] tomato paste
-[0.2 tablespoon] smoked paprika
-[0.2 teaspoon] ground cumin
-[0.1 teaspoon] ground ginger
-[0.1 teaspoon] turmeric, ground
-[0.05 teaspoon] cinnamon, ground
-[0.3 teaspoons] sriracha, optional
-[0.3 cups] red lentils, rinsed
-[0.6 tablespoons] cilantro, chopped
-[0.8 cups] vegetable broth, low sodium
-[0.3 cups] water
+[0.2 tbsp] tomato paste
+[0.2 tbsp] smoked paprika
+[0.2 tsp] ground cumin
+[0.1 tsp] ground ginger
+[0.1 tsp] turmeric, ground
+[0.05 tsp] cinnamon, ground
+[0.3 tsp] sriracha, optional
+[0.3 cup] red lentils, rinsed
+[0.6 tbsp] cilantro, chopped
+[0.8 cup] vegetable broth, low sodium
+[0.3 cup] water
 [0.1 cup] coconut, canned milk optional use more water or broth in it’s place
-[0.4] -4 tablespoons fresh lemon juice
+[0.4] -4 tbsp fresh lemon juice
 
 [Curry Cashews (optional)]
 [0.1 cup] cashews, raw
-[0.1 teaspoon] olive oil
-[0.05 teaspoon] curry powder
-[0.05 teaspoon] smoked paprika
+[0.1 tsp] olive oil
+[0.05 tsp] curry powder
+[0.05 tsp] smoked paprika
 
 Steps:
 Curry Cashews (optional)
@@ -73,21 +73,21 @@ Link: https://dishingouthealth.com/mediterranean-eggplant-and-halloumi-bowls-wit
 Image: data/urls/img/Mediterranean_Eggplant_and_Halloumi_Bowls_with_Lem_b7e39e34.jpg
 
 [1]
-[1.5 Tbsp] olive oil, extra-virgin divided
+[1.5 tbsp] olive oil, extra-virgin divided
 [0.25] eggplant, small-medium globe cut into 1/2-inch cubes
-[0.25 Tbsp] tamari
+[0.25 tbsp] tamari
 [56.75 g] halloumi cheese, cut into 1/3-in.-thick slices
 [0.25] cherry tomatoes, pint halved
 [0.75] cucumbers, Persian thinly sliced (or 1/2 English cucumber)
-[0.25 Tbsp] capers, roughly chopped
-[0.5 cups] quinoa, cooked grains of choice (farro rice or barley) or arugula for lower carb
+[0.25 tbsp] capers, roughly chopped
+[0.5 cup] quinoa, cooked grains of choice (farro rice or barley) or arugula for lower carb
 
 [Lemon-Dill Yogurt Sauce]
 [0.12 cup] yogurt, plain whole-milk Greek
-[0.5 Tbsp] lemon, fresh juice
-[0.5 Tbsp] fresh dill, finely chopped plus more for garnish
+[0.5 tbsp] lemon, fresh juice
+[0.5 tbsp] fresh dill, finely chopped plus more for garnish
 [0.5] garlic, grated cloves
-[0.25] to 2 Tbsp. olive oil, extra-virgin
+[0.25] to 2 tbsp. olive oil, extra-virgin
 
 Steps:
 1. In a medium bowl, combine tomatoes, cucumbers, capers, and 2 Tbsp. olive oil. Season with salt and pepper. Set aside.
@@ -98,304 +98,4 @@ Notes:
 MakeAhead: The lemondill sauce can be prepared up to 3 days ahead. Refrigerate in an airtight jar or container. You can also prepare the tomatocucumber salad up to 1 day ahead.
 Store: Store grains, eggplant, and halloumi separately from salad and sauce.
 Reheat: Reheat grain, eggplant, and halloumi mixture in the microwave or in a skillet over medium heat. Add tomatocucumber salad and sauce after bowl is warm.
-
-
-=== BBQ Ranch Chickpea Quinoa Bowls ===
-Servings: 3
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/chickpea-quinoa-bowls/
-Image: data/urls/img/BBQ_Ranch_Chickpea_Quinoa_Bowls_2a31faf3.jpg
-
-[Pickled Red Onions]
-[0.17] red onion, very thinly sliced
-[0.17 cup] apple cider vinegar
-[0.33 Tbsp] sugar, sweetener of choice (granulated honey or maple syrup)
-[0.33 tsp] salt, kosher
-
-[Chickpea Quinoa Bowls]
-[0.25 cup] quinoa, dry (uncooked)
-[0.5 cups] vegetable broth
-[0.33 Tbsp] olive oil, extra-virgin
-[0.33] chickpeas, (15-oz.) can rinsed drained and patted dry
-[0.17 tsp] smoked paprika
-[0.08 tsp] garlic powder
-[0.08 cup] BBQ sauce
-[0.25 cup] corn, frozen/thawed fire-roasted warmed
-[0.33] avocado, medium cut into chunks
-[0.17 cup] cheddar cheese, grated sharp white
-
-[Yogurt Ranch Dressing]
-[0.11 cup] yogurt, 2% plain Greek
-[0.67 Tbsp] mayonnaise
-[0.5 tsp] lemon, fresh juice
-[0.33 Tbsp] chives, finely chopped fresh
-[0.17 tsp] dill, dried (or 2 tsp. fresh)
-[0.17 tsp] garlic powder
-[0.08 tsp] onion powder
-[0.08 tsp] black pepper, each kosher salt and
-
-Steps:
-1. Pickle Red Onions:Place red onions in a medium heatproof bowl.In a medium pot, combine vinegar, 1/2 cup water, sugar, and salt; bring to a boil. Turn off heat and pour vinegar mixture over red onions.Let sit for at least 30 minutes (or up to 2 hours) at room temperature. (Note: you can prepare and refrigerate red onions up to 3 days in advance.)
-Pickle Red Onions:
-2. Cook Quinoa:Using the same pot, combine quinoa, vegetable broth, and a pinch of salt; bring to a boil. Reduce heat to low, cover, and cook until quinoa is fluffy and liquid is absorbed, about 15 to 18 minutes. Remove from heat, stir, and place lid back on to let grains steam until you're ready to assemble the bowls.
-3. Prepare Yogurt Ranch:In a medium bowl, combine Greek yogurt, mayo, lemon juice, chives, dill, garlic powder, onion powder, salt, and pepper; mix to combine.
-Prepare Yogurt Ranch:
-4. Sauté Chickpeas:Heat oil in a medium skillet over medium heat. Once hot, add chickpeas and cook for 4 to 5 minutes, stirring only occasionally, until slightly crisp. Season with smoked paprika, garlic powder, and a pinch of salt.Add BBQ sauce and cook 1 to 2 more minutes, allowing sauce to glaze over chickpeas. (Note: if you prefer saucier beans, add an extra 1 to 2 Tbsp. of BBQ sauce.) Remove from heat.
-5. Divide quinoa mixture evenly between 3 bowls. Top with BBQ chickpeas, fireroasted corn, pickled red onion, sharp cheddar, and avocado. Drizzle yogurt ranch dressing overtop, and garnish with fresh chopped chives, if desired.
-
-Notes:
-MakeAhead: The yogurt ranch can be made up to 3 days in advance. Refrigerate in an airtight container. You can also prepare the pickled red onions up to 1 week ahead. Refrigerate in a sealed jar or container.
-Store: The BBQ chickpeas, quinoa, corn, and white cheddar can be store together, however the onions, avocado, and dressing should be kept separate.
-Reheat: Warm the chickpea and quinoa mixture in the microwave, and add the remaining bowl ingredients after.
-
-
-=== 30 Minute Greek Shrimp Grain Bowls ===
-Servings: 4
-Time: 30
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/30-minute-greek-shrimp-farro-bowls/
-Image: data/urls/img/30_Minute_Greek_Shrimp_Grain_Bowls_d80d8d46.jpg
-
-[1]
-[0.06 cup] olive oil, plus 1 Tbsp. extra-virgin
-[0.5 Tbsp] lemon, fresh juice
-[0.5 Tbsp] fresh parsley, finely chopped plus more for garnish
-[0.5] cloves garlic, minced
-[0.38 tsp] paprika
-[0.38 tsp] dried oregano
-[0.19 tsp] salt, kosher
-[0.12 tsp] black pepper
-[113.5 g] shrimp, raw peeled and deveined
-[0.5] zucchinis, small sliced into coins or half moons
-[0.5] bell peppers, (I use red and orange) sliced into 1×1" pieces
-[0.25 cup] rice, long-grain white rinsed (sub farro or quinoa)
-
-[Lemon-Garlic Yogurt]
-[0.12 cup] yogurt, plain whole-milk Greek
-[0.25] garlic clove, grated (I use a microplane) sub 1 tsp. granulated garlic
-[0.25 Tbsp] lemon, juice
-
-Steps:
-1. In a small bowl or glass jar, combine first eight ingredients (olive oil through black pepper); stir with a whisk. 1/4 cup plus 1 Tbsp. extravirgin olive oil, 2 Tbsp. fresh lemon juice, 2 Tbsp. finely chopped fresh parsley, plus more for garnish, 2 cloves garlic, minced, 1 1/2 tsp. paprika, 1 1/2 tsp. dried oregano, 3/4 tsp. kosher salt, 1/2 tsp. black pepper
-2. Place shrimp and vegetables in two separate bowls, and divide marinade evenly into each one (I like to reserve about 1 Tablespoon to drizzle on the bowls for garnish, however totally optional!); toss to coat. Let stand 10 minutes.1 lb. raw peeled and deveined shrimp, 2 small zucchinis, sliced into coins or half moons, 2 bell peppers (I use red and orange), sliced into 1×1" pieces
-3. Meanwhile, combine rice, 1 1/2 cups water, and a generous pinch of salt in a medium saucepan. Bring to a boil, reduce heat to low, and gently simmer, covered, until grains are tender and liquid is absorbed, about 15 to 18 minutes. Remove from heat and let sit, covered, for 10 minutes. Fluff with a fork before serving.1 cup longgrain white rice, rinsed
-4. Meanwhile, prepare LemonGarlic Yogurt by combining yogurt, garlic, lemon juice, and a pinch of salt in a medium bowl. 1/2 cup plain wholemilk Greek yogurt, 1 garlic clove, grated (I use a microplane), 1 Tbsp. lemon juice
-5. Heat a large skillet over medium. Add vegetables and cook until tender, about 8 to 10 minutes. Transfer back to the same bowl.Add shrimp to pan and cook 2 minutes per side, or until opaque.
-6. Assemble bowls by dividing rice evenly into 4 bowls. Scatter shrimp and vegetables overtop, and add a generous dollop of LemonGarlic Yogurt. Finish with extra chopped fresh parsley and garnishes of choice.Optional additions: sliced green olives, capers, avocado, feta, and/or hummus
-
-Notes:
-To Store: place in an airtight container with the grains on the bottom. Store lemongarlic yogurt sauce separately.
-To Reheat: transfer to a microwavesafe bowl or plate, and reheat in 45second intervals, stirring in between, until warm. Add yogurt after rewarming.
-
-
-=== BBQ Salmon Bowls ===
-Servings: 4
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/bbq-salmon-bowls/
-Image: data/urls/img/BBQ_Salmon_Bowls_00d57c1d.jpg
-
-[Jalapeño-Peach Salsa]
-[0.5] peaches, pitted and diced
-[0.25] to 2 jalapeños seeds, fresh removed finely diced
-[0.08 cup] cilantro, chopped fresh
-[0.5 Tbsp] lime, fresh juice (from 1 lime)
-[0.06 tsp] salt, kosher
-
-[Zesty Cilantro Sauce]
-[0.12 cup] cilantro, packed leaves and stems
-[0.12 cup] onion, chopped green (scallions)
-[0.12 cup] yogurt, plain 2% fat Greek
-[0.06 cup] avocado, neutral oil (such as grapeseed or canola oil – I prefer using avocado oil)
-[0.5 Tbsp] lime, fresh juice
-[0.5] to 3 Tbsp. water
-[0.12 tsp] salt, kosher
-
-[BBQ Salmon Bowls]
-[1] salmon, (6-ounce) skin-on center-cut fillets
-[0.25 Tbsp] avocado oil
-[0.25 Tbsp] coconut, sugar (or brown sugar)
-[0.38 tsp] paprika
-[0.25 tsp] chili powder
-[0.19 tsp] garlic powder
-[0.19 tsp] onion powder
-[0.19 tsp] salt, kosher
-
-Steps:
-1. Customizable. When peaches aren’t in season, there are plenty of substitution options for the salsa. Not a fan of salmon? Chicken also works wonderfully here!
-2. Ask for Center Cut Salmon. This part of the salmon fillet is thicker and juicier, and won’t overcook as easy as the tail end.
-3. Prepare JalapeñoPeach Salsa by combining all ingredients (peaches, jalapeño, cilantro, lime, and salt) in a medium bowl; toss to combine. Set aside.
-4. Prepare Zesty Cilantro Sauce by combining all ingredients (cilantro, green onion, yogurt, oil, lime, 2 Tbsp. water, and salt) in a food processor. Blend until smooth with bright green specks throughout. Add an additional 1 Tbsp. water as needed to thin out to desired consistency.
-Zesty Cilantro Sauce
-5. Position the oven rack to the upper third of your oven; it should be about 6 inches from the broiling element at the top. Preheat broiler to HIGH.Arrange salmon fillets, skin sidedown, on a large rimmed baking sheet or baking dish. Drizzle with 1 Tablespoons avocado oil. In a small bowl, combine sugar, paprika, chili powder, garlic powder, onion powder, salt, and pepper; mix to combine. Season salmon fillets generously with spice mixture.Broil the salmon fillets, rotating the pan once halfway through, until the salmon flakes easily with a fork and appears medium in the center, about 8 to 9 minutes. If you prefer your salmon welldone, leave it in for 1 additional minute.
-6. Serve salmon over white rice with a few spoonfuls of JalapeñoPeach Salsa and a generous drizzle of Zesty Cilantro Sauce.
-
-Notes:
-Nutrition information includes 1/2 cup of cooked white rice.
-To Store. I suggest storing the salmon and rice separately from the fresh salsa and sauce. This way, you can rewarm the salmon and rice while keeping the cold components chilled.
-To Reheat. Gently reheat the salmon and rice in the microwave or in a skillet over medium heat. Once warm, top with fresh salsa and sauce.
-
-
-=== Chicken Zucchini Meatballs ===
-Servings: 4
-Time: 30
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/chicken-zucchini-meatballs/
-Image: data/urls/img/Chicken_Zucchini_Meatballs_e7ab1582.jpg
-
-[1]
-[113.5 g] ground chicken
-[0.25] zucchini, medium grated on a box grater (no need to press out excess moisture)
-[0.12 cup] panko breadcrumbs
-[0.12 cup] feta cheese, crumbled
-[0.08 cup] yellow onion, minced (or shallots)
-[0.5 Tbsp] fresh dill, finely chopped (or parsley)
-[0.5 Tbsp] jalapeño, minced fresh
-[0.25 tsp] lemon, zest
-[0.19 tsp] salt, kosher
-[0.19 tsp] garlic powder
-[0.12 tsp] black pepper
-
-[Cucumber-Avocado Salad (optional)]
-[0.25] cucumber, English diced
-[0.25] avocado, large cut into chunks
-[0.5 Tbsp] fresh basil, chopped dill or mint
-[0.25] to 2 Tbsp. lemon, fresh juice
-[0.5 Tbsp] olive oil, extra-virgin
-
-Steps:
-1. Combine all meatballs ingredients (ground chicken through black pepper) in a large bowl. Use your hands to thoroughly mix and mash the mixture together. Scoop and roll into 24 mini meatballs. (If the meatballs are sticking while rolling, moisten your hands with a little water or olive oil.)
-2. Heat 1 to 2 Tbsp. of olive oil in a large skillet over medium heat. Add half of meatballs and cook until golden, rotating to brown all sides, about 6 to 8 minutes. Transfer to a plate and repeat with second batch, adding more oil as needed.
-3. Meanwhile, prepare CucumberAvocado Salad by combining all ingredients in a large bowl; mix well.
-4. Serve meatballs over white rice with CucumberAvocado Salad and a big scoop of tzatziki. Drizzle components with a little olive oil and garnish with extra fresh dill (optional) and cracked black pepper.
-
-Notes:
-To bake the meatballs, place on a greased baking sheet and bake at 425°F for 10 to 15 minutes.
-To air fry the meatballs, lightly coat meatballs and tray with cooking spray, and air fry at 400ºF for 12 to 14 minutes.
-MakeAhead. You can mix the meatball mixture and form it into balls up to 24 hours in advance. Just keep covered and refrigerated until ready to bake.
-Store. Refrigerate leftover meatballs in an airtight container for up to 3 days.
-Reheat. You can rewarm the meatballs in the oven, air fryer, or microwave. IF reheating frozen meatballs, preheat your oven to 350ºF (if the meatballs are fully cooked) or 400ºF (if not fully cooked). Arrange the meatballs in a baking dish coated with nonstick spray. Then, bake directly from frozen until hot, 20 to 30 minutes for cooked meatballs or 25 to 30 minutes for uncooked meatballs (until meatballs reach an internal temperature of 160ºF). Freeze. Let cooked meatballs cool completely. Then arrange on a parchmentlined baking sheet and freeze until the meatballs are firm; about 1 to 2 hours. Transfer the frozen chicken meatballs to a ziptop bag and tightly seal. Freeze for up to 3 months.
-IF reheating frozen meatballs, preheat your oven to 350ºF (if the meatballs are fully cooked) or 400ºF (if not fully cooked). Arrange the meatballs in a baking dish coated with nonstick spray. Then, bake directly from frozen until hot, 20 to 30 minutes for cooked meatballs or 25 to 30 minutes for uncooked meatballs (until meatballs reach an internal temperature of 160ºF).
-
-
-=== Falafel Bowls with Cashew Tzatziki ===
-Servings: 4
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/falafel-bowls-with-cashew-tzatziki/
-Image: data/urls/img/Falafel_Bowls_with_Cashew_Tzatziki_3730786d.jpg
-
-[Cashew Tzatziki]
-[0.17 cup] cashews, raw
-[0.25] cucumber, large English
-[0.75 Tbsp] lemon, juice
-[0.25] garlic clove
-[0.12 tsp] salt, kosher
-[0.5 Tbsp] fresh dill, finely chopped
-[0.25 Tbsp] fresh parsley, finely chopped
-[0.06 tsp] black pepper
-
-[Baked Falafel]
-[0.25] chickpeas, (15.5-oz.) can rinsed drained and patted dry
-[0.12 cup] red onion, roughly chopped
-[0.12 cup] fresh parsley, packed
-[0.5] garlic, cloves
-[0.25 Tbsp] tahini, (sesame seed paste)
-[0.19 tsp] ground cumin
-[0.12 tsp] smoked paprika
-[0.12 tsp] black pepper, each kosher salt and
-[0.75 Tbsp] flour, all-purpose (sub chickpea flour)
-
-[Additional Bowl Ingredients]
-[0.38 cups] cherry tomatoes, halved
-[0.25] avocado, medium peeled and diced
-[0.08 cup] red onion, finely chopped
-[0.5 Tbsp] olive oil, extra-virgin
-[1] handfuls, fresh arugula or greens of choice
-
-Steps:
-1. Place cashews in a small bowl and cover with 1/2 cup boiling water. Let cashews stand for 30 minutes while you prepare falafel.
-2. Begin preparing falafel by adding chickpeas, red onion, parsley, garlic, tahini, cumin, smoked paprika, salt, and pepper to a food processor or blender. Pulse to combine, scraping down sides as needed, until thoroughly combined. You’re looking for a crumbly dough, not a paste (as shown in photo).Add flour 1 Tbsp. at a time and pulse to combine until the mixture is dry enough to mold without it sticking to your hands.
-3. Preheat oven to 400ºF and lightly coat a rimmed baking sheet with olive oil. Scoop out 2 rounded Tbsp. amounts of falafel mix and gently form into 12 discs. Arrange discs on prepared baking sheet, spacing about 2 inches apart. Bake falafel for 25 to 30 minutes, gently flipping once halfway through, until golden and crisp.
-4. While falafel bakes, begin preparing tzatziki.To start, partially peel the cucumber and slice it in half. Grate half the cucumber on a box grater into a clean kitchen towel. Press to expel as much moisture as possible, and transfer cucumber to a small bowl. Transfer soaked cashews and water to a high power blender, along with lemon juice, garlic, and salt. Blend mixture on HIGH until smooth and creamy. Transfer cashew mixture to the bowl with grated cucumber, and mix in dill, parsley, and black pepper. Taste and adjust seasonings as needed.
-5. Prepare cucumbertomato salad by chopping up remaining half of cucumber and placing in a bowl. Add tomatoes, avocado, red onion, and olive oil. Gently toss to combine, and season to taste with salt and pepper. To assemble bowls, place 4 falafel, a handful of arugula, and a scoop of cucumbertomato salad into each of 4 bowls. Serve with cashew tzatziki and warm pita (if desired).
-To assemble bowls
-
-
-=== Cauliflower Burrito Bowls with Jalapeño Ranch ===
-Servings: 4
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/cauliflower-burrito-bowls-with-jalapeno-ranch/
-Image: data/urls/img/Cauliflower_Burrito_Bowls_with_Jalapeo_Ranch_a50c130a.jpg
-
-[1]
-[0.25] cauliflower, medium head cut into florets
-[0.75 Tbsp] olive oil, extra-virgin divided
-[0.38 Tbsp] taco seasoning, homemade or store-bought
-[0.25 cup] red onion, diced
-[0.5 tsp] adobo sauce (from a, can of chipotle peppers) (or 1 tsp. chili powder)
-[0.25 tsp] ground cumin
-[0.25] beans, (15.5-oz.) can black drained but not rinsed
-[0.5] tomatoes, plum diced
-[0.25 cup] corn, frozen fire-roasted partially thawed
-[0.5 Tbsp] cilantro, chopped fresh
-[0.25 Tbsp] lime, fresh juice
-
-[Jalapeño Ranch]
-[0.25 cup] yogurt, plain whole-milk Greek
-[0.12] jalapeño seeds, and ribs removed
-[0.06 cup] olive oil, extra-virgin
-[0.06 cup] cilantro, packed fresh leaves
-[0.5 Tbsp] fresh dill
-[0.25 tsp] garlic, granulated
-[0.12 tsp] onion powder
-[0.12 tsp] black pepper, kosher salt + 1/4 tsp.
-
-Steps:
-1. Preheat oven to 425°F. In a large bowl, toss cauliflower with 2 Tbsp. of the oil and taco seasoning. (Note: most taco seasonings are salted, however if yours is not, add 1/2 tsp. kosher salt.)Arrange on a rimmed baking sheet, avoiding any overlap; bake for 30 to 35 minutes, tossing once halfway through, until tender and charred in some spots.
-2. Meanwhile, heat remaining 1 Tbsp oil in a large skillet over medium heat. Add onion, cook until soft, about 3 to 5 minutes. Add adobo sauce, garlic, and cumin; cook 1 minute, stirring often. Add black beans, tomatoes, corn, and 1/2 tsp. kosher salt; simmer until mixture reduces, about 5 to 7 minutes. Stir in cilantro and lime juice.
-3. Prepare Jalapeño Ranch by combining all dressing ingredients in a food processor; process until smooth.
-4. Prepare bowls by dividing black bean mixture evenly into each of 4 bowls. Top evenly with cauliflower and additional toppings of choice. Drizzle Jalapeño Ranch dressing overtop.Note: all of these components are also amazing as taco fillings! Just tuck inside a toasted tortilla and voila.
-
-
-=== Summer Vegetable Curry ===
-Servings: 5
-Difficulty: Easy
-Favorite: No
-Link: https://dishingouthealth.com/summer-vegetable-curry/
-Image: data/urls/img/Summer_Vegetable_Curry_2b7d9b17.jpg
-
-[1]
-[6] Minutes
-[1] Ingredients
-[0.4 Tbsp] oil, vegetable
-[0.2 cup] onion, diced
-[0.6] garlic, cloves finely chopped
-[0.2 tsp] fresh ginger, minced
-[0.4 Tbsp] green curry paste, such as Thai Kitchen
-[0.2] zucchini, medium cut into 1/4-inch-thick slices
-[0.2] yellow squash, medium cut into 1/4-inch-thick slices
-[0.4] carrots, large sliced at a diagonal into 1-inch pieces
-[0.2] red bell pepper, sliced thin
-[0.1 tsp] black pepper, each salt and
-[0.2] 13.5 oz. coconut, can full-fat milk
-[0.3 cups] vegetable broth
-[0.6 Tbsp] almond butter, peanut or
-[0.2 cup] corn, fresh or frozen/thawed
-[0.2 cup] mango, chopped fresh
-[0.1 cup] cilantro, fresh
-[0.05 cup] mint leaves, fresh
-[0.6 Tbsp] peanuts, roasted
-[0.2 Tbsp] lime, fresh juice
-[0.1 tsp] fish, sauce optional
-
-Steps:
-1. Heat 1 Tbsp. of the oil in a large highsided skillet over medium heat. Cook onion 5 minutes, until softened. Add garlic, ginger, and curry paste; cook 1 to 2 minutes, stirring often, until fragrant. Add remaining 1 Tbsp oil, zucchini, squash, carrots, and bell pepper; cook 5 to 6 minutes, until vegetables develop some color. Season with salt and pepper.
-2. Add coconut milk, broth, nut butter, and corn; bring mixture to a boil. Reduce to a simmer, and cook 15 minutes, uncovered, until vegetables soften and broth slightly thickens.
-3. Meanwhile, prepare mango salad by combining mango, herbs, peanuts, lime juice, and fish sauce in a small bowl; gently toss.
-4. Serve curry over rice and top with mango salad.
 

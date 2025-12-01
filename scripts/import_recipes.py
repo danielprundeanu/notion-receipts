@@ -62,15 +62,15 @@ class RecipeImporter:
         'kilograms': ('g', 1000),
     }
     
-    # Mapări de sinonime pentru unități
+    # Mapări de sinonime pentru unități (folosim termenii englezi ca chei principale)
     UNIT_SYNONYMS = {
         'ml': ['ml', 'milliliter', 'milliliters', 'mL'],
         'l': ['l', 'L', 'liter', 'liters', 'litre', 'litres'],
         'g': ['g', 'gram', 'grams', 'gm'],
         'kg': ['kg', 'kilogram', 'kilograms'],
-        'buc': ['buc', 'piece', 'pieces', 'pc', 'pcs', 'bucată', 'bucăți'],
-        'lingura': ['lingura', 'lingură', 'linguri', 'tbsp', 'tablespoon', 'tablespoons'],
-        'lingurita': ['lingurita', 'lingurită', 'lingurite', 'linguriță', 'tsp', 'teaspoon', 'teaspoons'],
+        'piece': ['buc', 'piece', 'pieces', 'pc', 'pcs', 'bucată', 'bucăți'],
+        'tbsp': ['lingura', 'lingură', 'linguri', 'tbsp', 'tablespoon', 'tablespoons'],
+        'tsp': ['lingurita', 'lingurită', 'lingurite', 'linguriță', 'tsp', 'teaspoon', 'teaspoons'],
     }
     
     # Opțiuni disponibile în Notion pentru Unity și Category (din database schema)
@@ -318,13 +318,29 @@ class RecipeImporter:
             rest = match.group(3).strip()
             grocery_item = match.group(4).strip() if match.group(4) else None
             
-            # Separă observațiile (după virgulă)
+            # Inițializează observations
             observations = ''
+            
+            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
+            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
+            if grocery_item and grocery_item.lower() in descriptive_words:
+                # Mută în observații, nu e un grocery item
+                observations = grocery_item
+                grocery_item = None
+            
+            # Separă observațiile (după virgulă)
+            observations_from_comma = ''
             name = rest
             if ',' in rest:
                 parts = rest.split(',', 1)
                 name = parts[0].strip()
-                observations = parts[1].strip()
+                observations_from_comma = parts[1].strip()
+            
+            # Combină observațiile
+            if observations and observations_from_comma:
+                observations = f"{observations_from_comma}, {observations}"
+            elif observations_from_comma:
+                observations = observations_from_comma
             
             # Procesare simplă - ingredientele vin deja procesate de la scraping
             # Singularizează și capitalizează numele
@@ -353,6 +369,13 @@ class RecipeImporter:
             potential_unit = match.group(2) or ''
             rest = match.group(3).strip()
             grocery_item = match.group(4).strip() if match.group(4) else None
+            
+            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
+            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
+            if grocery_item and grocery_item.lower() in descriptive_words:
+                # Mută în observații, nu e un grocery item
+                rest = f"{rest} ({grocery_item})"
+                grocery_item = None
             
             # Validează dacă unitatea este o unitate de măsură reală
             # Lista de unități cunoscute (extinsă)
@@ -409,6 +432,13 @@ class RecipeImporter:
         if match:
             rest = match.group(1).strip()
             grocery_item = match.group(2).strip() if match.group(2) else None
+            
+            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
+            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
+            if grocery_item and grocery_item.lower() in descriptive_words:
+                # Mută în observații, nu e un grocery item
+                rest = f"{rest} ({grocery_item})"
+                grocery_item = None
             
             # Separă observațiile (după virgulă)
             observations = ''
@@ -1267,6 +1297,17 @@ class RecipeImporter:
             print(f"  ⚠ Eroare la obținerea ingredientelor: {e}")
             return []
     
+    def _get_grocery_item_name(self, grocery_id: str) -> Optional[str]:
+        """Obține numele unui grocery item după ID"""
+        try:
+            page = notion.pages.retrieve(page_id=grocery_id)
+            name_prop = page['properties'].get('Name', {})
+            if name_prop.get('title'):
+                return name_prop['title'][0]['text']['content']
+        except Exception:
+            pass
+        return None
+    
     def _get_existing_ingredients_detailed(self, recipe_id: str) -> List[Dict]:
         """Obține ingredientele existente pentru o rețetă cu toate detaliile (pentru smart update)"""
         try:
@@ -1282,46 +1323,60 @@ class RecipeImporter:
             
             ingredients = []
             for result in response.get('results', []):
-                props = result['properties']
-                
-                # Extrage numele ingredientului
-                name = ''
-                if 'Ingredient' in props and props['Ingredient']['title']:
-                    name = props['Ingredient']['title'][0]['text']['content']
-                
-                # Extrage Grocery Item ID
-                grocery_id = None
-                if 'Grocery - Item' in props and props['Grocery - Item']['relation']:
-                    grocery_id = props['Grocery - Item']['relation'][0]['id']
-                
-                # Extrage cantitățile
-                size_unit = None
-                if 'Size / Unit' in props and props['Size / Unit']['number'] is not None:
-                    size_unit = props['Size / Unit']['number']
-                
-                size_2nd_unit = None
-                if 'Size / 2nd Unit' in props and props['Size / 2nd Unit']['number'] is not None:
-                    size_2nd_unit = props['Size / 2nd Unit']['number']
-                
-                # Extrage observațiile
-                obs = ''
-                if 'Obs' in props and props['Obs']['rich_text']:
-                    obs = props['Obs']['rich_text'][0]['plain_text']
-                
-                # Extrage separator
-                separator = ''
-                if 'Receipt separator' in props and props['Receipt separator']['select']:
-                    separator = props['Receipt separator']['select']['name']
-                
-                ingredients.append({
-                    'id': result['id'],
-                    'name': name,
-                    'grocery_id': grocery_id,
-                    'size_unit': size_unit,
-                    'size_2nd_unit': size_2nd_unit,
-                    'obs': obs,
-                    'separator': separator
-                })
+                try:
+                    props = result['properties']
+                    
+                    # Extrage numele ingredientului
+                    name = ''
+                    if 'Ingredient' in props and props['Ingredient']['title']:
+                        title_arr = props['Ingredient']['title']
+                        if title_arr and len(title_arr) > 0:
+                            # Încearcă ambele formate API
+                            text_obj = title_arr[0].get('text')
+                            if text_obj and 'content' in text_obj:
+                                name = text_obj['content']
+                            elif 'plain_text' in title_arr[0]:
+                                name = title_arr[0]['plain_text']
+                    
+                    # Extrage Grocery Item ID
+                    grocery_id = None
+                    if 'Grocery - Item' in props and props['Grocery - Item']['relation']:
+                        relations = props['Grocery - Item']['relation']
+                        if relations and len(relations) > 0:
+                            grocery_id = relations[0]['id']
+                    
+                    # Extrage cantitățile
+                    size_unit = None
+                    if 'Size / Unit' in props and props['Size / Unit']['number'] is not None:
+                        size_unit = props['Size / Unit']['number']
+                    
+                    size_2nd_unit = None
+                    if 'Size / 2nd Unit' in props and props['Size / 2nd Unit']['number'] is not None:
+                        size_2nd_unit = props['Size / 2nd Unit']['number']
+                    
+                    # Extrage observațiile
+                    obs = ''
+                    if 'Obs' in props and props['Obs']['rich_text']:
+                        obs = props['Obs']['rich_text'][0]['plain_text']
+                    
+                    # Extrage separator
+                    separator = ''
+                    if 'Receipt separator' in props and props['Receipt separator']['select']:
+                        separator = props['Receipt separator']['select']['name']
+                    
+                    ingredients.append({
+                        'id': result['id'],
+                        'name': name,
+                        'grocery_id': grocery_id,
+                        'size_unit': size_unit,
+                        'size_2nd_unit': size_2nd_unit,
+                        'obs': obs,
+                        'separator': separator
+                    })
+                except Exception as item_error:
+                    # Sari peste ingrediente care nu pot fi parsate
+                    print(f"  ⚠ Nu pot parsa ingredientul: {item_error}")
+                    continue
             
             return ingredients
             
@@ -1337,11 +1392,24 @@ class RecipeImporter:
         existing = self._get_existing_ingredients_detailed(recipe_id)
         print(f"  ℹ Găsite {len(existing)} ingrediente existente")
         
-        # Creează un dict pentru ingredientele existente (key = grocery_id + name)
+        # Creează un dict pentru ingredientele existente (key = grocery_id + name lowercase)
         existing_map = {}
+        # Creează și un mapping de la grocery_item name la grocery_id pentru reutilizare
+        existing_grocery_names = {}
+        # Creează și un mapping invers: grocery_id -> numele pe care il folosim in DB
+        grocery_id_to_name = {}
         for ing in existing:
-            key = f"{ing['grocery_id']}:{ing['name']}"
+            # Aplică singularizare la fel ca _parse_ingredient pentru matching consistent
+            singularized_name = self._singularize(ing['name'])
+            key = f"{ing['grocery_id']}:{singularized_name.lower()}"
             existing_map[key] = ing
+            # Mapează și numele grocery item-ului la ID
+            if ing['grocery_id']:
+                grocery_name = self._get_grocery_item_name(ing['grocery_id'])
+                if grocery_name:
+                    existing_grocery_names[grocery_name.lower()] = ing['grocery_id']
+                    # Salvează și mapping-ul grocery_id -> nume din DB
+                    grocery_id_to_name[ing['grocery_id']] = ing['name']
         
         # Procesează ingredientele noi
         separator_counter = 1
@@ -1353,8 +1421,14 @@ class RecipeImporter:
             print(f"\n  Grup: [{group['name']}]")
             
             for ingredient in group['ingredients']:
-                # Găsește/creează grocery item
-                grocery_id = self.find_or_create_grocery_item(ingredient['grocery_item'])
+                # Mai întâi verifică dacă avem deja acest grocery item în ingredientele existente
+                grocery_id = existing_grocery_names.get(ingredient['grocery_item'].lower())
+                
+                # Dacă nu există, caută/creează în baza de date
+                if not grocery_id:
+                    grocery_id = self.find_or_create_grocery_item(ingredient['grocery_item'])
+                else:
+                    print(f"  ♻️  Reutilizez grocery item existent: {ingredient['grocery_item']}")
                 
                 if not grocery_id:
                     continue
@@ -1372,8 +1446,14 @@ class RecipeImporter:
                 final_quantity = converted_qty if converted_qty is not None else ingredient['quantity']
                 final_unit = converted_unit if converted_unit is not None else ingredient['unit']
                 
-                # Creează key pentru acest ingredient
-                ingredient_key = f"{grocery_id}:{ingredient['name']}"
+                # Determină numele de folosit pentru matching
+                # Dacă acest grocery_id există deja în ingrediente, folosește numele din DB
+                # Altfel folosește numele parsate din ingredient
+                name_for_matching = grocery_id_to_name.get(grocery_id, ingredient['name'])
+                
+                # Creează key pentru acest ingredient (folosește lowercase și singularizat)
+                singularized_name = self._singularize(name_for_matching)
+                ingredient_key = f"{grocery_id}:{singularized_name.lower()}"
                 new_ingredients_keys.add(ingredient_key)
                 
                 # Verifică dacă ingredientul există deja
