@@ -64,7 +64,7 @@ class RecipeScraper:
         
         # Pattern pentru a identifica cantitate + unitate la început
         # Exemplu: "500 g", "2 cani", "1 lingura", etc.
-        pattern = r'^(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|cup|cups|tsp|tbsp|teaspoon|teaspoons|tablespoon|tablespoons|oz|lb|lingura|linguri|lingurita|lingurite|cana|cani|bucata|bucati)?)\s+(.+)$'
+        pattern = r'^(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|cup|cups|tsp|tbsp|teaspoon|teaspoons|tablespoon|tablespoons|oz|lb|pint|pints|lingura|linguri|lingurita|lingurite|cana|cani|bucata|bucati)?)\s+(.+)$'
         match = re.match(pattern, line, re.I)
         
         if match:
@@ -90,6 +90,7 @@ class RecipeScraper:
             quantity_unit_en = re.sub(r'\bteaspoons?\b', 'tsp', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bounces?\b', 'oz', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bpounds?\b', 'lb', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bpints?\b', 'pint', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bpieces?\b', 'piece', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bgrams?\b', 'g', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bkilograms?\b', 'kg', quantity_unit_en)
@@ -115,6 +116,7 @@ class RecipeScraper:
         text = re.sub(r'\bteaspoons?\b', 'tsp', text, flags=re.I)
         text = re.sub(r'\bounces?\b', 'oz', text, flags=re.I)
         text = re.sub(r'\bpounds?\b', 'lb', text, flags=re.I)
+        text = re.sub(r'\bpints?\b', 'pint', text, flags=re.I)
         text = re.sub(r'\bpieces?\b', 'piece', text, flags=re.I)
         text = re.sub(r'\bgrams?\b', 'g', text, flags=re.I)
         text = re.sub(r'\bkilograms?\b', 'kg', text, flags=re.I)
@@ -705,6 +707,31 @@ class RecipeScraper:
             # Procesează ingredientul pentru a separa adjectivele
             processed, adjectives = self.ingredient_processor.process_ingredient_line(ingredient_text)
             
+            # Post-procesare: Detectează unități în observații și mută-le în cantitate
+            # Ex: "1/4 cherry tomatoes, pint halved" -> "1/4 pint cherry tomatoes, halved"
+            if adjectives:
+                # Caută unități cunoscute în observații
+                unit_pattern = r'\b(pint|pints|cup|cups|tablespoon|tablespoons|teaspoon|teaspoons|tbsp|tsp|oz|lb|pound|pounds)\b'
+                unit_match = re.search(unit_pattern, adjectives, re.I)
+                
+                if unit_match:
+                    unit_found = unit_match.group(1)
+                    # Șterge unitatea din observații
+                    adjectives_cleaned = re.sub(r'\b' + unit_found + r'\b\s*,?\s*', '', adjectives, flags=re.I).strip()
+                    adjectives_cleaned = adjectives_cleaned.strip(',').strip()
+                    
+                    # Adaugă unitatea în cantitate
+                    # Ex: processed = "1/4 cherry tomatoes" -> "1/4 pint cherry tomatoes"
+                    qty_pattern = r'^(\d+(?:[./]\d+)?)\s+'
+                    qty_match = re.match(qty_pattern, processed)
+                    if qty_match:
+                        qty = qty_match.group(1)
+                        rest = processed[qty_match.end():]
+                        processed = f"{qty} {unit_found} {rest}".strip()
+                    
+                    # Actualizează adjectives
+                    adjectives = adjectives_cleaned if adjectives_cleaned else None
+            
             # Dacă am găsit adjective, adaugă-le ca observații după virgulă
             if adjectives:
                 ingredients.append(f"{processed}, {adjectives}")
@@ -727,7 +754,10 @@ class RecipeScraper:
                     # Elimină caractere speciale (checkboxes, bullets, etc.)
                     text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', item.strip())
                     text = re.sub(r'\s+', ' ', text).strip()
-                    steps.append(text)
+                    # Șterge numerotarea de la început dacă există (ex: "1. " sau "1) ")
+                    text = re.sub(r'^\d+[\.\)]\s*', '', text)
+                    if text:
+                        steps.append(text)
                 elif isinstance(item, dict):
                     item_type = item.get('@type', '')
                     
@@ -746,12 +776,18 @@ class RecipeScraper:
                                     # Elimină caractere speciale (checkboxes, bullets, etc.)
                                     sub_text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', sub_text.strip())
                                     sub_text = re.sub(r'\s+', ' ', sub_text).strip()
-                                    steps.append(sub_text)
+                                    # Șterge numerotarea de la început dacă există
+                                    sub_text = re.sub(r'^\d+[\.\)]\s*', '', sub_text)
+                                    if sub_text:
+                                        steps.append(sub_text)
                             elif isinstance(sub_item, str):
                                 # Elimină caractere speciale (checkboxes, bullets, etc.)
                                 text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', sub_item.strip())
                                 text = re.sub(r'\s+', ' ', text).strip()
-                                steps.append(text)
+                                # Șterge numerotarea de la început dacă există
+                                text = re.sub(r'^\d+[\.\)]\s*', '', text)
+                                if text:
+                                    steps.append(text)
                     else:
                         # E un pas simplu (HowToStep)
                         text = item.get('text') or item.get('name') or ''
@@ -759,7 +795,10 @@ class RecipeScraper:
                             # Elimină caractere speciale (checkboxes, bullets, etc.)
                             text = re.sub(r'[\-–•*▢☐□▪◦✓✔︎→◆■●○]', '', text.strip())
                             text = re.sub(r'\s+', ' ', text).strip()
-                            steps.append(text)
+                            # Șterge numerotarea de la început dacă există
+                            text = re.sub(r'^\d+[\.\)]\s*', '', text)
+                            if text:
+                                steps.append(text)
         
         return steps
     
@@ -1421,8 +1460,11 @@ class RecipeScraper:
             'fl oz': ('ml', 30),
             'fluid ounce': ('ml', 30),
             'fluid ounces': ('ml', 30),
-            'pint': ('ml', 473),
-            'pints': ('ml', 473),
+            
+            # Pint conversions to cup (1 pint = 2 cups)
+            'pint': ('cup', 2),
+            'pints': ('cup', 2),
+            
             'quart': ('ml', 946),
             'quarts': ('ml', 946),
             'gallon': ('ml', 3785),
@@ -1431,9 +1473,13 @@ class RecipeScraper:
             # Note: cup, tsp, tbsp există deja în Notion, nu le convertim
         }
         
+        # Creează pattern dinamic pentru unitățile cunoscute
+        known_units = '|'.join(re.escape(unit) for unit in conversions.keys())
+        
         # Pattern pentru cantități cu unități - include fracții și numere mixte
-        # Ex: "2 oz", "1.5 lb", "1 1/2 liter", "500ml" (fără spațiu)
-        pattern = r'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*([a-zA-Z\s]+)'
+        # Ex: "2 oz", "1.5 lb", "1 1/2 pint", "500ml" (fără spațiu)
+        # Captură doar cantitatea și unitatea cunoscută, restul rămâne în ingredient
+        pattern = rf'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*({known_units})(?:\s+|$)'
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
         if not match:
@@ -1649,6 +1695,31 @@ class RecipeScraper:
         
         # Procesează ingredientul pentru a separa adjectivele și descrierile
         processed, descriptions = self.ingredient_processor.process_ingredient_line(ingredient)
+        
+        # Post-procesare: Detectează unități în observații și mută-le în cantitate
+        # Ex: "1/4 cherry tomatoes, pint halved" -> "1/4 pint cherry tomatoes, halved"
+        if descriptions:
+            # Caută unități cunoscute în observații
+            unit_pattern = r'\b(pint|pints|cup|cups|tablespoon|tablespoons|teaspoon|teaspoons|tbsp|tsp|oz|lb|pound|pounds)\b'
+            unit_match = re.search(unit_pattern, descriptions, re.I)
+            
+            if unit_match:
+                unit_found = unit_match.group(1)
+                # Șterge unitatea din observații
+                descriptions_cleaned = re.sub(r'\b' + unit_found + r'\b\s*,?\s*', '', descriptions, flags=re.I).strip()
+                descriptions_cleaned = descriptions_cleaned.strip(',').strip()
+                
+                # Adaugă unitatea în cantitate
+                # Ex: processed = "1/4 cherry tomatoes" -> "1/4 pint cherry tomatoes"
+                qty_pattern = r'^(\d+(?:[./]\d+)?)\s+'
+                qty_match = re.match(qty_pattern, processed)
+                if qty_match:
+                    qty = qty_match.group(1)
+                    rest = processed[qty_match.end():]
+                    processed = f"{qty} {unit_found} {rest}".strip()
+                
+                # Actualizează descriptions
+                descriptions = descriptions_cleaned if descriptions_cleaned else None
         
         # Dacă am găsit descrieri, adaugă-le ca observații
         if descriptions:
