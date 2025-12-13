@@ -39,8 +39,8 @@ class RecipeImporter:
         'fl oz': ('ml', 30),
         'fluid ounce': ('ml', 30),
         'fluid ounces': ('ml', 30),
-        'pint': ('ml', 473),
-        'pints': ('ml', 473),
+        'pint': ('cup', 2),  # 1 pint = 2 cups
+        'pints': ('cup', 2),
         'quart': ('ml', 946),
         'quarts': ('ml', 946),
         'gallon': ('ml', 3785),
@@ -74,7 +74,7 @@ class RecipeImporter:
     }
     
     # Opțiuni disponibile în Notion pentru Unity și Category (din database schema)
-    AVAILABLE_UNITS = ['piece', 'tsp', 'tbsp', 'g', 'slice', 'handful', 'pinch', 'ml', 'scoop', 'bottle', 'cup']
+    AVAILABLE_UNITS = ['piece', 'tsp', 'tbsp', 'g', 'slice', 'handful', 'pinch', 'ml', 'scoop', 'bottle', 'cup', 'pint']
     AVAILABLE_2ND_UNITS = ['cup', 'piece', 'tbsp', 'tsp']
     AVAILABLE_CATEGORIES = [
         '🍎 Fruits', '🥕 Veg & Legumes', '🌾 Grains', '🫙 Pantry', 
@@ -278,6 +278,7 @@ class RecipeImporter:
             'tbsps': 'tbsp',
             'ounces': 'oz',
             'pounds': 'lb',
+            'pints': 'pint',
             'grams': 'g',
             'kilograms': 'kg',
             'milliliters': 'ml',
@@ -315,6 +316,9 @@ class RecipeImporter:
             # Normalizează unitățile (cups -> cup, teaspoons -> tsp, etc.)
             if unit:
                 unit = self._normalize_unit(unit)
+            else:
+                # Dacă nu există unitate, tratează ca piece
+                unit = 'piece'
             rest = match.group(3).strip()
             grocery_item = match.group(4).strip() if match.group(4) else None
             
@@ -382,7 +386,7 @@ class RecipeImporter:
             known_units = ['g', 'kg', 'mg', 'ml', 'l', 'cup', 'cups', 'tsp', 'teaspoon', 'teaspoons',
                           'tbsp', 'tablespoon', 'tablespoons', 'oz', 'ounce', 'ounces', 'lb', 'lbs',
                           'pound', 'pounds', 'piece', 'pieces', 'slice', 'slices', 'handful', 'pinch',
-                          'scoop']
+                          'pint', 'pints', 'scoop']
             
             # Containere care NU sunt unități de măsură - fac parte din numele ingredientului
             # Exemplu: "1 tin of beans" -> quantity=1, unit='', name='tin of beans'
@@ -400,6 +404,10 @@ class RecipeImporter:
                 # Nu e nici unitate, nici container - consideră-l parte din nume
                 if potential_unit:
                     rest = f"{potential_unit} {rest}"
+            
+            # Dacă nu există unitate, tratează ca piece
+            if not unit:
+                unit = 'piece'
             
             # Separă observațiile (după virgulă)
             observations = ''

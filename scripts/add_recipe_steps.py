@@ -139,8 +139,8 @@ class RecipeStepsAdder:
                 print(f"    ℹ Pagină goală - creez secțiune nouă")
                 return self._create_steps_section(page_id, steps, notes)
             
-            # Caută heading-ul "Instructions" sau "Steps"
-            instructions_block_index = None
+            # Caută TOATE heading-urile "Instructions", "Steps" sau "Notes" pentru a le șterge
+            headings_to_delete = []
             
             for idx, block in enumerate(blocks['results']):
                 block_type = block.get('type')
@@ -149,25 +149,32 @@ class RecipeStepsAdder:
                 if block_type and block_type.startswith('heading_'):
                     heading_content = block.get(block_type, {}).get('rich_text', [])
                     if heading_content:
-                        text = heading_content[0].get('plain_text', '').lower()
-                        if 'instruction' in text or 'steps' in text:
-                            instructions_block_index = idx
+                        text = heading_content[0].get('plain_text', '').lower().strip()
+                        # Caută Steps, Instructions sau Notes (inclusiv variații)
+                        if any(keyword in text for keyword in ['instruction', 'steps', 'step', 'notes', 'note']):
+                            headings_to_delete.append(idx)
                             print(f"    ✓ Găsit heading '{heading_content[0].get('plain_text')}' la poziția {idx}")
-                            break
             
-            if instructions_block_index is not None:
-                # Colectează blocurile de șters: heading + conținutul său până la următorul heading
-                blocks_to_delete = [blocks['results'][instructions_block_index]['id']]  # Include heading-ul
+            if headings_to_delete:
+                # Colectează blocurile de șters pentru TOATE heading-urile găsite
+                blocks_to_delete = []
                 
-                for i in range(instructions_block_index + 1, len(blocks['results'])):
-                    block = blocks['results'][i]
-                    block_type = block.get('type')
+                for heading_idx in headings_to_delete:
+                    # Adaugă heading-ul
+                    blocks_to_delete.append(blocks['results'][heading_idx]['id'])
                     
-                    # Oprește dacă întâlnim alt heading
-                    if block_type and block_type.startswith('heading_'):
-                        break
-                    
-                    blocks_to_delete.append(block['id'])
+                    # Adaugă conținutul după heading până la următorul heading
+                    for i in range(heading_idx + 1, len(blocks['results'])):
+                        block = blocks['results'][i]
+                        block_type = block.get('type')
+                        
+                        # Oprește dacă întâlnim alt heading
+                        if block_type and block_type.startswith('heading_'):
+                            break
+                        
+                        # Evită duplicatele (dacă heading-urile sunt consecutive)
+                        if block['id'] not in blocks_to_delete:
+                            blocks_to_delete.append(block['id'])
                 
                 # Șterge heading-ul vechi + conținutul
                 for block_id in blocks_to_delete:
@@ -192,14 +199,16 @@ class RecipeStepsAdder:
                 })
                 
                 # Pașii
-                for idx, step in enumerate(steps, 1):
+                for step in steps:
+                    # Șterge numerotarea dacă există (e.g., "1. text" -> "text")
+                    clean_step = re.sub(r'^\d+[\.\)]\s*', '', step)
                     children.append({
                         "object": "block",
-                        "type": "paragraph",
-                        "paragraph": {
+                        "type": "numbered_list_item",
+                        "numbered_list_item": {
                             "rich_text": [{
                                 "type": "text",
-                                "text": {"content": f"{idx}. {step}"}
+                                "text": {"content": clean_step}
                             }]
                         }
                     })
@@ -275,16 +284,16 @@ class RecipeStepsAdder:
             })
             
             # Adaugă pașii
-            for idx, step in enumerate(steps, 1):
+            for step in steps:
                 # Șterge numerotarea dacă există (e.g., "1. text" -> "text")
                 clean_step = re.sub(r'^\d+\.\s*', '', step)
                 children.append({
                     "object": "block",
-                    "type": "paragraph",
-                    "paragraph": {
+                    "type": "numbered_list_item",
+                    "numbered_list_item": {
                         "rich_text": [{
                             "type": "text",
-                            "text": {"content": f"{idx}. {clean_step}"}
+                            "text": {"content": clean_step}
                         }]
                     }
                 })
