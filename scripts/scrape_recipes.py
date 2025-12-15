@@ -1479,7 +1479,8 @@ class RecipeScraper:
         # Pattern pentru cantități cu unități - include fracții și numere mixte
         # Ex: "2 oz", "1.5 lb", "1 1/2 pint", "500ml" (fără spațiu)
         # Captură doar cantitatea și unitatea cunoscută, restul rămâne în ingredient
-        pattern = rf'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*({known_units})(?:\s+|$)'
+        # Include punct opțional după unitate (ex: "lb.")
+        pattern = rf'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*({known_units})\.?(?:\s+|$)'
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
         if not match:
@@ -1538,8 +1539,8 @@ class RecipeScraper:
                 # Pentru valori mici, păstrează precizie
                 qty_formatted = f"{converted_qty:.1f}".rstrip('0').rstrip('.')
             
-            # Reconstruiește ingredientul cu unitatea convertită
-            result = f"{qty_formatted}{target_unit} {rest}".strip()
+            # Reconstruiește ingredientul cu unitatea convertită (cu spațiu între cantitate și unitate)
+            result = f"{qty_formatted} {target_unit} {rest}".strip()
             
             # Adaugă observațiile înapoi (dacă exist)
             if observations:
