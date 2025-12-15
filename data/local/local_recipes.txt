@@ -69,9 +69,9 @@ link: https://www.instagram.com/reel/DHt0CNStFyy/?igsh=MXFxMGR1dWtyYTFtag%3D%3D
 One Pan Lemon Pepper Shrimp Orzo. 
 
 Ingredients
-2 Tbsp. butter
-2 Tbsp. extra-virgin olive oil
-1 lb. raw peeled and deveined shrimp
+2 Tbsp butter
+2 Tbsp extra-virgin olive oil
+1 shrimp
 1 pinch salt and freshly ground black pepper
 0.5 cup finely chopped shallots
 4 garlic cloves, minced
@@ -79,7 +79,7 @@ Ingredients
 3 cups chicken or vegetable broth
 3 cups fresh baby spinach OR 8 oz. fresh asparagus, trimmed and thinly sliced
 1 lemon, Zest and juice
-2 Tbsp. finely chopped fresh parsley
+2 Tbsp finely chopped fresh parsley
 
 link: https://www.instagram.com/reel/C5OavvDLDhk/?igsh=MWY2c3Y1Zm9wczQyeQ%3D%3D
 
@@ -144,12 +144,12 @@ link: https://attachments.convertkitcdnn2.com/256011/0667f690-8375-4cff-9265-69b
 # Ingredients
 1/2 cup Oat flour
 2/3 tsp Baking powder
-1 1/3 tbsp Maple syrup
-1/3 tsp Vanilla extract
-2 2/3 tbsp Coconut yogurt
-2 2/3 tbsp Soy milk
-1/3 cup Blackberry
-1/3 cup Cherries
+1.33 tbsp Maple syrup
+0.33 tsp Vanilla extract
+2.66 tbsp Coconut yogurt
+2.66 tbsp Soy milk
+0.33 cup Blackberry
+0.33 cup Cherries
 
 # Directions
 
