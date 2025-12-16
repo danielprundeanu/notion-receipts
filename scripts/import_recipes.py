@@ -320,17 +320,10 @@ class RecipeImporter:
                 # Dacă nu există unitate, tratează ca piece
                 unit = 'piece'
             rest = match.group(3).strip()
-            grocery_item = match.group(4).strip() if match.group(4) else None
+            text_in_parentheses = match.group(4).strip() if match.group(4) else None
             
-            # Inițializează observations
-            observations = ''
-            
-            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
-            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
-            if grocery_item and grocery_item.lower() in descriptive_words:
-                # Mută în observații, nu e un grocery item
-                observations = grocery_item
-                grocery_item = None
+            # Textul din paranteze este ÎNTOTDEAUNA observație, nu grocery item
+            observations = text_in_parentheses if text_in_parentheses else ''
             
             # Separă observațiile (după virgulă)
             observations_from_comma = ''
@@ -340,7 +333,7 @@ class RecipeImporter:
                 name = parts[0].strip()
                 observations_from_comma = parts[1].strip()
             
-            # Combină observațiile
+            # Combină observațiile (paranteze + virgulă)
             if observations and observations_from_comma:
                 observations = f"{observations_from_comma}, {observations}"
             elif observations_from_comma:
@@ -351,9 +344,8 @@ class RecipeImporter:
             name = self._singularize(name)
             name = name.capitalize()
             
-            # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
-            if not grocery_item:
-                grocery_item = name
+            # Grocery item este întotdeauna numele curățat (nu mai folosim paranteze pentru grocery_item)
+            grocery_item = name
             
             return {
                 'quantity': quantity,
@@ -372,14 +364,10 @@ class RecipeImporter:
             quantity = float(match.group(1))
             potential_unit = match.group(2) or ''
             rest = match.group(3).strip()
-            grocery_item = match.group(4).strip() if match.group(4) else None
+            text_in_parentheses = match.group(4).strip() if match.group(4) else None
             
-            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
-            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
-            if grocery_item and grocery_item.lower() in descriptive_words:
-                # Mută în observații, nu e un grocery item
-                rest = f"{rest} ({grocery_item})"
-                grocery_item = None
+            # Textul din paranteze este ÎNTOTDEAUNA observație, nu grocery item
+            observations_from_parentheses = text_in_parentheses if text_in_parentheses else ''
             
             # Validează dacă unitatea este o unitate de măsură reală
             # Lista de unități cunoscute (extinsă)
@@ -410,20 +398,28 @@ class RecipeImporter:
                 unit = 'piece'
             
             # Separă observațiile (după virgulă)
-            observations = ''
+            observations_from_comma = ''
             name = rest
             if ',' in rest:
                 parts = rest.split(',', 1)
                 name = parts[0].strip()
-                observations = parts[1].strip()
+                observations_from_comma = parts[1].strip()
+            
+            # Combină observațiile (paranteze + virgulă)
+            observations = ''
+            if observations_from_parentheses and observations_from_comma:
+                observations = f"{observations_from_comma}, {observations_from_parentheses}"
+            elif observations_from_parentheses:
+                observations = observations_from_parentheses
+            elif observations_from_comma:
+                observations = observations_from_comma
             
             # Procesare simplă - ingredientele vin deja procesate de la scraping
             name = self._singularize(name)
             name = name.capitalize()
             
-            # Dacă nu e specificat grocery_item în paranteze, folosește numele curățat
-            if not grocery_item:
-                grocery_item = name
+            # Grocery item este întotdeauna numele curățat
+            grocery_item = name
             
             return {
                 'quantity': quantity,
@@ -439,29 +435,34 @@ class RecipeImporter:
         
         if match:
             rest = match.group(1).strip()
-            grocery_item = match.group(2).strip() if match.group(2) else None
+            text_in_parentheses = match.group(2).strip() if match.group(2) else None
             
-            # Dacă grocery_item este "optional" sau alte cuvinte descriptive, tratează-l ca observație
-            descriptive_words = ['optional', 'to taste', 'if needed', 'if desired', 'as needed']
-            if grocery_item and grocery_item.lower() in descriptive_words:
-                # Mută în observații, nu e un grocery item
-                rest = f"{rest} ({grocery_item})"
-                grocery_item = None
+            # Textul din paranteze este ÎNTOTDEAUNA observație
+            observations_from_parentheses = text_in_parentheses if text_in_parentheses else ''
             
             # Separă observațiile (după virgulă)
-            observations = ''
+            observations_from_comma = ''
             name = rest
             if ',' in rest:
                 parts = rest.split(',', 1)
                 name = parts[0].strip()
-                observations = parts[1].strip()
+                observations_from_comma = parts[1].strip()
+            
+            # Combină observațiile
+            observations = ''
+            if observations_from_parentheses and observations_from_comma:
+                observations = f"{observations_from_comma}, {observations_from_parentheses}"
+            elif observations_from_parentheses:
+                observations = observations_from_parentheses
+            elif observations_from_comma:
+                observations = observations_from_comma
             
             # Procesare simplă - ingredientele vin deja procesate de la scraping
             name = self._singularize(name)
             name = name.capitalize()
             
-            if not grocery_item:
-                grocery_item = name
+            # Grocery item este întotdeauna numele curățat
+            grocery_item = name
             
             return {
                 'quantity': None,
@@ -1441,9 +1442,13 @@ class RecipeImporter:
                 if not grocery_id:
                     continue
                 
+                # Obține numele REAL al grocery item-ului din Notion pentru validarea unitățiilor
+                grocery_name_from_db = self._get_grocery_item_name(grocery_id)
+                grocery_name_for_validation = grocery_name_from_db if grocery_name_from_db else ingredient['grocery_item']
+                
                 # Validează unitatea și verifică dacă e nevoie de conversie
                 is_valid, converted_qty, converted_unit = self.validate_unit(
-                    ingredient, grocery_id, ingredient['grocery_item']
+                    ingredient, grocery_id, grocery_name_for_validation
                 )
                 
                 if not is_valid:
@@ -2053,9 +2058,13 @@ class RecipeImporter:
                 if not grocery_id:
                     continue
                 
+                # Obține numele REAL al grocery item-ului din Notion pentru validarea unitățiilor
+                grocery_name_from_db = self._get_grocery_item_name(grocery_id)
+                grocery_name_for_validation = grocery_name_from_db if grocery_name_from_db else ingredient['grocery_item']
+                
                 # Validează unitatea și verifică dacă e nevoie de conversie
                 is_valid, converted_qty, converted_unit = self.validate_unit(
-                    ingredient, grocery_id, ingredient['grocery_item']
+                    ingredient, grocery_id, grocery_name_for_validation
                 )
                 
                 if not is_valid:
