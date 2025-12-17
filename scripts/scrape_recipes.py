@@ -64,7 +64,7 @@ class RecipeScraper:
         
         # Pattern pentru a identifica cantitate + unitate la început
         # Exemplu: "500 g", "2 cani", "1 lingura", etc.
-        pattern = r'^(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|cup|cups|tsp|tbsp|teaspoon|teaspoons|tablespoon|tablespoons|oz|lb|pint|pints|lingura|linguri|lingurita|lingurite|cana|cani|bucata|bucati)?)\s+(.+)$'
+        pattern = r'^(\d+(?:\.\d+)?\s*(?:g|kg|ml|l|cup|cups|tsp|tbsp|teaspoon|teaspoons|tablespoon|tablespoons|oz|lb|pint|pints|handful|handfuls|lingura|linguri|lingurita|lingurite|cana|cani|bucata|bucati)?)\s+(.+)$'
         match = re.match(pattern, line, re.I)
         
         if match:
@@ -92,6 +92,7 @@ class RecipeScraper:
             quantity_unit_en = re.sub(r'\bpounds?\b', 'lb', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bpints?\b', 'pint', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bpieces?\b', 'piece', quantity_unit_en)
+            quantity_unit_en = re.sub(r'\bhandfuls?\b', 'handful', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bgrams?\b', 'g', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bkilograms?\b', 'kg', quantity_unit_en)
             quantity_unit_en = re.sub(r'\bmilliliters?\b', 'ml', quantity_unit_en)
@@ -118,6 +119,7 @@ class RecipeScraper:
         text = re.sub(r'\bpounds?\b', 'lb', text, flags=re.I)
         text = re.sub(r'\bpints?\b', 'pint', text, flags=re.I)
         text = re.sub(r'\bpieces?\b', 'piece', text, flags=re.I)
+        text = re.sub(r'\bhandfuls?\b', 'handful', text, flags=re.I)
         text = re.sub(r'\bgrams?\b', 'g', text, flags=re.I)
         text = re.sub(r'\bkilograms?\b', 'kg', text, flags=re.I)
         text = re.sub(r'\bmilliliters?\b', 'ml', text, flags=re.I)
