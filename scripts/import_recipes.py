@@ -279,6 +279,7 @@ class RecipeImporter:
             'ounces': 'oz',
             'pounds': 'lb',
             'pints': 'pint',
+            'handfuls': 'handful',
             'grams': 'g',
             'kilograms': 'kg',
             'milliliters': 'ml',
