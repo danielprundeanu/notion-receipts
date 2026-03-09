@@ -7,18 +7,35 @@
  * Requires DATABASE_URL set in .env.local (or environment).
  */
 
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../app/generated/prisma/client";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Load .env.local for local dev
+const envLocalPath = resolve(__dirname, "../.env.local");
+if (existsSync(envLocalPath)) {
+  for (const line of readFileSync(envLocalPath, "utf-8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const val = trimmed.slice(eqIdx + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
+  }
+}
+
 const exportPath = resolve(__dirname, "../../data/export.json");
 
 console.log(`📂 Loading export from: ${exportPath}`);
 const data = JSON.parse(readFileSync(exportPath, "utf-8"));
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log(`\n📦 Importing ${data.groceryItems.length} grocery items…`);
