@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -13,6 +13,7 @@ import {
   Plus,
   Users,
 } from "lucide-react";
+import { toggleFavorite } from "@/lib/actions";
 
 export type RecipeData = {
   id: string;
@@ -24,6 +25,7 @@ export type RecipeData = {
   favorite: boolean;
   link: string | null;
   notes: string | null;
+  imageUrl: string | null;
   ingredients: Array<{
     id: string;
     quantity: number | null;
@@ -59,15 +61,24 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const defaultServings = recipe.servings ?? 1;
   const [servings, setServings] = useState(defaultServings);
   const scale = defaultServings > 0 ? servings / defaultServings : 1;
+  const [isFavorite, setIsFavorite] = useState(recipe.favorite);
+  const [, startTransition] = useTransition();
 
-  // Group ingredients by groupOrder
-  const groups = new Map<number, typeof recipe.ingredients>();
+  function handleToggleFavorite() {
+    const next = !isFavorite;
+    setIsFavorite(next);
+    startTransition(() => toggleFavorite(recipe.id, next));
+  }
+
+  // Group ingredients by groupOrder, preserve groupName
+  type GroupEntry = { name: string | null; items: typeof recipe.ingredients };
+  const groupMap = new Map<number, GroupEntry>();
   for (const ing of recipe.ingredients) {
     const key = ing.groupOrder ?? 1;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(ing);
+    if (!groupMap.has(key)) groupMap.set(key, { name: ing.groupName, items: [] });
+    groupMap.get(key)!.items.push(ing);
   }
-  const sortedGroups = [...groups.entries()].sort((a, b) => a[0] - b[0]);
+  const sortedGroups = [...groupMap.entries()].sort((a, b) => a[0] - b[0]);
 
   // Nutrition
   let totalKcal = 0, totalCarbs = 0, totalFat = 0, totalProtein = 0;
@@ -86,7 +97,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-4xl mx-auto p-4 md:p-8">
       {/* Nav */}
       <div className="flex items-center justify-between mb-6">
         <Link
@@ -103,14 +114,32 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         </Link>
       </div>
 
+      {/* Cover image */}
+      {recipe.imageUrl && (
+        <div className="w-full h-56 md:h-72 rounded-2xl overflow-hidden mb-6 bg-gray-100">
+          <img
+            src={recipe.imageUrl}
+            alt={recipe.name}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
           <h1 className="text-3xl font-bold text-gray-900">{recipe.name}</h1>
           <div className="flex items-center gap-3 shrink-0">
-            {recipe.favorite && (
-              <Star size={20} className="text-amber-400 fill-amber-400" />
-            )}
+            <button
+              onClick={handleToggleFavorite}
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              className="p-1.5 rounded-lg hover:bg-amber-50 transition-colors"
+            >
+              <Star
+                size={20}
+                className={isFavorite ? "text-amber-400 fill-amber-400" : "text-gray-300 hover:text-amber-300"}
+              />
+            </button>
             {recipe.link && (
               <a
                 href={recipe.link}
@@ -197,15 +226,15 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             <p className="text-sm text-gray-500">No ingredients listed</p>
           ) : (
             <div className="space-y-5">
-              {sortedGroups.map(([groupOrder, items]) => (
+              {sortedGroups.map(([groupOrder, group]) => (
                 <div key={groupOrder}>
-                  {sortedGroups.length > 1 && (
+                  {(sortedGroups.length > 1 || group.name) && (
                     <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
-                      Part {groupOrder}
+                      {group.name ?? `Part ${groupOrder}`}
                     </p>
                   )}
                   <ul className="space-y-2">
-                    {items.map((ing) => (
+                    {group.items.map((ing) => (
                       <li
                         key={ing.id}
                         className="flex items-baseline gap-2 text-sm"
@@ -228,6 +257,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       </li>
                     ))}
                   </ul>
+
                 </div>
               ))}
             </div>

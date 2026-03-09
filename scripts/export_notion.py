@@ -11,6 +11,8 @@ Output: data/export.json
 import os
 import json
 import sys
+import hashlib
+import urllib.request
 from datetime import datetime
 from notion_client import Client
 from dotenv import load_dotenv
@@ -24,6 +26,31 @@ notion = Client(auth=os.getenv('NOTION_TOKEN'))
 DB_GROCERIES = os.getenv('DB_GROCERIES_ID')
 DB_INGREDIENTS = os.getenv('DB_INGREDIENTS_ID')
 DB_RECEIPTS = os.getenv('DB_RECEIPTS_ID').rstrip('?')
+
+IMAGES_DIR = os.path.join(project_root, 'webapp', 'public', 'images', 'recipes')
+os.makedirs(IMAGES_DIR, exist_ok=True)
+
+
+def download_image(url: str) -> str | None:
+    """Download image from URL, save to public/images/recipes/, return public path."""
+    try:
+        # Use a stable filename based on URL hash so re-runs are idempotent
+        ext = '.jpg'
+        for candidate in ['.png', '.webp', '.jpeg', '.gif']:
+            if candidate in url.lower():
+                ext = candidate
+                break
+        filename = hashlib.md5(url.encode()).hexdigest() + ext
+        dest = os.path.join(IMAGES_DIR, filename)
+        if not os.path.exists(dest):
+            req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                with open(dest, 'wb') as f:
+                    f.write(resp.read())
+        return f'/images/recipes/{filename}'
+    except Exception as e:
+        print(f'    ⚠ Image download failed: {e}')
+        return None
 
 
 def get_text(rich_text_array):
@@ -179,14 +206,17 @@ def export_recipes(grocery_items):
 
         categories = [opt['name'] for opt in props.get('Receipe Category', {}).get('multi_select', [])]
 
-        # Cover image
+        # Cover image — download locally so URLs don't expire
         cover = page.get('cover')
         image_url = None
         if cover:
+            raw_url = None
             if cover.get('type') == 'external':
-                image_url = cover.get('external', {}).get('url')
+                raw_url = cover.get('external', {}).get('url')
             elif cover.get('type') == 'file':
-                image_url = cover.get('file', {}).get('url')
+                raw_url = cover.get('file', {}).get('url')
+            if raw_url:
+                image_url = download_image(raw_url)
 
         recipe = {
             'notionId': page['id'],

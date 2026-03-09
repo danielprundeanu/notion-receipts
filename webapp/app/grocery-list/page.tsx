@@ -73,7 +73,7 @@ export default function GroceryListPage() {
   });
 
   return (
-    <div className="p-8 max-w-2xl mx-auto">
+    <div className="p-4 md:p-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -91,7 +91,7 @@ export default function GroceryListPage() {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="text-sm font-medium text-gray-700 w-44 text-center">
+          <span className="text-sm font-medium text-gray-700 text-center">
             {formatWeekRange(weekStart)}
           </span>
           <button
