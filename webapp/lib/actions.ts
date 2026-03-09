@@ -183,11 +183,42 @@ export async function getRecipe(id: string) {
 
 export async function searchRecipesForPlanner(query: string) {
   return prisma.recipe.findMany({
-    where: { name: { contains: query } },
+    where: { name: { contains: query, mode: "insensitive" } },
     take: 10,
     orderBy: { name: "asc" },
     select: { id: true, name: true, category: true, servings: true, imageUrl: true },
   });
+}
+
+export async function getRecipesPanel(search?: string, category?: string) {
+  return prisma.recipe.findMany({
+    where: {
+      AND: [
+        search ? { name: { contains: search, mode: "insensitive" } } : {},
+        category ? { category: { contains: category, mode: "insensitive" } } : {},
+      ],
+    },
+    take: 80,
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+  });
+}
+
+export async function getRecipeCategories(): Promise<string[]> {
+  const recipes = await prisma.recipe.findMany({
+    where: { category: { not: null } },
+    select: { category: true },
+  });
+  const cats = new Set<string>();
+  for (const r of recipes) {
+    if (r.category) {
+      for (const cat of r.category.split(",")) {
+        const t = cat.trim();
+        if (t) cats.add(t);
+      }
+    }
+  }
+  return Array.from(cats).sort();
 }
 
 // ─── Week Plan ────────────────────────────────────────────────────────────────
