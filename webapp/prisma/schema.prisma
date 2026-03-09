@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Recipe {
+  id           String        @id @default(cuid())
+  name         String
+  servings     Int?
+  time         Int?
+  difficulty   String?
+  category     String?
+  favorite     Boolean       @default(false)
+  link         String?
+  imageUrl     String?
+  notionId     String?       @unique
+  notes        String?
+  ingredients  Ingredient[]
+  instructions Instruction[]
+  weekPlans    WeekPlan[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model GroceryItem {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  category    String?
+  unit        String?
+  unit2       String?
+  conversion  Float?
+  kcal        Float?
+  carbs       Float?
+  fat         Float?
+  protein     Float?
+  notionId    String?      @unique
+  ingredients Ingredient[]
+}
+
+model Ingredient {
+  id            String       @id @default(cuid())
+  recipeId      String
+  recipe        Recipe       @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  groceryItemId String?
+  groceryItem   GroceryItem? @relation(fields: [groceryItemId], references: [id])
+  groupName     String?
+  groupOrder    Int          @default(0)
+  quantity      Float?
+  unit          String?
+  notes         String?
+  order         Int          @default(0)
+}
+
+model Instruction {
+  id        String  @id @default(cuid())
+  recipeId  String
+  recipe    Recipe  @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  step      Int
+  text      String
+  isSection Boolean @default(false)
+}
+
+model WeekPlan {
+  id        String   @id @default(cuid())
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  weekStart DateTime
+  dayOfWeek Int
+  mealType  String
+  servings  Int      @default(1)
+  createdAt DateTime @default(now())
+}

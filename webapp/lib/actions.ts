@@ -1,0 +1,358 @@
+"use server";
+
+import { prisma } from "./db";
+import { revalidatePath } from "next/cache";
+
+// ─── Recipe Form Types ────────────────────────────────────────────────────────
+
+export type RecipeFormInput = {
+  name: string;
+  categories: string[];
+  servings: number | null;
+  time: number | null;
+  difficulty: string | null;
+  favorite: boolean;
+  link: string | null;
+  notes: string | null;
+  ingredients: Array<{
+    groceryItemName: string;
+    quantity: number | null;
+    unit: string | null;
+    notes: string | null;
+    groupOrder: number;
+    groupName: string | null;
+    order: number;
+  }>;
+  instructions: Array<{
+    text: string;
+    isSection: boolean;
+    step: number;
+  }>;
+};
+
+// ─── Grocery Item Search ──────────────────────────────────────────────────────
+
+export async function searchGroceryItems(query: string) {
+  if (!query.trim()) return [];
+  return prisma.groceryItem.findMany({
+    where: { name: { contains: query } },
+    take: 8,
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, unit: true },
+  });
+}
+
+// ─── Recipe CRUD ──────────────────────────────────────────────────────────────
+
+async function buildIngredientsAndInstructions(
+  recipeId: string,
+  data: RecipeFormInput
+) {
+  for (const ing of data.ingredients) {
+    if (!ing.groceryItemName.trim()) continue;
+
+    let groceryItem = await prisma.groceryItem.findFirst({
+      where: { name: ing.groceryItemName.trim() },
+    });
+    if (!groceryItem) {
+      groceryItem = await prisma.groceryItem.create({
+        data: { name: ing.groceryItemName.trim(), unit: ing.unit ?? null },
+      });
+    }
+
+    await prisma.ingredient.create({
+      data: {
+        recipeId,
+        groceryItemId: groceryItem.id,
+        quantity: ing.quantity,
+        unit: ing.unit ?? groceryItem.unit,
+        notes: ing.notes,
+        groupOrder: ing.groupOrder,
+        groupName: ing.groupName ?? null,
+        order: ing.order,
+      },
+    });
+  }
+
+  let stepCounter = 0;
+  for (const inst of data.instructions) {
+    if (!inst.text.trim()) continue;
+    if (!inst.isSection) stepCounter++;
+    await prisma.instruction.create({
+      data: {
+        recipeId,
+        step: inst.isSection ? 0 : stepCounter,
+        text: inst.text.trim(),
+        isSection: inst.isSection,
+      },
+    });
+  }
+}
+
+export async function createRecipe(data: RecipeFormInput): Promise<string> {
+  const recipe = await prisma.recipe.create({
+    data: {
+      name: data.name,
+      category: data.categories.length > 0 ? data.categories.join(", ") : null,
+      servings: data.servings,
+      time: data.time,
+      difficulty: data.difficulty,
+      favorite: data.favorite,
+      link: data.link,
+      notes: data.notes,
+    },
+  });
+  await buildIngredientsAndInstructions(recipe.id, data);
+  revalidatePath("/recipes");
+  return recipe.id;
+}
+
+export async function updateRecipe(
+  id: string,
+  data: RecipeFormInput
+): Promise<void> {
+  await prisma.recipe.update({
+    where: { id },
+    data: {
+      name: data.name,
+      category: data.categories.length > 0 ? data.categories.join(", ") : null,
+      servings: data.servings,
+      time: data.time,
+      difficulty: data.difficulty,
+      favorite: data.favorite,
+      link: data.link,
+      notes: data.notes,
+    },
+  });
+  await prisma.ingredient.deleteMany({ where: { recipeId: id } });
+  await prisma.instruction.deleteMany({ where: { recipeId: id } });
+  await buildIngredientsAndInstructions(id, data);
+  revalidatePath("/recipes");
+  revalidatePath(`/recipes/${id}`);
+}
+
+export async function deleteRecipe(id: string): Promise<void> {
+  await prisma.recipe.delete({ where: { id } });
+  revalidatePath("/recipes");
+}
+
+export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
+  await prisma.recipe.update({ where: { id }, data: { favorite } });
+  revalidatePath(`/recipes/${id}`);
+  revalidatePath("/recipes");
+}
+
+// ─── Recipes ─────────────────────────────────────────────────────────────────
+
+export async function getRecipes(search?: string, category?: string) {
+  return prisma.recipe.findMany({
+    where: {
+      AND: [
+        search ? { name: { contains: search } } : {},
+        category ? { category: { contains: category } } : {},
+      ],
+    },
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      time: true,
+      servings: true,
+      difficulty: true,
+      favorite: true,
+      imageUrl: true,
+    },
+  });
+}
+
+export async function getRecipe(id: string) {
+  return prisma.recipe.findUnique({
+    where: { id },
+    include: {
+      ingredients: {
+        include: { groceryItem: true },
+        orderBy: [{ groupOrder: "asc" }, { order: "asc" }],
+      },
+      instructions: {
+        orderBy: [{ step: "asc" }],
+      },
+    },
+  });
+}
+
+export async function searchRecipesForPlanner(query: string) {
+  return prisma.recipe.findMany({
+    where: { name: { contains: query } },
+    take: 10,
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+  });
+}
+
+// ─── Week Plan ────────────────────────────────────────────────────────────────
+
+export async function getWeekPlan(weekStartIso: string) {
+  const weekStart = new Date(weekStartIso);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  return prisma.weekPlan.findMany({
+    where: {
+      weekStart: { gte: weekStart, lt: weekEnd },
+    },
+    include: {
+      recipe: {
+        select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+      },
+    },
+  });
+}
+
+export async function addToWeekPlan(data: {
+  recipeId: string;
+  weekStartIso: string;
+  dayOfWeek: number;
+  mealType: string;
+  servings: number;
+}) {
+  const weekStart = new Date(data.weekStartIso);
+  await prisma.weekPlan.create({
+    data: {
+      recipeId: data.recipeId,
+      weekStart,
+      dayOfWeek: data.dayOfWeek,
+      mealType: data.mealType,
+      servings: data.servings,
+    },
+  });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+}
+
+export async function removeFromWeekPlan(id: string) {
+  await prisma.weekPlan.delete({ where: { id } });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+}
+
+export async function updateWeekPlanServings(id: string, servings: number): Promise<void> {
+  await prisma.weekPlan.update({ where: { id }, data: { servings } });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+}
+
+// ─── Grocery List ─────────────────────────────────────────────────────────────
+
+type GroceryEntry = {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string | null;
+  category: string;
+};
+
+export async function getGroceryList(
+  weekStartIso: string
+): Promise<Record<string, GroceryEntry[]>> {
+  const weekStart = new Date(weekStartIso);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const plans = await prisma.weekPlan.findMany({
+    where: { weekStart: { gte: weekStart, lt: weekEnd } },
+    include: {
+      recipe: {
+        include: {
+          ingredients: {
+            include: { groceryItem: true },
+          },
+        },
+      },
+    },
+  });
+
+  const map = new Map<
+    string,
+    { name: string; quantity: number; unit: string | null; category: string }
+  >();
+
+  for (const plan of plans) {
+    const recipeServings = plan.recipe.servings || 1;
+    const scale = plan.servings / recipeServings;
+
+    for (const ing of plan.recipe.ingredients) {
+      if (!ing.groceryItem) continue;
+      const key = ing.groceryItem.id;
+      const qty = (ing.quantity || 0) * scale;
+
+      if (map.has(key)) {
+        map.get(key)!.quantity += qty;
+      } else {
+        map.set(key, {
+          name: ing.groceryItem.name,
+          quantity: qty,
+          unit: ing.unit ?? ing.groceryItem.unit,
+          category: ing.groceryItem.category ?? "Other",
+        });
+      }
+    }
+  }
+
+  const grouped: Record<string, GroceryEntry[]> = {};
+  for (const [id, data] of map) {
+    const cat = data.category;
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({
+      id,
+      name: data.name,
+      quantity: Math.round(data.quantity * 10) / 10,
+      unit: data.unit,
+      category: cat,
+    });
+  }
+
+  // Sort items within each category
+  for (const cat of Object.keys(grouped)) {
+    grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  return grouped;
+}
+
+// ─── Ingredients Page ─────────────────────────────────────────────────────────
+
+export async function updateGroceryItem(
+  id: string,
+  data: {
+    name?: string;
+    category?: string | null;
+    unit?: string | null;
+    unit2?: string | null;
+    conversion?: number | null;
+    kcal?: number | null;
+    carbs?: number | null;
+    fat?: number | null;
+    protein?: number | null;
+  }
+): Promise<void> {
+  await prisma.groceryItem.update({ where: { id }, data });
+}
+
+export async function getGroceryItems() {
+  return prisma.groceryItem.findMany({
+    orderBy: [{ category: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      unit: true,
+      unit2: true,
+      conversion: true,
+      kcal: true,
+      carbs: true,
+      fat: true,
+      protein: true,
+    },
+  });
+}
