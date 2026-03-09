@@ -1,25 +1,24 @@
 /**
- * Import data from Notion export (data/export.json) into the local SQLite database.
+ * Import data from Notion export (data/export.json) into the database.
  *
  * Run from the webapp directory:
  *   npx tsx scripts/import-to-db.ts
+ *
+ * Requires DATABASE_URL set in .env.local (or environment).
  */
 
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { PrismaClient } from "../app/generated/prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const exportPath = resolve(__dirname, "../../data/export.json");
-const dbPath = resolve(__dirname, "../dev.db");
 
 console.log(`📂 Loading export from: ${exportPath}`);
 const data = JSON.parse(readFileSync(exportPath, "utf-8"));
 
-const adapter = new PrismaBetterSqlite3({ url: dbPath });
-const prisma = new PrismaClient({ adapter });
+const prisma = new PrismaClient();
 
 async function main() {
   console.log(`\n📦 Importing ${data.groceryItems.length} grocery items…`);
@@ -64,7 +63,6 @@ async function main() {
     if (!recipe.notionId || !recipe.name) continue;
 
     try {
-      // Upsert recipe
       const dbRecipe = await prisma.recipe.upsert({
         where: { notionId: recipe.notionId },
         update: {
@@ -90,11 +88,9 @@ async function main() {
         },
       });
 
-      // Re-create ingredients and instructions
       await prisma.ingredient.deleteMany({ where: { recipeId: dbRecipe.id } });
       await prisma.instruction.deleteMany({ where: { recipeId: dbRecipe.id } });
 
-      // Ingredients
       for (let i = 0; i < (recipe.ingredients ?? []).length; i++) {
         const ing = recipe.ingredients[i];
         let groceryItemId = null;
@@ -104,9 +100,7 @@ async function main() {
             where: { notionId: ing.groceryItemId },
             select: { id: true, unit: true },
           });
-          if (gi) {
-            groceryItemId = gi.id;
-          }
+          if (gi) groceryItemId = gi.id;
         }
 
         await prisma.ingredient.create({
@@ -122,7 +116,6 @@ async function main() {
         });
       }
 
-      // Instructions
       for (const inst of recipe.instructions ?? []) {
         await prisma.instruction.create({
           data: {

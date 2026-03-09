@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, ChefHat } from "lucide-react";
+import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple } from "lucide-react";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
   { href: "/planner", label: "Planner", icon: Calendar },
   { href: "/grocery-list", label: "Grocery List", icon: ShoppingCart },
+  { href: "/ingredients", label: "Ingredients", icon: Apple },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="w-56 bg-white border-r border-gray-100 flex flex-col shrink-0">
+    <aside className="hidden md:flex md:flex-col w-56 bg-white border-r border-gray-100 shrink-0">
       <div className="p-5 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">

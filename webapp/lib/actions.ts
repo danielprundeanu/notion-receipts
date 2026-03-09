@@ -20,6 +20,7 @@ export type RecipeFormInput = {
     unit: string | null;
     notes: string | null;
     groupOrder: number;
+    groupName: string | null;
     order: number;
   }>;
   instructions: Array<{
@@ -67,6 +68,7 @@ async function buildIngredientsAndInstructions(
         unit: ing.unit ?? groceryItem.unit,
         notes: ing.notes,
         groupOrder: ing.groupOrder,
+        groupName: ing.groupName ?? null,
         order: ing.order,
       },
     });
@@ -134,6 +136,12 @@ export async function deleteRecipe(id: string): Promise<void> {
   revalidatePath("/recipes");
 }
 
+export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
+  await prisma.recipe.update({ where: { id }, data: { favorite } });
+  revalidatePath(`/recipes/${id}`);
+  revalidatePath("/recipes");
+}
+
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
 export async function getRecipes(search?: string, category?: string) {
@@ -178,7 +186,7 @@ export async function searchRecipesForPlanner(query: string) {
     where: { name: { contains: query } },
     take: 10,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, servings: true },
+    select: { id: true, name: true, category: true, servings: true, imageUrl: true },
   });
 }
 
@@ -195,7 +203,7 @@ export async function getWeekPlan(weekStartIso: string) {
     },
     include: {
       recipe: {
-        select: { id: true, name: true, category: true, servings: true },
+        select: { id: true, name: true, category: true, servings: true, imageUrl: true },
       },
     },
   });
@@ -224,6 +232,12 @@ export async function addToWeekPlan(data: {
 
 export async function removeFromWeekPlan(id: string) {
   await prisma.weekPlan.delete({ where: { id } });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+}
+
+export async function updateWeekPlanServings(id: string, servings: number): Promise<void> {
+  await prisma.weekPlan.update({ where: { id }, data: { servings } });
   revalidatePath("/planner");
   revalidatePath("/grocery-list");
 }
@@ -304,4 +318,41 @@ export async function getGroceryList(
   }
 
   return grouped;
+}
+
+// ─── Ingredients Page ─────────────────────────────────────────────────────────
+
+export async function updateGroceryItem(
+  id: string,
+  data: {
+    name?: string;
+    category?: string | null;
+    unit?: string | null;
+    unit2?: string | null;
+    conversion?: number | null;
+    kcal?: number | null;
+    carbs?: number | null;
+    fat?: number | null;
+    protein?: number | null;
+  }
+): Promise<void> {
+  await prisma.groceryItem.update({ where: { id }, data });
+}
+
+export async function getGroceryItems() {
+  return prisma.groceryItem.findMany({
+    orderBy: [{ category: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      unit: true,
+      unit2: true,
+      conversion: true,
+      kcal: true,
+      carbs: true,
+      fat: true,
+      protein: true,
+    },
+  });
 }
