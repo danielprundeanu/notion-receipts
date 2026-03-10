@@ -2,7 +2,19 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  Star,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  Clock,
+  Users,
+  Minus,
+} from "lucide-react";
 import {
   createRecipe,
   updateRecipe,
@@ -128,6 +140,201 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+// ─── Live Preview Panel ───────────────────────────────────────────────────────
+
+function RecipePreviewPanel({
+  name,
+  categories,
+  servings,
+  time,
+  difficulty,
+  favorite,
+  notes,
+  groups,
+  instructionsText,
+}: {
+  name: string;
+  categories: string[];
+  servings: string;
+  time: string;
+  difficulty: string;
+  favorite: boolean;
+  notes: string;
+  groups: IngredientGroup[];
+  instructionsText: string;
+}) {
+  const defaultServings = servings ? parseInt(servings) || 1 : 1;
+  const [currentServings, setCurrentServings] = useState(defaultServings);
+
+  useEffect(() => {
+    setCurrentServings(defaultServings);
+  }, [defaultServings]);
+
+  const scale = defaultServings > 0 ? currentServings / defaultServings : 1;
+
+  // Parse instructions text
+  const instructions: Array<{ step: number; text: string; isSection: boolean }> = [];
+  let stepNum = 0;
+  for (const line of instructionsText.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("# ")) {
+      instructions.push({ step: 0, text: trimmed.slice(2), isSection: true });
+    } else {
+      stepNum++;
+      instructions.push({ step: stepNum, text: trimmed, isSection: false });
+    }
+  }
+
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.ingredients.filter((i) => i.groceryItemName.trim()) }))
+    .filter((g) => g.items.length > 0);
+
+  const multiGroup = visibleGroups.length > 1;
+
+  return (
+    <div className="p-6 md:p-8">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {name || <span className="text-gray-300">Untitled Recipe</span>}
+        </h1>
+        <div className="flex flex-wrap items-center gap-2 mt-3">
+          {categories.map((cat) => (
+            <span key={cat} className="px-2.5 py-0.5 bg-orange-100 text-orange-800 rounded-full text-xs font-medium">
+              {cat}
+            </span>
+          ))}
+          {difficulty && (
+            <span className="px-2.5 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+              {difficulty}
+            </span>
+          )}
+          {time && (
+            <span className="flex items-center gap-1 text-xs text-gray-600 font-medium">
+              <Clock size={11} className="text-gray-500" /> {time} min
+            </span>
+          )}
+          {favorite && <Star size={14} className="text-amber-400 fill-amber-400" />}
+        </div>
+        {notes && (
+          <p className="mt-3 text-sm text-gray-700 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
+            {notes}
+          </p>
+        )}
+      </div>
+
+      {/* Servings control */}
+      <div className="flex items-center gap-3 mb-6 pb-5 border-b border-gray-100">
+        <Users size={13} className="text-gray-500" />
+        <span className="text-xs font-medium text-gray-700">Servings</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setCurrentServings((s) => Math.max(1, s - 1))}
+            className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 text-gray-700 transition-colors"
+          >
+            <Minus size={10} />
+          </button>
+          <span className="w-6 text-center text-xs font-bold text-gray-900">{currentServings}</span>
+          <button
+            type="button"
+            onClick={() => setCurrentServings((s) => s + 1)}
+            className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 text-gray-700 transition-colors"
+          >
+            <Plus size={10} />
+          </button>
+        </div>
+        {currentServings !== defaultServings && (
+          <button
+            type="button"
+            onClick={() => setCurrentServings(defaultServings)}
+            className="text-xs text-gray-400 hover:text-gray-600 underline"
+          >
+            reset
+          </button>
+        )}
+        {scale !== 1 && (
+          <span className="text-xs text-orange-600 font-medium bg-orange-50 px-2 py-0.5 rounded-full">
+            ×{Math.round(scale * 100) / 100} scaled
+          </span>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="grid grid-cols-1 xl:grid-cols-5 gap-8">
+        {/* Ingredients */}
+        <div className="xl:col-span-2">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Ingredients</h2>
+          {visibleGroups.length === 0 ? (
+            <p className="text-xs text-gray-400 italic">No ingredients yet</p>
+          ) : (
+            <div className="space-y-4">
+              {visibleGroups.map((group, gi) => (
+                <div key={group.id}>
+                  {(multiGroup || (group.name && group.name !== "Ingredients")) && (
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+                      {group.name || `Part ${gi + 1}`}
+                    </p>
+                  )}
+                  <ul className="space-y-1.5">
+                    {group.items.map((ing) => {
+                      const rawQty = parseFloat(ing.quantity);
+                      const scaledQty = !isNaN(rawQty) ? Math.round(rawQty * scale * 10) / 10 : null;
+                      return (
+                        <li key={ing.id} className="flex items-baseline gap-1.5 text-sm">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0 mt-[5px]" />
+                          <span>
+                            {scaledQty != null && (
+                              <span className="font-semibold text-gray-900">
+                                {scaledQty % 1 === 0 ? scaledQty : scaledQty}
+                                {ing.unit ? ` ${ing.unit}` : ""}
+                              </span>
+                            )}{" "}
+                            <span className="text-gray-800">{ing.groceryItemName}</span>
+                            {ing.notes && (
+                              <span className="text-gray-500"> · {ing.notes}</span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Instructions */}
+        <div className="xl:col-span-3">
+          <h2 className="text-sm font-semibold text-gray-900 mb-3">Instructions</h2>
+          {instructions.length === 0 ? (
+            <p className="text-xs text-gray-400 italic">No instructions yet</p>
+          ) : (
+            <div className="space-y-3">
+              {instructions.map((inst, i) =>
+                inst.isSection ? (
+                  <h3 key={i} className="text-xs font-bold uppercase tracking-wide text-gray-600 pt-1">
+                    {inst.text}
+                  </h3>
+                ) : (
+                  <div key={i} className="flex gap-2.5">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                      {inst.step}
+                    </span>
+                    <p className="text-sm text-gray-800 leading-relaxed">{inst.text}</p>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
 export default function RecipeForm({ initial }: { initial?: InitialRecipeData }) {
@@ -135,6 +342,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const [name, setName] = useState(initial?.name ?? "");
   const [categories, setCategories] = useState<string[]>(initial?.categories ?? []);
@@ -288,8 +496,8 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
     router.refresh();
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7">
+  const formContent = (
+    <>
       {/* Name */}
       <div>
         <input
@@ -602,6 +810,59 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
           </button>
         )}
       </div>
-    </form>
+    </>
+  );
+
+  return (
+    <div className={showPreview ? "flex items-start" : ""}>
+      {/* Form column */}
+      <form
+        onSubmit={handleSubmit}
+        className={
+          showPreview
+            ? "w-1/2 shrink-0 px-4 md:px-6 py-6 space-y-7 border-r border-gray-200 sticky top-0 max-h-screen overflow-y-auto"
+            : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"
+        }
+      >
+        {/* Preview toggle */}
+        <div className="flex justify-end -mb-3">
+          <button
+            type="button"
+            onClick={() => setShowPreview((p) => !p)}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors ${
+              showPreview
+                ? "bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                : "border-gray-200 text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            {showPreview ? <EyeOff size={12} /> : <Eye size={12} />}
+            {showPreview ? "Hide preview" : "Preview"}
+          </button>
+        </div>
+
+        {formContent}
+      </form>
+
+      {/* Preview column */}
+      {showPreview && (
+        <div className="w-1/2 sticky top-0 max-h-screen overflow-y-auto bg-gray-50 border-l border-gray-200">
+          <div className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-2 flex items-center gap-2">
+            <Eye size={12} className="text-gray-400" />
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Live Preview</p>
+          </div>
+          <RecipePreviewPanel
+            name={name}
+            categories={categories}
+            servings={servings}
+            time={time}
+            difficulty={difficulty}
+            favorite={favorite}
+            notes={notes}
+            groups={groups}
+            instructionsText={instructionsText}
+          />
+        </div>
+      )}
+    </div>
   );
 }
