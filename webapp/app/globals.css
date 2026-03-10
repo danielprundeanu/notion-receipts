@@ -48,32 +48,32 @@
    DESIGN TOKENS — Dark Theme
    ════════════════════════════════════════════════ */
 .dark {
-  /* Backgrounds */
-  --color-bg-base:        #0f172a; /* slate-900 — page background         */
-  --color-bg-card:        #1e293b; /* slate-800 — card / panel            */
-  --color-bg-card-hover:  #334155; /* slate-700 — card hover              */
-  --color-bg-input:       #1e293b; /* slate-800 — input / select          */
-  --color-bg-sidebar:     #1e293b; /* slate-800 — sidebar                 */
-  --color-bg-nav:         #1e293b; /* slate-800 — bottom nav              */
-  --color-bg-muted:       #334155; /* slate-700 — subtle surface          */
+  /* Backgrounds — zinc palette (neutral warm, not blue-tinted) */
+  --color-bg-base:        #18181b; /* zinc-900 — page background          */
+  --color-bg-card:        #27272a; /* zinc-800 — card / panel             */
+  --color-bg-card-hover:  #3f3f46; /* zinc-700 — card hover               */
+  --color-bg-input:       #27272a; /* zinc-800 — input / select           */
+  --color-bg-sidebar:     #1c1c1f; /* zinc-850 — sidebar (darker than card) */
+  --color-bg-nav:         #1c1c1f; /* zinc-850 — bottom nav               */
+  --color-bg-muted:       #3f3f46; /* zinc-700 — subtle surface           */
 
   /* Borders */
-  --color-border:         #334155; /* slate-700 — subtle dividers         */
-  --color-border-input:   #475569; /* slate-600 — input / card borders    */
-  --color-border-strong:  #64748b; /* slate-500 — stronger borders        */
+  --color-border:         #3f3f46; /* zinc-700 — subtle dividers          */
+  --color-border-input:   #52525b; /* zinc-600 — input / card borders     */
+  --color-border-strong:  #71717a; /* zinc-500 — stronger borders         */
 
   /* Text */
-  --color-text-primary:   #f1f5f9; /* slate-100 — headings, body          */
-  --color-text-secondary: #cbd5e1; /* slate-300 — secondary labels        */
-  --color-text-muted:     #94a3b8; /* slate-400 — hints, meta             */
-  --color-text-faint:     #64748b; /* slate-500 — placeholders, disabled  */
+  --color-text-primary:   #fafafa; /* zinc-50  — headings, body           */
+  --color-text-secondary: #d4d4d8; /* zinc-300 — secondary labels         */
+  --color-text-muted:     #a1a1aa; /* zinc-400 — hints, meta              */
+  --color-text-faint:     #71717a; /* zinc-500 — placeholders, disabled   */
 
   /* Brand — Orange (stays vibrant on dark) */
   --color-brand:          #f97316; /* orange-500 — primary action         */
   --color-brand-hover:    #fb923c; /* orange-400 — lighter on dark bg     */
   --color-brand-soft:     #431407; /* orange-950 — soft brand on dark     */
   --color-brand-soft-2:   #7c2d12; /* orange-900 — slightly lighter soft  */
-  --color-brand-text:     #fb923c; /* orange-400 — brand text on dark bg  */
+  --color-brand-text:     #fdba74; /* orange-300 — brand text (readable on dark) */
   --color-brand-mid:      #9a3412; /* orange-800 — mid-weight accent      */
 
   /* Semantic */
