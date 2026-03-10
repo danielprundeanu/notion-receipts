@@ -120,13 +120,20 @@ async function main() {
           if (gi) groceryItemId = gi.id;
         }
 
+        // Use qty1/unit1 when available; fall back to qty2/unit2 if only unit2 was filled in Notion
+        const useUnit2 = ing.quantity == null && ing.quantity2 != null;
+        const quantity = useUnit2 ? ing.quantity2 : (ing.quantity ?? null);
+        const unit = useUnit2
+          ? (ing.groceryItem?.unit2 ?? null)
+          : (ing.groceryItem?.unit ?? null);
+
         await prisma.ingredient.create({
           data: {
             recipeId: dbRecipe.id,
             groceryItemId,
             groupOrder: ing.groupOrder ?? 1,
-            quantity: ing.quantity ?? null,
-            unit: ing.groceryItem?.unit ?? null,
+            quantity,
+            unit,
             notes: ing.notes ?? null,
             order: i,
           },
