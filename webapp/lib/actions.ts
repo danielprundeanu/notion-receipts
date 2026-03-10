@@ -34,10 +34,10 @@ export type RecipeFormInput = {
 // ─── Grocery Item Search ──────────────────────────────────────────────────────
 
 export async function searchGroceryItems(query: string) {
-  if (!query.trim()) return [];
+  if (query.trim().length < 2) return [];
   return prisma.groceryItem.findMany({
-    where: { name: { contains: query } },
-    take: 8,
+    where: { name: { contains: query, mode: "insensitive" } },
+    take: 10,
     orderBy: { name: "asc" },
     select: { id: true, name: true, unit: true, unit2: true },
   });

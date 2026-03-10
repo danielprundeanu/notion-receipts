@@ -88,21 +88,41 @@ function AddToPlannerModal({
 }) {
   const today = new Date();
   const weekStart = getMondayOf(today);
+  const defaultServings = recipe.servings ?? 1;
   const [dayIdx, setDayIdx] = useState(todayDayIndex());
-  const [meal, setMeal] = useState<MealType>("Lunch");
-  const [servings, setServings] = useState(recipe.servings ?? 1);
+  const [mealServings, setMealServings] = useState<Record<MealType, number>>({
+    Breakfast: 0,
+    Lunch: 0,
+    Dinner: 0,
+    Snack: 0,
+  });
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  async function handleAdd() {
-    setSaving(true);
-    await addToWeekPlan({
-      recipeId: recipe.id,
-      weekStartIso: weekStart.toISOString(),
-      dayOfWeek: dayIdx,
-      mealType: meal,
-      servings,
+  const totalSelected = Object.values(mealServings).filter((s) => s > 0).length;
+
+  function setMeal(meal: MealType, delta: number) {
+    setMealServings((prev) => {
+      const next = Math.max(0, prev[meal] + delta);
+      // First time activating a meal → default to recipe servings
+      const resolved = delta > 0 && prev[meal] === 0 ? defaultServings : next;
+      return { ...prev, [meal]: resolved };
     });
+  }
+
+  async function handleAdd() {
+    const entries = MEALS.filter((m) => mealServings[m] > 0);
+    if (entries.length === 0) return;
+    setSaving(true);
+    for (const meal of entries) {
+      await addToWeekPlan({
+        recipeId: recipe.id,
+        weekStartIso: weekStart.toISOString(),
+        dayOfWeek: dayIdx,
+        mealType: meal,
+        servings: mealServings[meal],
+      });
+    }
     setDone(true);
     setSaving(false);
   }
@@ -124,7 +144,7 @@ function AddToPlannerModal({
             </div>
             <p className="font-medium text-gray-900 dark:text-[#e3e3e3] mb-1">Added!</p>
             <p className="text-sm text-gray-500 dark:text-[#787878]">
-              {recipe.name} → {DAYS[dayIdx]} · {meal}
+              {recipe.name} → {DAYS[dayIdx]}
             </p>
             <button onClick={onClose} className="mt-4 text-sm text-orange-600 dark:text-orange-400 hover:underline">
               Close
@@ -133,7 +153,7 @@ function AddToPlannerModal({
         ) : (
           <>
             {/* Day selector */}
-            <div className="mb-4">
+            <div className="mb-5">
               <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Day</p>
               <div className="grid grid-cols-7 gap-1">
                 {DAYS.map((d, i) => {
@@ -161,56 +181,67 @@ function AddToPlannerModal({
               </div>
             </div>
 
-            {/* Meal type */}
-            <div className="mb-4">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Meal</p>
-              <div className="grid grid-cols-2 gap-2">
-                {MEALS.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setMeal(m)}
-                    className={`py-2 rounded-lg text-sm transition-colors ${
-                      meal === m
-                        ? "bg-orange-500 text-white font-medium"
-                        : "border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Servings */}
-            <div className="flex items-center gap-3 mb-5">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide flex-1">Servings</p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setServings((s) => Math.max(1, s - 1))}
-                  className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] flex items-center justify-center text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] transition-colors"
-                >
-                  −
-                </button>
-                <span className="w-6 text-center text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">{servings}</span>
-                <button
-                  type="button"
-                  onClick={() => setServings((s) => s + 1)}
-                  className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] flex items-center justify-center text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] transition-colors"
-                >
-                  +
-                </button>
+            {/* Meal type + servings */}
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Meals & Servings</p>
+              <div className="space-y-2">
+                {MEALS.map((m) => {
+                  const s = mealServings[m];
+                  const active = s > 0;
+                  return (
+                    <div
+                      key={m}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
+                        active
+                          ? "border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30"
+                          : "border-gray-200 dark:border-[#3a3a3a] hover:border-gray-300 dark:hover:border-[#4a4a4a]"
+                      }`}
+                    >
+                      <span className={`flex-1 text-sm font-medium ${active ? "text-orange-800 dark:text-orange-300" : "text-gray-600 dark:text-[#9a9a9a]"}`}>
+                        {m}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setMeal(m, -1)}
+                          className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
+                            active
+                              ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
+                              : "border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#555555] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                          }`}
+                        >
+                          −
+                        </button>
+                        <span className={`w-5 text-center text-sm font-bold ${active ? "text-orange-900 dark:text-orange-200" : "text-gray-300 dark:text-[#444444]"}`}>
+                          {s === 0 ? "—" : s}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setMeal(m, 1)}
+                          className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
+                            active
+                              ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
+                              : "border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#555555] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                          }`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             <button
               onClick={handleAdd}
-              disabled={saving}
+              disabled={saving || totalSelected === 0}
               className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
-              Add to Planner
+              {totalSelected === 0
+                ? "Select at least one meal"
+                : `Add to Planner${totalSelected > 1 ? ` (${totalSelected} meals)` : ""}`}
             </button>
           </>
         )}
