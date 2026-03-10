@@ -14,6 +14,7 @@ export type RecipeFormInput = {
   favorite: boolean;
   link: string | null;
   notes: string | null;
+  imageUrl: string | null;
   ingredients: Array<{
     groceryItemName: string;
     quantity: number | null;
@@ -38,7 +39,17 @@ export async function searchGroceryItems(query: string) {
     where: { name: { contains: query } },
     take: 8,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, unit: true },
+    select: { id: true, name: true, unit: true, unit2: true },
+  });
+}
+
+export async function getGroceryItemDetails(id: string) {
+  return prisma.groceryItem.findUnique({
+    where: { id },
+    select: {
+      id: true, name: true, unit: true, unit2: true,
+      conversion: true, kcal: true, carbs: true, fat: true, protein: true,
+    },
   });
 }
 
@@ -100,6 +111,7 @@ export async function createRecipe(data: RecipeFormInput): Promise<string> {
       favorite: data.favorite,
       link: data.link,
       notes: data.notes,
+      imageUrl: data.imageUrl ?? null,
     },
   });
   await buildIngredientsAndInstructions(recipe.id, data);
@@ -122,6 +134,7 @@ export async function updateRecipe(
       favorite: data.favorite,
       link: data.link,
       notes: data.notes,
+      imageUrl: data.imageUrl ?? null,
     },
   });
   await prisma.ingredient.deleteMany({ where: { recipeId: id } });
@@ -386,4 +399,18 @@ export async function getGroceryItems() {
       protein: true,
     },
   });
+}
+
+export async function getRecipeWeekPlanServings(
+  recipeId: string,
+  weekStartIso: string
+): Promise<number> {
+  const weekStart = new Date(weekStartIso);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const plans = await prisma.weekPlan.findMany({
+    where: { recipeId, weekStart: { gte: weekStart, lt: weekEnd } },
+    select: { servings: true },
+  });
+  return plans.reduce((sum, p) => sum + p.servings, 0);
 }

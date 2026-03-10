@@ -2,19 +2,21 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon } from "lucide-react";
 import {
   createRecipe,
   updateRecipe,
   deleteRecipe,
   searchGroceryItems,
+  getGroceryItemDetails,
+  updateGroceryItem,
 } from "@/lib/actions";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
   "Smoothie", "Smoothie Bowl", "Soup", "High Protein", "Receipt", "Extra",
 ];
-const UNITS = ["g", "ml", "piece", "tsp", "tbsp", "cup", "slice", "handful", "pinch", "scoop", "bottle", "pint"];
+const ALL_UNITS = ["g", "ml", "piece", "tsp", "tbsp", "cup", "slice", "handful", "pinch", "scoop", "bottle", "pint"];
 const DIFFICULTIES = ["Easy", "Moderate"];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +27,8 @@ type IngredientRow = {
   unit: string;
   groceryItemName: string;
   notes: string;
+  groceryItemId: string | null;
+  availableUnits: string[] | null; // null = show all ALL_UNITS
 };
 
 type IngredientGroup = {
@@ -43,6 +47,7 @@ export type InitialRecipeData = {
   favorite: boolean;
   link: string;
   notes: string;
+  imageUrl: string;
   groups: IngredientGroup[];
   instructionsText: string;
 };
@@ -52,23 +57,27 @@ function uid() {
 }
 
 function emptyIngredient(): IngredientRow {
-  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", notes: "" };
+  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", notes: "", groceryItemId: null, availableUnits: null };
 }
 
 function defaultGroup(name = "Ingredients"): IngredientGroup {
   return { id: uid(), name, ingredients: [emptyIngredient()] };
 }
 
-// ─── Grocery Item Autocomplete ─────────────────────────────────────────────
+// ─── Grocery Item Autocomplete ──────────────────────────────────────────────
+
+type GroceryItemOption = { id: string; name: string; unit: string | null; unit2: string | null };
 
 function GroceryItemInput({
   value,
   onChange,
+  onItemSelect,
 }: {
   value: string;
   onChange: (name: string) => void;
+  onItemSelect?: (item: GroceryItemOption) => void;
 }) {
-  const [results, setResults] = useState<Array<{ id: string; name: string; unit: string | null }>>([]);
+  const [results, setResults] = useState<GroceryItemOption[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -76,7 +85,7 @@ function GroceryItemInput({
     const t = setTimeout(async () => {
       if (value.length < 2) { setResults([]); return; }
       const r = await searchGroceryItems(value);
-      setResults(r);
+      setResults(r as GroceryItemOption[]);
       if (r.length > 0) setOpen(true);
     }, 250);
     return () => clearTimeout(t);
@@ -105,15 +114,172 @@ function GroceryItemInput({
               key={r.id}
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => { onChange(r.name); setOpen(false); }}
+              onClick={() => {
+                onChange(r.name);
+                onItemSelect?.(r);
+                setOpen(false);
+              }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-between"
             >
               <span className="text-gray-800 dark:text-[#d4d4d4]">{r.name}</span>
-              {r.unit && <span className="text-xs text-gray-500 dark:text-[#787878] ml-2">{r.unit}</span>}
+              {r.unit && (
+                <span className="text-xs text-gray-500 dark:text-[#787878] ml-2">
+                  {r.unit}{r.unit2 ? ` / ${r.unit2}` : ""}
+                </span>
+              )}
             </button>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Grocery Item Edit Modal ──────────────────────────────────────────────────
+
+function GroceryItemEditModal({
+  itemId,
+  onClose,
+  onSaved,
+}: {
+  itemId: string;
+  onClose: () => void;
+  onSaved: (unit: string | null, unit2: string | null) => void;
+}) {
+  const [item, setItem] = useState<{
+    name: string; unit: string | null; unit2: string | null;
+    conversion: number | null; kcal: number | null; carbs: number | null;
+    fat: number | null; protein: number | null;
+  } | null>(null);
+  const [unit2, setUnit2] = useState("");
+  const [conversion, setConversion] = useState("");
+  const [kcal, setKcal] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  const [protein, setProtein] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getGroceryItemDetails(itemId).then((data) => {
+      if (!data) return;
+      setItem(data);
+      setUnit2(data.unit2 ?? "");
+      setConversion(data.conversion?.toString() ?? "");
+      setKcal(data.kcal?.toString() ?? "");
+      setCarbs(data.carbs?.toString() ?? "");
+      setFat(data.fat?.toString() ?? "");
+      setProtein(data.protein?.toString() ?? "");
+    });
+  }, [itemId]);
+
+  async function handleSave() {
+    setSaving(true);
+    const u2 = unit2.trim() || null;
+    await updateGroceryItem(itemId, {
+      unit2: u2,
+      conversion: conversion ? parseFloat(conversion) : null,
+      kcal: kcal ? parseFloat(kcal) : null,
+      carbs: carbs ? parseFloat(carbs) : null,
+      fat: fat ? parseFloat(fat) : null,
+      protein: protein ? parseFloat(protein) : null,
+    });
+    onSaved(item?.unit ?? null, u2);
+    setSaving(false);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+            {item ? item.name : "Loading…"}
+          </h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1">
+            <X size={18} />
+          </button>
+        </div>
+
+        {!item ? (
+          <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">Primary unit</span>
+                <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] rounded-lg text-gray-500 dark:text-[#787878]">
+                  {item.unit ?? "—"}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">2nd unit</span>
+                <input
+                  value={unit2}
+                  onChange={(e) => setUnit2(e.target.value)}
+                  placeholder="cup, tbsp…"
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">
+                Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
+              </span>
+              <input
+                type="number" step="0.001" min="0"
+                value={conversion}
+                onChange={(e) => setConversion(e.target.value)}
+                placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+            </div>
+
+            <div>
+              <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">
+                Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
+              </span>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { label: "kcal", value: kcal, set: setKcal },
+                  { label: "carbs g", value: carbs, set: setCarbs },
+                  { label: "fat g", value: fat, set: setFat },
+                  { label: "protein g", value: protein, set: setProtein },
+                ].map(({ label, value, set }) => (
+                  <div key={label}>
+                    <span className="text-xs text-gray-400 dark:text-[#555555] block mb-1">{label}</span>
+                    <input
+                      type="number" step="0.1" min="0"
+                      value={value}
+                      onChange={(e) => set(e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-6">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !item}
+            className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -125,6 +291,42 @@ function Label({ children }: { children: React.ReactNode }) {
     <label className="text-xs font-semibold text-gray-600 dark:text-[#9a9a9a] uppercase tracking-wide block mb-1.5">
       {children}
     </label>
+  );
+}
+
+// ─── Unit Select ──────────────────────────────────────────────────────────────
+
+function UnitSelect({
+  value,
+  availableUnits,
+  groceryItemId,
+  onChange,
+  onAddUnit,
+  className,
+}: {
+  value: string;
+  availableUnits: string[] | null;
+  groceryItemId: string | null;
+  onChange: (v: string) => void;
+  onAddUnit: () => void;
+  className?: string;
+}) {
+  const units = availableUnits ?? ALL_UNITS;
+  const showAddUnit = groceryItemId !== null && availableUnits !== null && availableUnits.length < 2;
+
+  return (
+    <select
+      value={value}
+      onChange={(e) => {
+        if (e.target.value === "__add_unit__") { onAddUnit(); return; }
+        onChange(e.target.value);
+      }}
+      className={className}
+    >
+      <option value="">—</option>
+      {units.map((u) => <option key={u} value={u}>{u}</option>)}
+      {showAddUnit && <option value="__add_unit__">+ Add unit…</option>}
+    </select>
   );
 }
 
@@ -144,16 +346,42 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
   const [favorite, setFavorite] = useState(initial?.favorite ?? false);
   const [link, setLink] = useState(initial?.link ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
+  const [imageUploading, setImageUploading] = useState(false);
 
   const [groups, setGroups] = useState<IngredientGroup[]>(
     initial?.groups?.length ? initial.groups : [defaultGroup()]
   );
   const [instructionsText, setInstructionsText] = useState(initial?.instructionsText ?? "");
 
+  // For the "Add unit" modal
+  const [editingUnit, setEditingUnit] = useState<{
+    groupId: string; ingId: string; groceryItemId: string;
+  } | null>(null);
+
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
   function toggleCategory(cat: string) {
     setCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
+  }
+
+  // ── Image upload ──────────────────────────────────────────────────────────
+
+  async function handleImageFile(file: File) {
+    setImageUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/upload-recipe-image", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.path) setImageUrl(data.path);
+      else setError(data.error ?? "Upload failed");
+    } catch {
+      setError("Image upload failed");
+    }
+    setImageUploading(false);
   }
 
   // ── Group operations ──────────────────────────────────────────────────────
@@ -214,6 +442,29 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
     );
   }
 
+  function handleItemSelect(groupId: string, ingId: string, item: { id: string; unit: string | null; unit2: string | null }) {
+    const units = [item.unit, item.unit2].filter(Boolean) as string[];
+    setGroups((gs) =>
+      gs.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              ingredients: g.ingredients.map((i) => {
+                if (i.id !== ingId) return i;
+                const newUnit = units.length > 0 && !units.includes(i.unit) ? units[0] : i.unit;
+                return {
+                  ...i,
+                  groceryItemId: item.id,
+                  availableUnits: units.length > 0 ? units : null,
+                  unit: newUnit,
+                };
+              }),
+            }
+          : g
+      )
+    );
+  }
+
   // ── Submit ────────────────────────────────────────────────────────────────
 
   async function handleSubmit(e: React.FormEvent) {
@@ -222,7 +473,6 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
     setSaving(true);
     setError(null);
 
-    // Flatten groups to ingredients list
     const ingredients = groups.flatMap((group, groupIdx) =>
       group.ingredients
         .filter((i) => i.groceryItemName.trim())
@@ -237,7 +487,6 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
         }))
     );
 
-    // Parse instructions textarea
     const instructions: Array<{ text: string; isSection: boolean; step: number }> = [];
     let stepNum = 0;
     for (const line of instructionsText.split("\n")) {
@@ -260,6 +509,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
       favorite,
       link: link.trim() || null,
       notes: notes.trim() || null,
+      imageUrl: imageUrl || null,
       ingredients,
       instructions,
     };
@@ -288,6 +538,9 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
     router.refresh();
   }
 
+  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]";
+
   return (
     <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7">
       {/* Name */}
@@ -301,6 +554,58 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
         />
       </div>
 
+      {/* Cover image */}
+      <div>
+        <Label>Cover image</Label>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleImageFile(file);
+          }}
+        />
+        {imageUrl ? (
+          <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gray-100 dark:bg-[#2a2a2a] group">
+            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => imageInputRef.current?.click()}
+                className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-800 shadow"
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageUrl("")}
+                className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white shadow"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => imageInputRef.current?.click()}
+            disabled={imageUploading}
+            className="w-full h-32 rounded-xl border-2 border-dashed border-gray-200 dark:border-[#3a3a3a] flex flex-col items-center justify-center gap-2 hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group disabled:opacity-50"
+          >
+            {imageUploading ? (
+              <Loader2 size={20} className="animate-spin text-gray-400" />
+            ) : (
+              <>
+                <ImageIcon size={20} className="text-gray-300 dark:text-[#444444] group-hover:text-orange-400" />
+                <span className="text-sm text-gray-400 dark:text-[#555555] group-hover:text-orange-500">Upload cover image</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+
       {/* Meta */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
@@ -309,8 +614,8 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
             type="number" min="1"
             value={servings}
             onChange={(e) => setServings(e.target.value)}
-            placeholder="4"
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            placeholder="1"
+            className={inputCls}
           />
         </div>
         <div>
@@ -320,7 +625,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
             value={time}
             onChange={(e) => setTime(e.target.value)}
             placeholder="30"
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className={inputCls}
           />
         </div>
         <div>
@@ -381,7 +686,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="https://…"
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className={inputCls}
           />
         </div>
         <div>
@@ -390,7 +695,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Optional notes…"
-            className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className={inputCls}
           />
         </div>
       </div>
@@ -420,31 +725,17 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                   className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#b8b8b8] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#555555]"
                 />
                 <div className="flex items-center gap-0.5 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => moveGroup(group.id, -1)}
-                    disabled={groupIdx === 0}
-                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
-                    title="Move up"
-                  >
+                  <button type="button" onClick={() => moveGroup(group.id, -1)} disabled={groupIdx === 0}
+                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors">
                     <ChevronUp size={13} />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => moveGroup(group.id, 1)}
-                    disabled={groupIdx === groups.length - 1}
-                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
-                    title="Move down"
-                  >
+                  <button type="button" onClick={() => moveGroup(group.id, 1)} disabled={groupIdx === groups.length - 1}
+                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors">
                     <ChevronDown size={13} />
                   </button>
                   {groups.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeGroup(group.id)}
-                      className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors ml-1"
-                      title="Remove group"
-                    >
+                    <button type="button" onClick={() => removeGroup(group.id)}
+                      className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors ml-1">
                       <Trash2 size={13} />
                     </button>
                   )}
@@ -454,7 +745,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
               {/* Ingredient rows */}
               <div className="p-3 space-y-2">
                 {/* Column headers — desktop only */}
-                <div className="hidden sm:grid grid-cols-[64px_76px_1fr_88px_28px] gap-2 mb-1 px-0.5">
+                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 mb-1 px-0.5">
                   {["Qty", "Unit", "Ingredient", "Notes", ""].map((h) => (
                     <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
                   ))}
@@ -472,23 +763,21 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                           placeholder="Qty"
                           className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
-                        <select
+                        <UnitSelect
                           value={ing.unit}
-                          onChange={(e) => updateIngredient(group.id, ing.id, { unit: e.target.value })}
-                          className="w-20 px-1.5 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
-                        >
-                          <option value="">—</option>
-                          {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                        </select>
+                          availableUnits={ing.availableUnits}
+                          groceryItemId={ing.groceryItemId}
+                          onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
+                          onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
+                          className="w-24 px-1.5 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
+                        />
                         <GroceryItemInput
                           value={ing.groceryItemName}
-                          onChange={(name) => updateIngredient(group.id, ing.id, { groceryItemName: name })}
+                          onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
+                          onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
                         />
-                        <button
-                          type="button"
-                          onClick={() => removeIngredient(group.id, ing.id)}
-                          className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors shrink-0"
-                        >
+                        <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
+                          className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors shrink-0">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -496,12 +785,12 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                         value={ing.notes}
                         onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
                         placeholder="Notes (optional)"
-                        className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525] dark:border-[#3a3a3a]"
+                        className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525]"
                       />
                     </div>
 
                     {/* Desktop layout */}
-                    <div className="hidden sm:grid grid-cols-[64px_76px_1fr_88px_28px] gap-2 items-center">
+                    <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 items-center">
                       <input
                         type="number" min="0" step="0.1"
                         value={ing.quantity}
@@ -509,29 +798,27 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                         placeholder="Qty"
                         className="px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                       />
-                      <select
+                      <UnitSelect
                         value={ing.unit}
-                        onChange={(e) => updateIngredient(group.id, ing.id, { unit: e.target.value })}
-                        className="px-1.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
-                      >
-                        <option value="">—</option>
-                        {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-                      </select>
+                        availableUnits={ing.availableUnits}
+                        groceryItemId={ing.groceryItemId}
+                        onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
+                        onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
+                        className={unitSelectCls}
+                      />
                       <GroceryItemInput
                         value={ing.groceryItemName}
-                        onChange={(name) => updateIngredient(group.id, ing.id, { groceryItemName: name })}
+                        onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
+                        onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
                       />
                       <input
                         value={ing.notes}
                         onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
                         placeholder="Notes"
-                        className="px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525] dark:border-[#3a3a3a]"
+                        className="px-2 py-1.5 text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525]"
                       />
-                      <button
-                        type="button"
-                        onClick={() => removeIngredient(group.id, ing.id)}
-                        className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors"
-                      >
+                      <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
+                        className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
                         <Trash2 size={14} />
                       </button>
                     </div>
@@ -602,6 +889,22 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
           </button>
         )}
       </div>
+
+      {/* Grocery item edit modal */}
+      {editingUnit && (
+        <GroceryItemEditModal
+          itemId={editingUnit.groceryItemId}
+          onClose={() => setEditingUnit(null)}
+          onSaved={(unit, unit2) => {
+            const newUnits = [unit, unit2].filter(Boolean) as string[];
+            updateIngredient(editingUnit.groupId, editingUnit.ingId, {
+              availableUnits: newUnits.length > 0 ? newUnits : null,
+              unit: unit2 ?? unit ?? "",
+            });
+            setEditingUnit(null);
+          }}
+        />
+      )}
     </form>
   );
 }
