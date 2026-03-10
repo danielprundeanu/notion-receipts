@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Meal Planner",
   description: "Personal meal planning app",
+  appleWebApp: {
+    capable: true,
+    title: "Meal Planner",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
