@@ -44,6 +44,16 @@ export default function ThemeProvider({
       root.classList.remove("dark");
     }
     localStorage.setItem("theme", theme);
+
+    // Keep iOS status bar in sync with the page background
+    const color = theme === "dark" ? "#191919" : "#ffffff";
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "theme-color";
+      document.head.appendChild(meta);
+    }
+    meta.content = color;
   }, [theme]);
 
   function toggleTheme() {
