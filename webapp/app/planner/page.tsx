@@ -131,10 +131,10 @@ function RecipeCard({
   onServingsChange: (n: number) => void;
 }) {
   return (
-    <div className="flex items-center gap-2 bg-orange-50 border border-orange-100 rounded-xl p-2 group relative">
+    <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-xl p-2 group relative">
       <button
         onClick={onRemove}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 hover:text-orange-600 z-10"
+        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-700 hover:text-orange-600 z-10"
       >
         <X size={11} />
       </button>
@@ -142,7 +142,7 @@ function RecipeCard({
       <div className="flex-1 min-w-0">
         <Link
           href={`/recipes/${entry.recipe.id}`}
-          className="text-xs font-medium text-orange-900 leading-snug line-clamp-2 hover:underline block"
+          className="text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline block"
         >
           {entry.recipe.name}
         </Link>
@@ -152,11 +152,11 @@ function RecipeCard({
               e.stopPropagation();
               onServingsChange(Math.max(1, entry.servings - 1));
             }}
-            className="w-4 h-4 rounded-full border border-orange-200 flex items-center justify-center hover:bg-orange-100 text-orange-600 transition-colors"
+            className="w-4 h-4 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
             <Minus size={8} />
           </button>
-          <span className="text-xs font-medium text-orange-700 w-4 text-center">
+          <span className="text-xs font-medium text-orange-700 dark:text-orange-300 w-4 text-center">
             {entry.servings}
           </span>
           <button
@@ -164,7 +164,7 @@ function RecipeCard({
               e.stopPropagation();
               onServingsChange(entry.servings + 1);
             }}
-            className="w-4 h-4 rounded-full border border-orange-200 flex items-center justify-center hover:bg-orange-100 text-orange-600 transition-colors"
+            className="w-4 h-4 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
             <Plus size={8} />
           </button>
@@ -190,12 +190,12 @@ function DraggableRecipeItem({ recipe }: { recipe: RecipeRef }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 p-2 bg-white border border-gray-100 rounded-xl cursor-grab active:cursor-grabbing hover:border-orange-200 hover:bg-orange-50 transition-colors select-none ${
+      className={`flex items-center gap-2 p-2 bg-white dark:bg-[#252525] border border-gray-100 dark:border-[#2e2e2e] rounded-xl cursor-grab active:cursor-grabbing hover:border-orange-200 dark:hover:border-orange-800/50 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors select-none ${
         isDragging ? "opacity-30" : ""
       }`}
     >
       <RecipeThumb recipe={recipe} size="md" />
-      <span className="text-xs font-medium text-gray-700 leading-snug line-clamp-2">
+      <span className="text-xs font-medium text-gray-700 dark:text-[#b8b8b8] leading-snug line-clamp-2">
         {recipe.name}
       </span>
     </div>
@@ -253,7 +253,7 @@ function DroppableMealSlot({
       ))}
       <button
         onClick={onAddClick}
-        className="w-full bg-white border border-dashed border-gray-200 rounded-xl flex items-center justify-center hover:border-orange-300 hover:bg-orange-50 transition-colors group"
+        className="w-full bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
         style={{ minHeight: entries.length === 0 ? "56px" : "28px" }}
       >
         <Plus
@@ -292,7 +292,7 @@ function RecipePanel() {
   }, [search, activeCategory]);
 
   return (
-    <div className="hidden md:flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 shrink-0">
+    <div className="hidden md:flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm font-semibold text-gray-700 shrink-0">
@@ -301,13 +301,13 @@ function RecipePanel() {
         <div className="relative">
           <Search
             size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555555]"
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
-            className="pl-7 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-1">
@@ -316,7 +316,7 @@ function RecipePanel() {
             className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
               activeCategory === null
                 ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+                : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] border-gray-200 dark:border-[#3a3a3a] hover:border-orange-300 dark:hover:border-orange-700"
             }`}
           >
             All
@@ -330,7 +330,7 @@ function RecipePanel() {
               className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 activeCategory === cat
                   ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-orange-300"
+                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] border-gray-200 dark:border-[#3a3a3a] hover:border-orange-300 dark:hover:border-orange-700"
               }`}
             >
               {cat}
@@ -354,7 +354,7 @@ function RecipePanel() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-gray-400 dark:text-[#555555]">
         Drag a recipe onto a day / meal slot above to add it to the plan.
       </p>
     </div>
@@ -418,15 +418,15 @@ function RecipeSelectorModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
+    <div className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-gray-900">
+          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
             {DAYS[day]} · {mealType}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-1"
+            className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1"
           >
             <X size={18} />
           </button>
@@ -445,7 +445,7 @@ function RecipeSelectorModal({
               setSelected(null);
             }}
             placeholder="Search recipe…"
-            className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full pl-9 pr-3 py-2.5 text-sm bg-white dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
@@ -456,11 +456,11 @@ function RecipeSelectorModal({
         )}
 
         {!loading && results.length > 0 && !selected && (
-          <ul className="border border-gray-100 rounded-lg divide-y divide-gray-50 mb-4 max-h-52 overflow-auto">
+          <ul className="border border-gray-100 dark:border-[#2e2e2e] rounded-lg divide-y divide-gray-50 dark:divide-[#2e2e2e] mb-4 max-h-52 overflow-auto">
             {results.map((r) => (
               <li key={r.id}>
                 <button
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-orange-50 transition-colors flex items-center gap-2.5"
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors flex items-center gap-2.5"
                   onClick={() => {
                     setSelected(r);
                     setServings(r.servings ?? 1);
@@ -468,9 +468,9 @@ function RecipeSelectorModal({
                 >
                   <RecipeThumb recipe={r} />
                   <div>
-                    <span className="font-medium text-gray-900">{r.name}</span>
+                    <span className="font-medium text-gray-900 dark:text-[#e3e3e3]">{r.name}</span>
                     {r.category && (
-                      <span className="ml-2 text-gray-400 text-xs">
+                      <span className="ml-2 text-gray-400 dark:text-[#555555] text-xs">
                         {r.category.split(",")[0]}
                       </span>
                     )}
@@ -482,9 +482,9 @@ function RecipeSelectorModal({
         )}
 
         {selected && (
-          <div className="bg-orange-50 border border-orange-100 rounded-lg px-3 py-2 mb-4 flex items-center gap-2.5">
+          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-lg px-3 py-2 mb-4 flex items-center gap-2.5">
             <RecipeThumb recipe={selected} />
-            <span className="flex-1 text-sm font-medium text-orange-800">
+            <span className="flex-1 text-sm font-medium text-orange-800 dark:text-orange-300">
               {selected.name}
             </span>
             <button
@@ -497,11 +497,11 @@ function RecipeSelectorModal({
         )}
 
         <div className="flex items-center gap-3 mb-5">
-          <label className="text-sm text-gray-600">Servings</label>
+          <label className="text-sm text-gray-600 dark:text-[#9a9a9a]">Servings</label>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setServings((s) => Math.max(1, s - 1))}
-              className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+              className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center"
             >
               −
             </button>
@@ -510,7 +510,7 @@ function RecipeSelectorModal({
             </span>
             <button
               onClick={() => setServings((s) => s + 1)}
-              className="w-8 h-8 rounded-full border border-gray-200 text-gray-600 hover:bg-gray-50 flex items-center justify-center"
+              className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center"
             >
               +
             </button>
@@ -617,7 +617,7 @@ export default function PlannerPage() {
       {!isThisWeek(weekStart) && (
         <button
           onClick={() => setWeekStart(getMondayOf(new Date()))}
-          className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
+          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-600 dark:text-[#9a9a9a]"
         >
           Today
         </button>
@@ -630,11 +630,11 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500"
+        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
       >
         <ChevronLeft size={18} />
       </button>
-      <span className="text-sm font-medium text-gray-700 hidden sm:block w-44 text-center">
+      <span className="text-sm font-medium text-gray-700 dark:text-[#b8b8b8] hidden sm:block w-44 text-center">
         {formatWeekRange(weekStart)}
       </span>
       <button
@@ -645,7 +645,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500"
+        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
       >
         <ChevronRight size={18} />
       </button>
@@ -662,14 +662,14 @@ export default function PlannerPage() {
       <div className="p-4 md:p-6 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">
             Planner
           </h1>
           {weekNav}
         </div>
 
         {/* Week label on mobile */}
-        <p className="sm:hidden text-xs text-gray-400 text-center mb-3">
+        <p className="sm:hidden text-xs text-gray-400 dark:text-[#555555] text-center mb-3">
           {formatWeekRange(weekStart)}
         </p>
 
@@ -699,8 +699,8 @@ export default function PlannerPage() {
                         mobileDay === i
                           ? "bg-orange-500 text-white"
                           : isToday
-                          ? "bg-orange-50 text-orange-600 border border-orange-200"
-                          : "bg-white border border-gray-200 text-gray-600"
+                          ? "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50"
+                          : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
                       }`}
                     >
                       <span className="uppercase tracking-wide text-[10px]">
@@ -720,7 +720,7 @@ export default function PlannerPage() {
                   const entries = getEntries(mobileDay, meal);
                   return (
                     <div key={meal}>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555555] mb-2">
                         {meal}
                       </h3>
                       <div className="space-y-2">
@@ -736,7 +736,7 @@ export default function PlannerPage() {
                         ))}
                         <button
                           onClick={() => setModal({ day: mobileDay, meal })}
-                          className="w-full py-2.5 bg-white border border-dashed border-gray-200 rounded-xl flex items-center justify-center hover:border-orange-300 hover:bg-orange-50 transition-colors group"
+                          className="w-full py-2.5 bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
                         >
                           <Plus
                             size={15}
@@ -766,14 +766,14 @@ export default function PlannerPage() {
                       <div key={day} className="text-center">
                         <span
                           className={`text-xs font-semibold uppercase tracking-wide ${
-                            isToday ? "text-orange-600" : "text-gray-400"
+                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-400 dark:text-[#555555]"
                           }`}
                         >
                           {day}
                         </span>
                         <div
                           className={`text-sm font-medium mt-0.5 ${
-                            isToday ? "text-orange-600" : "text-gray-600"
+                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-600 dark:text-[#9a9a9a]"
                           }`}
                         >
                           {date.getDate()}
@@ -790,7 +790,7 @@ export default function PlannerPage() {
                     className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2"
                   >
                     <div className="flex items-start pt-2">
-                      <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                      <span className="text-xs font-medium text-gray-400 dark:text-[#555555] uppercase tracking-wide">
                         {meal}
                       </span>
                     </div>

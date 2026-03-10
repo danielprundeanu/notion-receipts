@@ -48,25 +48,25 @@
    DESIGN TOKENS — Dark Theme
    ════════════════════════════════════════════════ */
 .dark {
-  /* Backgrounds — zinc palette (neutral warm, not blue-tinted) */
-  --color-bg-base:        #18181b; /* zinc-900 — page background          */
-  --color-bg-card:        #27272a; /* zinc-800 — card / panel             */
-  --color-bg-card-hover:  #3f3f46; /* zinc-700 — card hover               */
-  --color-bg-input:       #27272a; /* zinc-800 — input / select           */
-  --color-bg-sidebar:     #1c1c1f; /* zinc-850 — sidebar (darker than card) */
-  --color-bg-nav:         #1c1c1f; /* zinc-850 — bottom nav               */
-  --color-bg-muted:       #3f3f46; /* zinc-700 — subtle surface           */
+  /* Backgrounds — Notion-inspired warm near-black */
+  --color-bg-base:        #191919; /* page background                     */
+  --color-bg-card:        #252525; /* card / panel                        */
+  --color-bg-card-hover:  #2f2f2f; /* card hover                          */
+  --color-bg-input:       #252525; /* input / select                      */
+  --color-bg-sidebar:     #1f1f1f; /* sidebar                             */
+  --color-bg-nav:         #1f1f1f; /* bottom nav                          */
+  --color-bg-muted:       #2a2a2a; /* subtle surface (table header, etc.) */
 
-  /* Borders */
-  --color-border:         #3f3f46; /* zinc-700 — subtle dividers          */
-  --color-border-input:   #52525b; /* zinc-600 — input / card borders     */
-  --color-border-strong:  #71717a; /* zinc-500 — stronger borders         */
+  /* Borders — very subtle, Notion-style */
+  --color-border:         #2e2e2e; /* subtle dividers                     */
+  --color-border-input:   #3a3a3a; /* input / card borders                */
+  --color-border-strong:  #4a4a4a; /* stronger borders                    */
 
-  /* Text */
-  --color-text-primary:   #fafafa; /* zinc-50  — headings, body           */
-  --color-text-secondary: #d4d4d8; /* zinc-300 — secondary labels         */
-  --color-text-muted:     #a1a1aa; /* zinc-400 — hints, meta              */
-  --color-text-faint:     #71717a; /* zinc-500 — placeholders, disabled   */
+  /* Text — off-white, not harsh pure white */
+  --color-text-primary:   #e3e3e3; /* headings, body                      */
+  --color-text-secondary: #aaaaaa; /* secondary labels                    */
+  --color-text-muted:     #787878; /* hints, meta                         */
+  --color-text-faint:     #555555; /* placeholders, disabled              */
 
   /* Brand — Orange (stays vibrant on dark) */
   --color-brand:          #f97316; /* orange-500 — primary action         */

@@ -85,7 +85,7 @@ function EditableCell({
         onKeyDown={handleKeyDown}
         type={isNumber ? "number" : "text"}
         step={isNumber ? "0.1" : undefined}
-        className={`w-full px-1.5 py-0.5 text-sm border border-orange-400 rounded focus:outline-none bg-white ${align === "right" ? "text-right" : "text-left"}`}
+        className={`w-full px-1.5 py-0.5 text-sm border border-orange-400 rounded focus:outline-none bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] ${align === "right" ? "text-right" : "text-left"}`}
         style={{ minWidth: 40 }}
       />
     );
@@ -95,7 +95,7 @@ function EditableCell({
     <span
       onClick={startEdit}
       title="Click to edit"
-      className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 hover:text-orange-900 transition-colors ${
+      className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
         !value && value !== 0 ? "text-gray-300" : ""
       } ${align === "right" ? "text-right" : ""}`}
     >
@@ -147,25 +147,25 @@ export default function IngredientsPage() {
     <div className="p-4 md:p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-semibold text-gray-900">Ingredients</h1>
-        <span className="text-sm text-gray-500">{items.length} items</span>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Ingredients</h1>
+        <span className="text-sm text-gray-500 dark:text-[#787878]">{items.length} items</span>
       </div>
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555555]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search ingredient…"
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white text-gray-800"
+          className="px-3 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
         >
           <option value="">All categories</option>
           {categories.map((c) => (
@@ -180,22 +180,22 @@ export default function IngredientsPage() {
           Loading…
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border border-gray-200">
+        <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2e2e]">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left">
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Name</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Category</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Unit 2</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Conv.</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">kcal</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Carbs g</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Fat g</th>
-                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide text-right">Protein g</th>
+              <tr className="bg-gray-50 dark:bg-[#2a2a2a] text-left">
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Name</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Category</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Unit</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Unit 2</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Conv.</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">kcal</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Carbs g</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Fat g</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Protein g</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 dark:divide-[#2e2e2e]">
               {filtered.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
@@ -204,32 +204,32 @@ export default function IngredientsPage() {
                 </tr>
               ) : (
                 filtered.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-2 font-medium text-gray-900">
+                  <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-[#252525] transition-colors">
+                    <td className="px-4 py-2 font-medium text-gray-900 dark:text-[#e3e3e3]">
                       <EditableCell
                         value={item.name}
                         onSave={(v) => v && handleSave(item.id, "name", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-600">
+                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
                       <EditableCell
                         value={item.category}
                         onSave={(v) => handleSave(item.id, "category", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-600">
+                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
                       <EditableCell
                         value={item.unit}
                         onSave={(v) => handleSave(item.id, "unit", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-600">
+                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
                       <EditableCell
                         value={item.unit2}
                         onSave={(v) => handleSave(item.id, "unit2", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-600">
+                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
                       <EditableCell
                         value={item.conversion}
                         isNumber
@@ -238,7 +238,7 @@ export default function IngredientsPage() {
                         placeholder="—"
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-700 font-medium">
+                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8] font-medium">
                       <EditableCell
                         value={item.kcal}
                         isNumber
@@ -246,7 +246,7 @@ export default function IngredientsPage() {
                         onSave={(v) => handleSave(item.id, "kcal", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-700">
+                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
                       <EditableCell
                         value={item.carbs != null ? fmt(item.carbs) : null}
                         isNumber
@@ -254,7 +254,7 @@ export default function IngredientsPage() {
                         onSave={(v) => handleSave(item.id, "carbs", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-700">
+                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
                       <EditableCell
                         value={item.fat != null ? fmt(item.fat) : null}
                         isNumber
@@ -262,7 +262,7 @@ export default function IngredientsPage() {
                         onSave={(v) => handleSave(item.id, "fat", v)}
                       />
                     </td>
-                    <td className="px-4 py-2 text-gray-700">
+                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
                       <EditableCell
                         value={item.protein != null ? fmt(item.protein) : null}
                         isNumber
@@ -279,7 +279,7 @@ export default function IngredientsPage() {
       )}
 
       {!loading && filtered.length > 0 && (
-        <p className="text-xs text-gray-400 mt-3">
+        <p className="text-xs text-gray-400 dark:text-[#555555] mt-3">
           Showing {filtered.length} of {items.length} · Macros per 100g/ml · Click any cell to edit
         </p>
       )}
