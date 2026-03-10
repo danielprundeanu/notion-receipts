@@ -1,6 +1,93 @@
 @import "tailwindcss";
 
+/* ─── Class-based dark mode for Tailwind v4 ─── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ════════════════════════════════════════════════
+   DESIGN TOKENS — Light Theme
+   ════════════════════════════════════════════════ */
+:root {
+  /* Backgrounds */
+  --color-bg-base:        #f9fafb; /* gray-50  — page background         */
+  --color-bg-card:        #ffffff; /* white    — card / panel             */
+  --color-bg-card-hover:  #f9fafb; /* gray-50  — card hover               */
+  --color-bg-input:       #ffffff; /* white    — input / select           */
+  --color-bg-sidebar:     #ffffff; /* white    — sidebar                  */
+  --color-bg-nav:         #ffffff; /* white    — bottom nav               */
+  --color-bg-muted:       #f3f4f6; /* gray-100 — subtle surface           */
+
+  /* Borders */
+  --color-border:         #f3f4f6; /* gray-100 — subtle dividers          */
+  --color-border-input:   #e5e7eb; /* gray-200 — input / card borders     */
+  --color-border-strong:  #d1d5db; /* gray-300 — stronger borders         */
+
+  /* Text */
+  --color-text-primary:   #111827; /* gray-900 — headings, body           */
+  --color-text-secondary: #374151; /* gray-700 — secondary labels         */
+  --color-text-muted:     #6b7280; /* gray-500 — hints, meta              */
+  --color-text-faint:     #9ca3af; /* gray-400 — placeholders, disabled   */
+
+  /* Brand — Orange */
+  --color-brand:          #f97316; /* orange-500 — primary action         */
+  --color-brand-hover:    #ea580c; /* orange-600 — primary hover          */
+  --color-brand-soft:     #fff7ed; /* orange-50  — soft brand background  */
+  --color-brand-soft-2:   #ffedd5; /* orange-100 — slightly stronger soft */
+  --color-brand-text:     #c2410c; /* orange-700 — brand text on soft bg  */
+  --color-brand-mid:      #fed7aa; /* orange-200 — mid-weight accent      */
+
+  /* Semantic */
+  --color-success:        #16a34a; /* green-600  */
+  --color-warning:        #d97706; /* amber-600  */
+  --color-danger:         #dc2626; /* red-600    */
+
+  /* Favourite star */
+  --color-star:           #fbbf24; /* amber-400  */
+}
+
+/* ════════════════════════════════════════════════
+   DESIGN TOKENS — Dark Theme
+   ════════════════════════════════════════════════ */
+.dark {
+  /* Backgrounds */
+  --color-bg-base:        #0f172a; /* slate-900 — page background         */
+  --color-bg-card:        #1e293b; /* slate-800 — card / panel            */
+  --color-bg-card-hover:  #334155; /* slate-700 — card hover              */
+  --color-bg-input:       #1e293b; /* slate-800 — input / select          */
+  --color-bg-sidebar:     #1e293b; /* slate-800 — sidebar                 */
+  --color-bg-nav:         #1e293b; /* slate-800 — bottom nav              */
+  --color-bg-muted:       #334155; /* slate-700 — subtle surface          */
+
+  /* Borders */
+  --color-border:         #334155; /* slate-700 — subtle dividers         */
+  --color-border-input:   #475569; /* slate-600 — input / card borders    */
+  --color-border-strong:  #64748b; /* slate-500 — stronger borders        */
+
+  /* Text */
+  --color-text-primary:   #f1f5f9; /* slate-100 — headings, body          */
+  --color-text-secondary: #cbd5e1; /* slate-300 — secondary labels        */
+  --color-text-muted:     #94a3b8; /* slate-400 — hints, meta             */
+  --color-text-faint:     #64748b; /* slate-500 — placeholders, disabled  */
+
+  /* Brand — Orange (stays vibrant on dark) */
+  --color-brand:          #f97316; /* orange-500 — primary action         */
+  --color-brand-hover:    #fb923c; /* orange-400 — lighter on dark bg     */
+  --color-brand-soft:     #431407; /* orange-950 — soft brand on dark     */
+  --color-brand-soft-2:   #7c2d12; /* orange-900 — slightly lighter soft  */
+  --color-brand-text:     #fb923c; /* orange-400 — brand text on dark bg  */
+  --color-brand-mid:      #9a3412; /* orange-800 — mid-weight accent      */
+
+  /* Semantic */
+  --color-success:        #4ade80; /* green-400  */
+  --color-warning:        #fbbf24; /* amber-400  */
+  --color-danger:         #f87171; /* red-400    */
+
+  /* Favourite star */
+  --color-star:           #fbbf24; /* amber-400  */
+}
+
+/* ─── Base styles ─── */
 body {
-  background: #f9fafb;
-  color: #111827;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }

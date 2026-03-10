@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Calendar, ShoppingCart, Apple } from "lucide-react";
+import ThemeToggle from "./ThemeToggle";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
@@ -15,7 +16,7 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex md:hidden z-40">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-100 dark:border-slate-700 flex md:hidden z-40 transition-colors duration-200">
       {nav.map(({ href, label, icon: Icon }) => {
         const active = pathname === href || pathname.startsWith(href + "/");
         return (
@@ -23,7 +24,9 @@ export default function BottomNav() {
             key={href}
             href={href}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
-              active ? "text-orange-600" : "text-gray-400"
+              active
+                ? "text-orange-600 dark:text-orange-400"
+                : "text-gray-400 dark:text-slate-500"
             }`}
           >
             <Icon size={21} />
@@ -31,6 +34,9 @@ export default function BottomNav() {
           </Link>
         );
       })}
+
+      {/* Theme toggle — compact icon button */}
+      <ThemeToggle compact />
     </nav>
   );
 }
