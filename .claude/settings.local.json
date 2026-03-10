@@ -3,7 +3,8 @@
     "allow": [
       "Bash(npx create-next-app@latest webapp --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\" --yes)",
       "Bash(npm install prisma @prisma/client @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities)",
-      "Bash(npx prisma init --datasource-provider sqlite)"
+      "Bash(npx prisma init --datasource-provider sqlite)",
+      "Bash(npm run build)"
     ]
   }
 }
