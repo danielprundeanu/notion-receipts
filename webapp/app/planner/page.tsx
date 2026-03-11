@@ -591,6 +591,10 @@ export default function PlannerPage() {
 
   function handleDragStart(event: DragStartEvent) {
     setDragActive(event.active.data.current?.recipe ?? null);
+    // Haptic feedback when card "locks in" to drag
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate(12);
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
