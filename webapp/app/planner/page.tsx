@@ -20,7 +20,6 @@ import {
   addToWeekPlan,
   removeFromWeekPlan,
   updateWeekPlanServings,
-  searchRecipesForPlanner,
   getRecipesPanel,
   getRecipeCategories,
 } from "@/lib/actions";
@@ -376,7 +375,7 @@ function RecipePanel() {
   );
 }
 
-// ─── Recipe Selector Modal (mobile + desktop + button) ────────────────────────
+// ─── Recipe Selector Modal ────────────────────────────────────────────────────
 
 function RecipeSelectorModal({
   day,
@@ -392,154 +391,196 @@ function RecipeSelectorModal({
   onSelect: (entry: PlanEntry) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
   const [results, setResults] = useState<RecipeRef[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [servings, setServings] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<RecipeRef | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    getRecipeCategories().then(setCategories);
+  }, []);
+
+  useEffect(() => {
     const t = setTimeout(async () => {
-      if (!query.trim()) {
-        setResults([]);
-        return;
-      }
       setLoading(true);
-      const r = await searchRecipesForPlanner(query);
+      const r = await getRecipesPanel(
+        query || undefined,
+        activeCategory || undefined,
+        favOnly || undefined
+      );
       setResults(r as RecipeRef[]);
       setLoading(false);
-    }, 300);
+    }, 250);
     return () => clearTimeout(t);
-  }, [query]);
+  }, [query, activeCategory, favOnly]);
 
   async function handleSave() {
     if (!selected) return;
     setSaving(true);
-    await addToWeekPlan({
+    const { id: realId } = await addToWeekPlan({
       recipeId: selected.id,
       weekStartIso: weekStart.toISOString(),
       dayOfWeek: day,
       mealType,
       servings,
     });
-    onSelect({
-      id: Math.random().toString(),
-      dayOfWeek: day,
-      mealType,
-      servings,
-      recipe: selected,
-    });
+    onSelect({ id: realId, dayOfWeek: day, mealType, servings, recipe: selected });
     setSaving(false);
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
-        <div className="flex items-center justify-between mb-4">
+    <div
+      className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col max-h-[88vh] sm:max-h-[80vh]">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
           <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
             {DAYS[day]} · {mealType}
           </h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1"
-          >
+          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1">
             <X size={18} />
           </button>
         </div>
 
-        <div className="relative mb-3">
-          <Search
-            size={15}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelected(null);
-            }}
-            placeholder="Search recipe…"
-            className="w-full pl-9 pr-3 py-2.5 text-sm bg-white dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
+        {/* Search — 16px font prevents iOS zoom */}
+        <div className="px-4 pb-2 shrink-0">
+          <div className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555555]" />
+            <input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
+              placeholder="Search recipe…"
+              style={{ fontSize: "16px" }}
+              className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
         </div>
 
-        {loading && (
-          <div className="flex justify-center py-4">
-            <Loader2 size={16} className="animate-spin text-gray-400" />
+        {/* Filters */}
+        <div className="px-4 pb-3 shrink-0">
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            <button
+              onClick={() => { setFavOnly((v) => !v); setSelected(null); }}
+              className={`flex items-center gap-1 shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                favOnly
+                  ? "bg-amber-400 text-white border-amber-400"
+                  : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+              }`}
+            >
+              <Star size={10} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+              Fav
+            </button>
+            <button
+              onClick={() => { setActiveCategory(null); setSelected(null); }}
+              className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                activeCategory === null
+                  ? "bg-orange-500 text-white border-orange-500"
+                  : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+              }`}
+            >
+              All
+            </button>
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => { setActiveCategory(activeCategory === cat ? null : cat); setSelected(null); }}
+                className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
+                  activeCategory === cat
+                    ? "bg-orange-500 text-white border-orange-500"
+                    : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
 
-        {!loading && results.length > 0 && !selected && (
-          <ul className="border border-gray-100 dark:border-[#2e2e2e] rounded-lg divide-y divide-gray-50 dark:divide-[#2e2e2e] mb-4 max-h-52 overflow-auto">
-            {results.map((r) => (
-              <li key={r.id}>
+        {/* Recipe list — scrollable */}
+        <div className="flex-1 overflow-y-auto px-4">
+          {loading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 size={18} className="animate-spin text-gray-400" />
+            </div>
+          ) : results.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-8">No recipes found.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
+              {results.map((r) => (
                 <button
-                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors flex items-center gap-2.5"
-                  onClick={() => {
-                    setSelected(r);
-                    setServings(r.servings ?? 1);
-                  }}
+                  key={r.id}
+                  onClick={() => { setSelected(r); setServings(r.servings ?? 1); }}
+                  className={`flex flex-col rounded-xl overflow-hidden border text-left transition-all ${
+                    selected?.id === r.id
+                      ? "border-orange-400 ring-2 ring-orange-400/40"
+                      : "border-gray-100 dark:border-[#2e2e2e] hover:border-orange-200 dark:hover:border-orange-800/50"
+                  }`}
                 >
-                  <RecipeThumb recipe={r} />
-                  <div>
-                    <span className="font-medium text-gray-900 dark:text-[#e3e3e3]">{r.name}</span>
+                  <div className="h-20 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+                    {r.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={r.imageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <span className="text-2xl opacity-20">🍽️</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-2 py-1.5 bg-white dark:bg-[#252525]">
+                    <p className="text-xs font-medium text-gray-800 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+                      {r.name}
+                    </p>
                     {r.category && (
-                      <span className="ml-2 text-gray-400 dark:text-[#555555] text-xs">
+                      <p className="text-[10px] text-gray-400 dark:text-[#555555] mt-0.5 truncate">
                         {r.category.split(",")[0]}
-                      </span>
+                      </p>
                     )}
                   </div>
                 </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {selected && (
-          <div className="bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-lg px-3 py-2 mb-4 flex items-center gap-2.5">
-            <RecipeThumb recipe={selected} />
-            <span className="flex-1 text-sm font-medium text-orange-800 dark:text-orange-300">
-              {selected.name}
-            </span>
-            <button
-              onClick={() => setSelected(null)}
-              className="text-orange-400 hover:text-orange-600"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 mb-5">
-          <label className="text-sm text-gray-600 dark:text-[#9a9a9a]">Servings</label>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setServings((s) => Math.max(1, s - 1))}
-              className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center"
-            >
-              −
-            </button>
-            <span className="w-6 text-center text-sm font-medium">
-              {servings}
-            </span>
-            <button
-              onClick={() => setServings((s) => s + 1)}
-              className="w-8 h-8 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center"
-            >
-              +
-            </button>
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <button
-          onClick={handleSave}
-          disabled={!selected || saving}
-          className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-2"
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          Add to plan
-        </button>
+        {/* Footer — servings + add */}
+        <div className="px-4 pt-3 pb-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0 flex items-center gap-3">
+          {selected && (
+            <div className="flex items-center gap-1.5 mr-auto min-w-0">
+              <RecipeThumb recipe={selected} size="sm" />
+              <span className="text-xs font-medium text-gray-700 dark:text-[#b8b8b8] truncate">{selected.name}</span>
+            </div>
+          )}
+          {!selected && (
+            <span className="text-xs text-gray-400 dark:text-[#555555] mr-auto">Select a recipe above</span>
+          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => setServings((s) => Math.max(1, s - 1))}
+              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center text-sm"
+            >−</button>
+            <span className="w-5 text-center text-sm font-semibold text-gray-800 dark:text-[#e3e3e3]">{servings}</span>
+            <button
+              onClick={() => setServings((s) => s + 1)}
+              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center text-sm"
+            >+</button>
+          </div>
+          <button
+            onClick={handleSave}
+            disabled={!selected || saving}
+            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
+          >
+            {saving && <Loader2 size={13} className="animate-spin" />}
+            Add
+          </button>
+        </div>
+
       </div>
     </div>
   );
@@ -771,8 +812,6 @@ export default function PlannerPage() {
                 })}
               </div>
 
-              {/* Recipe Panel — mobile */}
-              <RecipePanel />
             </div>
 
             {/* ── Desktop view ────────────────────────────────────── */}
