@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getRecipes } from "@/lib/actions";
 import { Clock, Users, Star, Search, Plus } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
@@ -35,12 +36,17 @@ export default async function RecipesPage({
           <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e3e3e3]">Recipes</h1>
           <p className="text-sm text-gray-600 dark:text-[#9a9a9a] mt-0.5">{recipes.length} recipes</p>
         </div>
-        <Link
-          href="/recipes/new"
-          className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
-        >
-          <Plus size={15} /> New recipe
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="md:hidden">
+            <ThemeToggle compact />
+          </div>
+          <Link
+            href="/recipes/new"
+            className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
+          >
+            <Plus size={15} /> New recipe
+          </Link>
+        </div>
       </div>
 
       {/* Search + Filter */}
@@ -56,7 +62,7 @@ export default async function RecipesPage({
           {cat && <input type="hidden" name="cat" value={cat} />}
         </form>
 
-        <div className="flex gap-1.5 flex-wrap">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <Link
             href={q ? `?q=${q}` : "/recipes"}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${

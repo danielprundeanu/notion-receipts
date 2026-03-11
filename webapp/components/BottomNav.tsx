@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BookOpen, Calendar, ShoppingCart, Apple } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
@@ -38,8 +37,6 @@ export default function BottomNav() {
         );
       })}
 
-      {/* Theme toggle — compact icon button */}
-      <ThemeToggle compact />
     </nav>
   );
 }

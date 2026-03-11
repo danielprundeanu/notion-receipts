@@ -261,9 +261,9 @@ export async function addToWeekPlan(data: {
   dayOfWeek: number;
   mealType: string;
   servings: number;
-}) {
+}): Promise<{ id: string }> {
   const weekStart = new Date(data.weekStartIso);
-  await prisma.weekPlan.create({
+  const entry = await prisma.weekPlan.create({
     data: {
       recipeId: data.recipeId,
       weekStart,
@@ -271,9 +271,10 @@ export async function addToWeekPlan(data: {
       mealType: data.mealType,
       servings: data.servings,
     },
+    select: { id: true },
   });
-  revalidatePath("/planner");
   revalidatePath("/grocery-list");
+  return entry;
 }
 
 export async function removeFromWeekPlan(id: string) {

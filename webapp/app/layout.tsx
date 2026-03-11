@@ -34,10 +34,7 @@ export default function RootLayout({
         <ThemeProvider>
           <div className="flex h-screen">
             <Sidebar />
-            <main
-              className="flex-1 overflow-auto md:pb-0"
-              style={{ paddingBottom: "calc(4rem + env(safe-area-inset-bottom))" }}
-            >
+            <main className="flex-1 overflow-auto mobile-safe-pb">
               {children}
             </main>
           </div>

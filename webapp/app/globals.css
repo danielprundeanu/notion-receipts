@@ -3,6 +3,16 @@
 /* ─── Class-based dark mode for Tailwind v4 ─── */
 @variant dark (&:where(.dark, .dark *));
 
+/* ─── Mobile safe-area bottom padding (respects iOS home bar) ─── */
+.mobile-safe-pb {
+  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .mobile-safe-pb {
+    padding-bottom: 0;
+  }
+}
+
 /* ════════════════════════════════════════════════
    DESIGN TOKENS — Light Theme
    ════════════════════════════════════════════════ */

@@ -10,6 +10,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   pointerWithin,
@@ -240,7 +241,7 @@ function DroppableMealSlot({
       ref={setNodeRef}
       className={`min-h-[72px] flex flex-col gap-1.5 rounded-xl p-0.5 transition-all ${
         isOver
-          ? "bg-orange-50 ring-2 ring-orange-300 ring-inset"
+          ? "bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-300 dark:ring-orange-700 ring-inset"
           : ""
       }`}
     >
@@ -295,7 +296,7 @@ function RecipePanel() {
   }, [search, activeCategory, favOnly]);
 
   return (
-    <div className="hidden md:flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0">
+    <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm font-semibold text-gray-700 dark:text-[#e3e3e3] shrink-0">
@@ -557,7 +558,8 @@ export default function PlannerPage() {
   const [dragActive, setDragActive] = useState<RecipeRef | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
   );
 
   const loadPlans = useCallback(async () => {
@@ -614,7 +616,7 @@ export default function PlannerPage() {
       { id: tempId, dayOfWeek: dayIdx, mealType: meal, servings, recipe },
     ]);
 
-    await addToWeekPlan({
+    const { id: realId } = await addToWeekPlan({
       recipeId: recipe.id,
       weekStartIso: weekStart.toISOString(),
       dayOfWeek: dayIdx,
@@ -622,8 +624,10 @@ export default function PlannerPage() {
       servings,
     });
 
-    // Reload to get real DB id
-    loadPlans();
+    // Replace temp ID with real DB id (no full reload)
+    setPlans((prev) =>
+      prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p))
+    );
   }
 
   const weekNav = (
@@ -762,6 +766,9 @@ export default function PlannerPage() {
                   );
                 })}
               </div>
+
+              {/* Recipe Panel — mobile */}
+              <RecipePanel />
             </div>
 
             {/* ── Desktop view ────────────────────────────────────── */}
