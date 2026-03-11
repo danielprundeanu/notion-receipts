@@ -233,6 +233,22 @@ def export_recipes(grocery_items):
         try:
             blocks = get_page_blocks(page['id'])
             recipe['instructions'] = parse_instructions(blocks)
+            # If no cover image, use first image block found in page content
+            if not recipe['imageUrl']:
+                for block in blocks:
+                    if block.get('type') == 'image':
+                        img = block.get('image', {})
+                        raw_url = None
+                        if img.get('type') == 'external':
+                            raw_url = img.get('external', {}).get('url')
+                        elif img.get('type') == 'file':
+                            raw_url = img.get('file', {}).get('url')
+                        if raw_url:
+                            downloaded = download_image(raw_url)
+                            if downloaded:
+                                recipe['imageUrl'] = downloaded
+                                print(f"    📷 Content image used as cover")
+                                break
         except Exception as e:
             print(f"    ⚠ Instructions error: {e}")
             recipe['instructions'] = []

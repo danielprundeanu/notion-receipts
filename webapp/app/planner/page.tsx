@@ -31,6 +31,7 @@ import {
   Search,
   Loader2,
   Minus,
+  Star,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -270,6 +271,7 @@ function DroppableMealSlot({
 function RecipePanel() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [favOnly, setFavOnly] = useState(false);
   const [recipes, setRecipes] = useState<RecipeRef[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,19 +285,20 @@ function RecipePanel() {
       setLoading(true);
       const r = await getRecipesPanel(
         search || undefined,
-        activeCategory || undefined
+        activeCategory || undefined,
+        favOnly || undefined
       );
       setRecipes(r as RecipeRef[]);
       setLoading(false);
     }, 250);
     return () => clearTimeout(t);
-  }, [search, activeCategory]);
+  }, [search, activeCategory, favOnly]);
 
   return (
     <div className="hidden md:flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-gray-700 shrink-0">
+        <span className="text-sm font-semibold text-gray-700 dark:text-[#e3e3e3] shrink-0">
           Recipes
         </span>
         <div className="relative">
@@ -310,6 +313,17 @@ function RecipePanel() {
             className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
+        <button
+          onClick={() => setFavOnly((v) => !v)}
+          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
+            favOnly
+              ? "bg-amber-400 text-white border-amber-400"
+              : "bg-white dark:bg-[#252525] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:border-amber-300 dark:hover:border-amber-700"
+          }`}
+        >
+          <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+          Favorites
+        </button>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-1">
           <button
             onClick={() => setActiveCategory(null)}
@@ -347,7 +361,7 @@ function RecipePanel() {
       ) : recipes.length === 0 ? (
         <p className="text-sm text-gray-400 py-4">No recipes found.</p>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(172px,1fr))] gap-2 max-h-52 overflow-y-auto pr-1">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
           {recipes.map((recipe) => (
             <DraggableRecipeItem key={recipe.id} recipe={recipe} />
           ))}

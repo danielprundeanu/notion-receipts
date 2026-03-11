@@ -157,12 +157,13 @@ export async function toggleFavorite(id: string, favorite: boolean): Promise<voi
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
-export async function getRecipes(search?: string, category?: string) {
+export async function getRecipes(search?: string, category?: string, favorites?: boolean) {
   return prisma.recipe.findMany({
     where: {
       AND: [
-        search ? { name: { contains: search } } : {},
-        category ? { category: { contains: category } } : {},
+        search ? { name: { contains: search, mode: "insensitive" } } : {},
+        category ? { category: { contains: category, mode: "insensitive" } } : {},
+        favorites ? { favorite: true } : {},
       ],
     },
     orderBy: { name: "asc" },
@@ -203,12 +204,13 @@ export async function searchRecipesForPlanner(query: string) {
   });
 }
 
-export async function getRecipesPanel(search?: string, category?: string) {
+export async function getRecipesPanel(search?: string, category?: string, favorites?: boolean) {
   return prisma.recipe.findMany({
     where: {
       AND: [
         search ? { name: { contains: search, mode: "insensitive" } } : {},
         category ? { category: { contains: category, mode: "insensitive" } } : {},
+        favorites ? { favorite: true } : {},
       ],
     },
     take: 80,

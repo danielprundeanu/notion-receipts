@@ -21,10 +21,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cat?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; fav?: string }>;
 }) {
-  const { q, cat } = await searchParams;
-  const recipes = await getRecipes(q, cat);
+  const { q, cat, fav } = await searchParams;
+  const favOnly = fav === "1";
+  const recipes = await getRecipes(q, cat, favOnly);
 
   return (
     <div className="p-4 md:p-8">
@@ -59,12 +60,23 @@ export default async function RecipesPage({
           <Link
             href={q ? `?q=${q}` : "/recipes"}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              !cat
+              !cat && !favOnly
                 ? "bg-orange-500 text-white"
                 : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
             }`}
           >
             All
+          </Link>
+          <Link
+            href={`?${q ? `q=${q}&` : ""}fav=1`}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              favOnly
+                ? "bg-amber-400 text-white"
+                : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+            }`}
+          >
+            <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+            Favorites
           </Link>
           {CATEGORIES.map((c) => (
             <Link
