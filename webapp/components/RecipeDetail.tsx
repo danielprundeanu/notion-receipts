@@ -89,45 +89,74 @@ function AddToPlannerModal({
   const today = new Date();
   const weekStart = getMondayOf(today);
   const defaultServings = recipe.servings ?? 1;
-  const [selectedDays, setSelectedDays] = useState<number[]>([todayDayIndex()]);
-  const [mealServings, setMealServings] = useState<Record<MealType, number>>({
-    Breakfast: 0,
-    Lunch: 0,
-    Dinner: 0,
-    Snack: 0,
+  const todayIdx = todayDayIndex();
+
+  const emptyMeals = (): Record<MealType, number> => ({
+    Breakfast: 0, Lunch: 0, Dinner: 0, Snack: 0,
   });
+
+  const [activeDayIdx, setActiveDayIdx] = useState(todayIdx);
+  const [dayMealServings, setDayMealServings] = useState<Record<number, Record<MealType, number>>>(
+    { [todayIdx]: emptyMeals() }
+  );
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  const selectedMeals = MEALS.filter((m) => mealServings[m] > 0);
-  const totalEntries = selectedDays.length * selectedMeals.length;
+  const selectedDays = Object.keys(dayMealServings).map(Number).sort((a, b) => a - b);
+  const activeMeals = dayMealServings[activeDayIdx] ?? emptyMeals();
+  const totalEntries = selectedDays.reduce(
+    (sum, d) => sum + MEALS.filter((m) => (dayMealServings[d]?.[m] ?? 0) > 0).length,
+    0
+  );
 
-  function toggleDay(i: number) {
-    setSelectedDays((prev) =>
-      prev.includes(i) ? (prev.length > 1 ? prev.filter((d) => d !== i) : prev) : [...prev, i]
-    );
+  function handleDayClick(i: number) {
+    if (dayMealServings[i] !== undefined) {
+      // Zi deja selectată: activează panoul ei
+      setActiveDayIdx(i);
+    } else {
+      // Zi nouă: adaugă și activează
+      setDayMealServings((prev) => ({ ...prev, [i]: emptyMeals() }));
+      setActiveDayIdx(i);
+    }
+  }
+
+  function removeDay(i: number) {
+    if (selectedDays.length <= 1) return;
+    setDayMealServings((prev) => {
+      const next = { ...prev };
+      delete next[i];
+      return next;
+    });
+    if (activeDayIdx === i) {
+      const remaining = selectedDays.filter((d) => d !== i);
+      setActiveDayIdx(remaining[0]);
+    }
   }
 
   function setMeal(meal: MealType, delta: number) {
-    setMealServings((prev) => {
-      const next = Math.max(0, prev[meal] + delta);
-      const resolved = delta > 0 && prev[meal] === 0 ? defaultServings : next;
-      return { ...prev, [meal]: resolved };
+    setDayMealServings((prev) => {
+      const cur = prev[activeDayIdx] ?? emptyMeals();
+      const next = Math.max(0, cur[meal] + delta);
+      const resolved = delta > 0 && cur[meal] === 0 ? defaultServings : next;
+      return { ...prev, [activeDayIdx]: { ...cur, [meal]: resolved } };
     });
   }
 
   async function handleAdd() {
-    if (selectedMeals.length === 0) return;
+    if (totalEntries === 0) return;
     setSaving(true);
     for (const dayIdx of selectedDays) {
-      for (const meal of selectedMeals) {
-        await addToWeekPlan({
-          recipeId: recipe.id,
-          weekStartIso: weekStart.toISOString(),
-          dayOfWeek: dayIdx,
-          mealType: meal,
-          servings: mealServings[meal],
-        });
+      const meals = dayMealServings[dayIdx];
+      for (const meal of MEALS) {
+        if ((meals?.[meal] ?? 0) > 0) {
+          await addToWeekPlan({
+            recipeId: recipe.id,
+            weekStartIso: weekStart.toISOString(),
+            dayOfWeek: dayIdx,
+            mealType: meal,
+            servings: meals[meal],
+          });
+        }
       }
     }
     setDone(true);
@@ -162,40 +191,66 @@ function AddToPlannerModal({
           <>
             {/* Day selector */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Day</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Days</p>
               <div className="grid grid-cols-7 gap-1">
                 {DAYS.map((d, i) => {
                   const date = new Date(weekStart);
                   date.setDate(date.getDate() + i);
                   const isToday = date.toLocaleDateString() === today.toLocaleDateString();
-                  const isSelected = selectedDays.includes(i);
+                  const isSelected = dayMealServings[i] !== undefined;
+                  const isActive = activeDayIdx === i;
+                  const hasMeals = isSelected && MEALS.some((m) => (dayMealServings[i]?.[m] ?? 0) > 0);
                   return (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => toggleDay(i)}
-                      className={`flex flex-col items-center py-1.5 rounded-lg text-xs transition-colors ${
-                        isSelected
-                          ? "bg-orange-500 text-white"
-                          : isToday
-                          ? "border border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400"
-                          : "hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-600 dark:text-[#9a9a9a]"
-                      }`}
-                    >
-                      <span className="text-[9px] uppercase tracking-wide">{d}</span>
-                      <span className="font-bold text-sm">{date.getDate()}</span>
-                    </button>
+                    <div key={i} className="relative flex flex-col items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleDayClick(i)}
+                        className={`w-full flex flex-col items-center py-1.5 rounded-lg text-xs transition-colors ${
+                          isActive
+                            ? "bg-orange-500 text-white"
+                            : isSelected
+                            ? "border-2 border-orange-400 dark:border-orange-500 text-orange-600 dark:text-orange-400"
+                            : isToday
+                            ? "border border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400"
+                            : "hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-600 dark:text-[#9a9a9a]"
+                        }`}
+                      >
+                        <span className="text-[9px] uppercase tracking-wide">{d}</span>
+                        <span className="font-bold text-sm">{date.getDate()}</span>
+                      </button>
+                      {/* Dot indicator: has meals configured */}
+                      {hasMeals && (
+                        <span className={`absolute bottom-0.5 w-1 h-1 rounded-full ${isActive ? "bg-white/70" : "bg-orange-400 dark:bg-orange-500"}`} />
+                      )}
+                      {/* Remove button for selected non-active days */}
+                      {isSelected && !isActive && selectedDays.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeDay(i); }}
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-[#555] text-white flex items-center justify-center text-[8px] leading-none hover:bg-red-400 transition-colors"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Meal type + servings */}
+            {/* Meal type + servings — per active day */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Meals & Servings</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                  Meals & Servings
+                </p>
+                <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
+                  {DAYS[activeDayIdx]}
+                </span>
+              </div>
               <div className="space-y-2">
                 {MEALS.map((m) => {
-                  const s = mealServings[m];
+                  const s = activeMeals[m];
                   const active = s > 0;
                   return (
                     <div
