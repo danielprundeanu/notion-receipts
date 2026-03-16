@@ -89,7 +89,7 @@ function AddToPlannerModal({
   const today = new Date();
   const weekStart = getMondayOf(today);
   const defaultServings = recipe.servings ?? 1;
-  const [dayIdx, setDayIdx] = useState(todayDayIndex());
+  const [selectedDays, setSelectedDays] = useState<number[]>([todayDayIndex()]);
   const [mealServings, setMealServings] = useState<Record<MealType, number>>({
     Breakfast: 0,
     Lunch: 0,
@@ -99,29 +99,36 @@ function AddToPlannerModal({
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
-  const totalSelected = Object.values(mealServings).filter((s) => s > 0).length;
+  const selectedMeals = MEALS.filter((m) => mealServings[m] > 0);
+  const totalEntries = selectedDays.length * selectedMeals.length;
+
+  function toggleDay(i: number) {
+    setSelectedDays((prev) =>
+      prev.includes(i) ? (prev.length > 1 ? prev.filter((d) => d !== i) : prev) : [...prev, i]
+    );
+  }
 
   function setMeal(meal: MealType, delta: number) {
     setMealServings((prev) => {
       const next = Math.max(0, prev[meal] + delta);
-      // First time activating a meal → default to recipe servings
       const resolved = delta > 0 && prev[meal] === 0 ? defaultServings : next;
       return { ...prev, [meal]: resolved };
     });
   }
 
   async function handleAdd() {
-    const entries = MEALS.filter((m) => mealServings[m] > 0);
-    if (entries.length === 0) return;
+    if (selectedMeals.length === 0) return;
     setSaving(true);
-    for (const meal of entries) {
-      await addToWeekPlan({
-        recipeId: recipe.id,
-        weekStartIso: weekStart.toISOString(),
-        dayOfWeek: dayIdx,
-        mealType: meal,
-        servings: mealServings[meal],
-      });
+    for (const dayIdx of selectedDays) {
+      for (const meal of selectedMeals) {
+        await addToWeekPlan({
+          recipeId: recipe.id,
+          weekStartIso: weekStart.toISOString(),
+          dayOfWeek: dayIdx,
+          mealType: meal,
+          servings: mealServings[meal],
+        });
+      }
     }
     setDone(true);
     setSaving(false);
@@ -144,7 +151,8 @@ function AddToPlannerModal({
             </div>
             <p className="font-medium text-gray-900 dark:text-[#e3e3e3] mb-1">Added!</p>
             <p className="text-sm text-gray-500 dark:text-[#787878]">
-              {recipe.name} → {DAYS[dayIdx]}
+              {totalEntries} slot{totalEntries !== 1 ? "s" : ""} added across{" "}
+              {selectedDays.length} day{selectedDays.length !== 1 ? "s" : ""}
             </p>
             <button onClick={onClose} className="mt-4 text-sm text-orange-600 dark:text-orange-400 hover:underline">
               Close
@@ -160,13 +168,14 @@ function AddToPlannerModal({
                   const date = new Date(weekStart);
                   date.setDate(date.getDate() + i);
                   const isToday = date.toLocaleDateString() === today.toLocaleDateString();
+                  const isSelected = selectedDays.includes(i);
                   return (
                     <button
                       key={i}
                       type="button"
-                      onClick={() => setDayIdx(i)}
+                      onClick={() => toggleDay(i)}
                       className={`flex flex-col items-center py-1.5 rounded-lg text-xs transition-colors ${
-                        dayIdx === i
+                        isSelected
                           ? "bg-orange-500 text-white"
                           : isToday
                           ? "border border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400"
@@ -235,13 +244,13 @@ function AddToPlannerModal({
 
             <button
               onClick={handleAdd}
-              disabled={saving || totalSelected === 0}
+              disabled={saving || totalEntries === 0}
               className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
-              {totalSelected === 0
+              {totalEntries === 0
                 ? "Select at least one meal"
-                : `Add to Planner${totalSelected > 1 ? ` (${totalSelected} meals)` : ""}`}
+                : `Add to Planner${totalEntries > 1 ? ` (${totalEntries} slots)` : ""}`}
             </button>
           </>
         )}
