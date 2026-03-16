@@ -13,6 +13,8 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import re
+import sqlite3
+from difflib import SequenceMatcher
 from typing import Dict, List, Optional
 from fractions import Fraction
 import sys
@@ -100,11 +102,16 @@ class RecipeScraper:
             
             # Traduce doar numele ingredientului
             ingredient_name_en = self._translate_text(ingredient_name)
-            
+            # Elimină caractere Unicode invizibile introduse de traducere
+            ingredient_name_en = re.sub(r'[\u200b\u200c\u200d\ufeff\u00ad]', '', ingredient_name_en)
+            ingredient_name_en = re.sub(r'\s+', ' ', ingredient_name_en).strip()
+
             return f"{quantity_unit_en} {ingredient_name_en}"
         else:
             # Dacă nu e în format cantitate+unitate, traduce tot
-            return self._translate_text(line)
+            translated = self._translate_text(line)
+            translated = re.sub(r'[\u200b\u200c\u200d\ufeff\u00ad]', '', translated)
+            return re.sub(r'\s+', ' ', translated).strip()
     
     def _normalize_units_in_text(self, text: str) -> str:
         """
@@ -209,7 +216,7 @@ class RecipeScraper:
                 if re.search(r'(ingredient|ingrediente)', section_lower):
                     if current_ingredients:
                         recipe['ingredient_groups'].append({
-                            'name': current_group_name or '1',
+                            'name': current_group_name or None,
                             'items': current_ingredients
                         })
                         current_ingredients = []
@@ -219,7 +226,7 @@ class RecipeScraper:
                 elif re.search(r'(step|method|preparare|mod de preparare|instructions|directions)', section_lower):
                     if current_ingredients:
                         recipe['ingredient_groups'].append({
-                            'name': current_group_name or '1',
+                            'name': current_group_name or None,
                             'items': current_ingredients
                         })
                         current_ingredients = []
@@ -232,7 +239,7 @@ class RecipeScraper:
                 elif re.search(r'(description|descriere)', section_lower):
                     if current_ingredients:
                         recipe['ingredient_groups'].append({
-                            'name': current_group_name or '1',
+                            'name': current_group_name or None,
                             'items': current_ingredients
                         })
                         current_ingredients = []
@@ -243,7 +250,7 @@ class RecipeScraper:
                     # Altă secțiune (ex: # Serve, # Tips, etc.)
                     if current_ingredients:
                         recipe['ingredient_groups'].append({
-                            'name': current_group_name or '1',
+                            'name': current_group_name or None,
                             'items': current_ingredients
                         })
                         current_ingredients = []
@@ -357,7 +364,7 @@ class RecipeScraper:
         # Salvează ultimele secțiuni
         if current_ingredients:
             recipe['ingredient_groups'].append({
-                'name': current_group_name or '1',
+                'name': current_group_name or None,
                 'items': current_ingredients
             })
         
@@ -1300,13 +1307,10 @@ class RecipeScraper:
         groups_with_name = [g for g in ingredient_groups if g.get('name')]
         sorted_groups = groups_without_name + groups_with_name
         
-        for group_idx, group in enumerate(sorted_groups, 1):
-            # Scrie numele grupului în brackets, sau numărul dacă nu are nume
-            group_name = group.get('name')
-            if group_name:
-                lines.append(f"[{group_name}]")
-            else:
-                lines.append(f"[{group_idx}]")
+        for group in sorted_groups:
+            # Scrie numele grupului (fără brackets), sau "Ingredients" dacă nu are nume
+            group_name = group.get('name') or "Ingredients"
+            lines.append(group_name)
             
             # Scrie ingredientele din grup - convertește unități apoi normalizează la 1 porție
             for ingredient in group.get('items', []):
@@ -1332,7 +1336,7 @@ class RecipeScraper:
         
         # Dacă nu sunt grupuri, fallback la ingredients simplu (pentru JSON-LD)
         if not ingredient_groups and recipe.get('ingredients'):
-            lines.append("[1]")
+            lines.append("Ingredients")
             for ingredient in recipe.get('ingredients', []):
                 # Normalizează cantitatea
                 normalized = self._normalize_quantity(ingredient, original_servings or 1)
@@ -1359,13 +1363,15 @@ class RecipeScraper:
                 # Elimină newlines din interior (pot fi adăugate de HTML parsing)
                 step = step.replace('\n', ' ').replace('\r', ' ')
                 step = re.sub(r'\s+', ' ', step).strip()  # Normalizează spațiile
+                # Elimină punct/spații reziduale de la parse (ex: ". Cover..." → "Cover...")
+                step = re.sub(r'^[\.\s]+', '', step).strip()
                 
                 # Verifică dacă e header de secțiune (începe cu ##)
                 if step.startswith('## '):
                     # Adaugă header fără numerotare
-                    lines.append(step[3:])  # Elimină ## 
-                else:
-                    # Adaugă pas normal cu numerotare
+                    lines.append(step[3:])  # Elimină ##
+                elif step.strip('.').strip():
+                    # Adaugă pas normal cu numerotare (sare peste linii goale sau cu doar puncte)
                     lines.append(f"{step_number}. {step}")
                     step_number += 1
             lines.append("")
@@ -1731,24 +1737,248 @@ class RecipeScraper:
         return processed
 
 
-def scrape_recipes_from_file(mode: str):
+def _find_local_image(recipe_name: str, img_dir: str) -> Optional[str]:
+    """
+    Caută în img_dir un fișier al cărui nume (snake_case) este prefix
+    al numelui rețetei normalizat.
+    Ex: roast_dill_chicken.jpeg  →  "Roast Dill Chicken with courgette..."  ✓
+    Ex: beetroot_bunless_burgers.jpeg  →  "Beetroot Bunless Burgers with..."  ✓
+    """
+    if not os.path.isdir(img_dir):
+        return None
+    # Normalizează numele rețetei la snake_case
+    normalized = re.sub(r'[^a-zA-Z0-9\s]', '', recipe_name)
+    normalized = re.sub(r'\s+', '_', normalized.strip()).lower()
+    for fname in os.listdir(img_dir):
+        base = os.path.splitext(fname)[0].lower()
+        # Match exact SAU imaginea e prefix al numelui rețetei
+        if normalized == base or normalized.startswith(base + '_'):
+            return os.path.join(img_dir, fname)
+    return None
+
+
+def _load_scraper_db_items(db_path: str) -> dict:
+    """Încarcă numele GroceryItem din SQLite. Returnează dict lowercase → display name."""
+    result = {}
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute('SELECT name FROM "GroceryItem"')
+        for (name,) in cursor.fetchall():
+            if name:
+                result[name.lower()] = name
+        conn.close()
+    except Exception as e:
+        print(f"  ⚠ Eroare la încărcarea DB: {e}")
+    return result
+
+
+def _load_scraper_mappings(path: str) -> tuple[dict, dict]:
+    """Încarcă grocery_mappings și obs_mappings din ingredient_mappings.json."""
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data.get('grocery_mappings', {}), data.get('obs_mappings', {})
+    except FileNotFoundError:
+        return {}, {}
+    except Exception as e:
+        print(f"  ⚠ Eroare la încărcarea mappings: {e}")
+        return {}, {}
+
+
+def _save_scraper_mappings(path: str, grocery_mappings: dict, obs_mappings: dict = None):
+    """Actualizează grocery_mappings (și obs_mappings) în fișierul JSON."""
+    try:
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            data = {'grocery_mappings': {}, 'unit_conversions': {'custom_rules': []}, 'auto_create': {}}
+        data['grocery_mappings'] = grocery_mappings
+        if obs_mappings is not None:
+            data['obs_mappings'] = obs_mappings
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"  ⚠ Eroare la salvarea mappings: {e}")
+
+
+
+def _fuzzy_score(a: str, b: str) -> float:
+    """Calculează scorul de similaritate între două șiruri."""
+    ratio = SequenceMatcher(None, a, b).ratio()
+    if a in b or b in a:
+        return max(ratio, 0.75)
+    return ratio
+
+
+def _find_top_db_matches(name: str, db_items: dict, n: int = 5) -> list:
+    """Returnează top N potriviri din db_items ca listă de (score, display_name) sortată descendent."""
+    scores = []
+    name_lower = name.lower()
+    for key, display in db_items.items():
+        score = _fuzzy_score(name_lower, key)
+        if score > 0.4:
+            scores.append((score, display))
+    scores.sort(key=lambda x: x[0], reverse=True)
+    return scores[:n]
+
+
+def _resolve_ingredient_names_interactive(recipes: list, db_path: str, mappings_path: str) -> list:
+    """Rezolvă interactiv numele de ingrediente necunoscute față de DB, rețetă cu rețetă."""
+    db_items = _load_scraper_db_items(db_path)
+    grocery_mappings, obs_mappings = _load_scraper_mappings(mappings_path)
+
+    _bracket_re2 = re.compile(r'^\[([^\]]*)\]\s*', re.IGNORECASE)
+    _qty_unit_re = re.compile(
+        r'^[\d./\s]+\s*(?:cup|cups|tbsp|tsp|g|kg|ml|l|oz|lb|piece|pieces|slice|slices|handful|pint|clove|cloves|can|cans|bunch|bunches|pinch|pinches|sprig|sprigs)?\s*',
+        re.IGNORECASE
+    )
+
+    def _extract_base_name(item_str: str) -> str:
+        s = _bracket_re2.sub('', item_str.strip()).strip()
+        s = _qty_unit_re.sub('', s).strip()
+        s = s.split(',')[0].strip()
+        s = re.sub(r'\(.*?\)', '', s).strip()
+        return s.lower()
+
+    def _resolve_name(name: str, recipe_title: str, item_str: str) -> str | None:
+        """Returnează canonical name sau None (sare peste). Folosește cache grocery_mappings."""
+        # Deja mapat
+        if name in grocery_mappings:
+            return grocery_mappings[name]
+
+        # Potrivire exactă în DB (case-insensitive)
+        if name in db_items:
+            return db_items[name]
+
+        top_matches = _find_top_db_matches(name, db_items)
+
+        # Auto-resolve dacă scor >= 0.92
+        if top_matches and top_matches[0][0] >= 0.92:
+            canonical = top_matches[0][1]
+            grocery_mappings[name] = canonical
+            _save_scraper_mappings(mappings_path, grocery_mappings, obs_mappings)
+            print(f"    ✓ auto: '{name}' → '{canonical}'")
+            return canonical
+
+        # Prompt interactiv
+        print(f"\n  ┌─────────────────────────────────────────────────────")
+        print(f"  │  Rețetă     : {recipe_title}")
+        print(f"  │  Ingredient : {item_str.strip()}")
+        print(f"  │  Bază       : {name}")
+        print(f"  └─────────────────────────────────────────────────────")
+
+        if top_matches:
+            for idx, (score, display) in enumerate(top_matches, 1):
+                print(f"    [{idx}] {display}  ({int(score * 100)}%)")
+        else:
+            print("    (fără potriviri în DB)")
+
+        print("    [m] Introdu manual numele din DB")
+        print("    [n] Ingredient nou (creează)")
+        print("    [s] Sare peste")
+        print()
+
+        while True:
+            try:
+                choice = input("  Alegere: ").strip()
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return None
+
+            choice_lower = choice.lower()
+
+            if choice_lower == 's':
+                return None
+            elif choice_lower == 'n':
+                grocery_mappings[name] = '__new__'
+                _save_scraper_mappings(mappings_path, grocery_mappings, obs_mappings)
+                return None
+            elif choice_lower == 'm':
+                try:
+                    manual = input("  Nume DB: ").strip()
+                    obs = input("  Obs: ").strip()
+                except (EOFError, KeyboardInterrupt):
+                    print()
+                    return None
+                if manual:
+                    grocery_mappings[name] = manual
+                    if obs:
+                        obs_mappings[name] = obs
+                    _save_scraper_mappings(mappings_path, grocery_mappings, obs_mappings)
+                    return manual
+            elif choice.isdigit():
+                idx = int(choice)
+                if 1 <= idx <= len(top_matches):
+                    canonical = top_matches[idx - 1][1]
+                    grocery_mappings[name] = canonical
+                    _save_scraper_mappings(mappings_path, grocery_mappings, obs_mappings)
+                    return canonical
+                else:
+                    print(f"    Alegere invalidă. Introduceți 1-{len(top_matches)}, m, n sau s.")
+            else:
+                print("    Alegere invalidă. Introduceți un număr, m, n sau s.")
+
+    # Procesează rețetă cu rețetă
+    for recipe in recipes:
+        recipe_title = recipe.get('name', '?')
+        recipe_printed = False
+
+        for group in recipe.get('ingredient_groups', []):
+            new_items = []
+            for item in group.get('items', []):
+                base = _extract_base_name(item)
+                if not base:
+                    new_items.append(item)
+                    continue
+
+                # Verifică rapid dacă e deja cunoscut (fără prompt)
+                known = (base in grocery_mappings) or (base in db_items)
+                if not known:
+                    top = _find_top_db_matches(base, db_items)
+                    known = bool(top and top[0][0] >= 0.92)
+
+                if not known and not recipe_printed:
+                    print(f"\n{'═' * 58}")
+                    print(f"  {recipe_title}")
+                    print(f"{'═' * 58}")
+                    recipe_printed = True
+
+                canonical = _resolve_name(base, recipe_title, item)
+                if canonical and canonical != '__new__':
+                    item = re.sub(
+                        r'(?i)\b' + re.escape(base) + r'\b',
+                        canonical,
+                        item,
+                        count=1
+                    )
+                new_items.append(item)
+            group['items'] = new_items
+
+    return recipes
+
+
+def scrape_recipes_from_file(mode: str, input_file: str = None, output_file: str = None):
     """Citește URL-uri sau rețete text și scrie în formatul txt
-    
+
     Args:
         mode: '-url' pentru web scraping sau '-local' pentru fișiere locale
+        input_file: cale custom pentru fișierul de input (opțional)
+        output_file: cale custom pentru fișierul de output (opțional)
     """
     scraper = RecipeScraper()
-    
+
     # Configurare paths în funcție de mod
     if mode == '-url':
-        input_file = 'data/urls/recipe_urls.txt'
-        output_file = 'data/urls/scraped_recipe_urls.txt'
+        input_file = input_file or 'data/urls/recipe_urls.txt'
+        output_file = output_file or 'data/urls/scraped_recipe_urls.txt'
         img_dir = 'data/urls/img'
         mode_name = 'Web URLs'
         is_local = False
     elif mode == '-local':
-        input_file = 'data/local/local_recipes.txt'
-        output_file = 'data/local/scraped_local_recipes.txt'
+        input_file = input_file or 'data/local/local_recipes.txt'
+        output_file = output_file or 'data/local/scraped_local_recipes.txt'
         img_dir = 'data/local/img'
         mode_name = 'Local Text'
         is_local = True
@@ -1797,6 +2027,12 @@ def scrape_recipes_from_file(mode: str):
             
             recipe = scraper._parse_local_file(temp_file)
             if recipe:
+                # Caută imagine locală după numele rețetei (snake_case)
+                if not recipe.get('image_path') and not recipe.get('image_url'):
+                    img_match = _find_local_image(recipe['name'], img_dir)
+                    if img_match:
+                        recipe['image_path'] = img_match
+                        print(f"  🖼  Imagine găsită: {img_match}")
                 recipes.append(recipe)
             
             # Șterge fișierul temporar
@@ -1816,6 +2052,14 @@ def scrape_recipes_from_file(mode: str):
             if recipe:
                 recipes.append(recipe)
     
+    # Rezolvă interactiv numele de ingrediente necunoscute
+    if recipes:
+        db_path_for_resolver = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'webapp', 'dev.db')
+        if not os.path.isfile(db_path_for_resolver):
+            db_path_for_resolver = 'webapp/dev.db'
+        mappings_path = 'data/ingredient_mappings.json'
+        recipes = _resolve_ingredient_names_interactive(recipes, db_path_for_resolver, mappings_path)
+
     # Scrie în fișier
     if recipes:
         with open(output_file, 'w', encoding='utf-8') as f:
@@ -1836,11 +2080,13 @@ def scrape_recipes_from_file(mode: str):
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Utilizare:")
-        print("  python scrape_recipes.py -url     # Scrape URL-uri web")
-        print("  python scrape_recipes.py -local   # Parsează fișiere text locale")
-        print("\nStructură foldere:")
-        print("  data/urls/recipe_urls.txt         → data/urls/scraped_recipe_urls.txt")
-        print("  data/local/local_recipes.txt      → data/local/scraped_local_recipes.txt")
+        print("  python scrape_recipes.py -url               # Scrape URL-uri web (default paths)")
+        print("  python scrape_recipes.py -local             # Parsează fișiere text locale (default paths)")
+        print("  python scrape_recipes.py -url   -i <input> -o <output>")
+        print("  python scrape_recipes.py -local -i <input> -o <output>")
+        print("\nDefault paths:")
+        print("  -url  : data/urls/recipe_urls.txt    → data/urls/scraped_recipe_urls.txt")
+        print("  -local: data/local/local_recipes.txt → data/local/scraped_local_recipes.txt")
         print("\nImagini salvate în:")
         print("  data/urls/img/                    (pentru -url)")
         print("  data/local/img/                   (pentru -local)")
@@ -1849,12 +2095,27 @@ if __name__ == "__main__":
         print("  • Format cu bracket [cantitate unitate]")
         print("  • Normalizare per porție")
         sys.exit(1)
-    
+
     mode = sys.argv[1]
-    
+
     if mode not in ['-url', '-local']:
         print(f"✗ Flag invalid: {mode}")
         print("Utilizare: python scrape_recipes.py -url SAU python scrape_recipes.py -local")
         sys.exit(1)
-    
-    scrape_recipes_from_file(mode)
+
+    # Parsare opțională -i / -o
+    custom_input = None
+    custom_output = None
+    argv_rest = sys.argv[2:]
+    i = 0
+    while i < len(argv_rest):
+        if argv_rest[i] in ('-i', '--input') and i + 1 < len(argv_rest):
+            custom_input = argv_rest[i + 1]
+            i += 2
+        elif argv_rest[i] in ('-o', '--output') and i + 1 < len(argv_rest):
+            custom_output = argv_rest[i + 1]
+            i += 2
+        else:
+            i += 1
+
+    scrape_recipes_from_file(mode, input_file=custom_input, output_file=custom_output)

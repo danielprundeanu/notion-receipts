@@ -1,0 +1,58 @@
+{
+  "apples|": {
+    "action": "use_unit",
+    "unit": "piece",
+    "rate": 1.0,
+    "from_unit": null
+  },
+  "avocado|": {
+    "action": "use_unit",
+    "unit": "piece",
+    "rate": 1.0,
+    "from_unit": null
+  },
+  "baby spinach|g": {
+    "action": "use_unit",
+    "unit": "handful",
+    "rate": 0.0333,
+    "from_unit": "g"
+  },
+  "beetroot|g": {
+    "action": "set_unit2",
+    "unit": "g",
+    "rate": 100.0
+  },
+  "carrots|": {
+    "action": "use_unit",
+    "unit": "piece",
+    "rate": 1.0,
+    "from_unit": null
+  },
+  "cauliflower|": {
+    "action": "use_unit",
+    "unit": "g",
+    "rate": 550.0,
+    "from_unit": null
+  },
+  "cherry tomatoes|": {
+    "action": "use_unit",
+    "unit": "piece",
+    "rate": 1.0,
+    "from_unit": null
+  },
+  "0.25 cups orzo|piece": {
+    "action": "skip"
+  },
+  "cauliflower|piece": {
+    "action": "use_unit",
+    "unit": "g",
+    "rate": 550.0,
+    "from_unit": "piece"
+  },
+  "cheddar cheese|piece": {
+    "action": "use_unit",
+    "unit": "g",
+    "rate": 20.0,
+    "from_unit": "piece"
+  }
+}

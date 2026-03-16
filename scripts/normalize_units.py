@@ -19,10 +19,17 @@ Auto-detectează formatul:
 import re
 import os
 import json
+import secrets
 import sqlite3
+import string
 import argparse
 from typing import Optional
 from difflib import SequenceMatcher
+
+
+def _new_id() -> str:
+    alphabet = string.ascii_lowercase + string.digits
+    return "c" + "".join(secrets.choice(alphabet) for _ in range(24))
 
 # ──────────────────────────────────────────────────────────────
 # Normalizare unități
@@ -298,6 +305,24 @@ def extract_ingredients_from_file(filepath: str) -> tuple[list[dict], str]:
 # Citire GroceryItems din SQLite
 # ──────────────────────────────────────────────────────────────
 
+def update_grocery_item_unit2(db_path: str, db_name: str, unit2: str, rate: Optional[float]):
+    """Setează unit2 (și opțional conversion) pe un GroceryItem existent."""
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    if rate is not None:
+        cur.execute(
+            'UPDATE "GroceryItem" SET unit2 = ?, conversion = ? WHERE name = ?',
+            (unit2, rate, db_name),
+        )
+    else:
+        cur.execute(
+            'UPDATE "GroceryItem" SET unit2 = ? WHERE name = ?',
+            (unit2, db_name),
+        )
+    conn.commit()
+    conn.close()
+
+
 def load_grocery_items(db_path: str) -> dict[str, dict]:
     """
     Returnează dict: name_lower → { name, unit, unit2 }
@@ -427,9 +452,10 @@ def fuzzy_match(name: str, grocery_items: dict[str, dict], threshold: float = 0.
     if name.endswith("s") and name[:-1] in grocery_items:
         return grocery_items[name[:-1]]
 
-    # Prefix: item din DB e substring al numelui (ex: "baby spinach" conține "spinach")
+    # Prefix: DB key e conținut în numele din rețetă (ex: "spinach" în "baby spinach")
+    # Nu invers — "cheese" NU trebuie să match-uieze "ricotta cheese"
     for key, item in grocery_items.items():
-        if key in name or name in key:
+        if key in name:
             return item
 
     # Fuzzy
@@ -515,7 +541,8 @@ def prompt_user(name: str, raw_name: str, used_unit: Optional[str], db_item: dic
     """
     Afișează un prompt și returnează un dict cu alegerea.
     Chei posibile:
-      { "action": "use_unit", "unit": str, "rate": float|None, "from_unit": str|None }
+      { "action": "use_unit",  "unit": str, "rate": float|None, "from_unit": str|None }
+      { "action": "set_unit2", "unit": str, "rate": float|None }
       { "action": "new" }
       { "action": "skip" }
     """
@@ -523,6 +550,7 @@ def prompt_user(name: str, raw_name: str, used_unit: Optional[str], db_item: dic
     unit2 = db_item["unit2"]
     db_name = db_item["name"]
     db_conversion = db_item.get("conversion")
+    can_set_unit2 = bool(used_unit and not unit2)
 
     print()
     print(f"  ┌─ Conflict unitate ──────────────────────────────────────────")
@@ -543,7 +571,9 @@ def prompt_user(name: str, raw_name: str, used_unit: Optional[str], db_item: dic
         print(f"  [1] Folosește unit1: {unit1}")
     if unit2:
         print(f"  [2] Folosește unit2: {unit2}")
-    print(f"  [n] Adaugă ingredient nou (cu unitate: {used_unit or '?'})")
+    if can_set_unit2:
+        print(f"  [2] Setează unit2 = {used_unit}  (adaugă la {db_name} în DB)")
+    print(f"  [n] Ingredient nou  (cu unitate: {used_unit or '?'})")
     print(f"  [s] Sare peste")
     print()
 
@@ -552,12 +582,10 @@ def prompt_user(name: str, raw_name: str, used_unit: Optional[str], db_item: dic
 
         if choice == "1" and unit1:
             chosen = normalize_unit(unit1)
-            # Cere conversie doar dacă unitatea diferă
             from_unit = used_unit
             if from_unit and normalize_unit(from_unit) != chosen:
                 rate = prompt_conversion(from_unit, chosen, db_conversion)
             elif from_unit is None:
-                # Fără unitate în rețetă = implicit 1 bucată → confirm sau introdu
                 rate = prompt_conversion(None, chosen, db_conversion)
             else:
                 rate = None
@@ -573,6 +601,13 @@ def prompt_user(name: str, raw_name: str, used_unit: Optional[str], db_item: dic
             else:
                 rate = None
             return {"action": "use_unit", "unit": chosen, "rate": rate, "from_unit": from_unit}
+
+        if choice == "2" and can_set_unit2:
+            new_unit2 = normalize_unit(used_unit)
+            print()
+            print(f"  Rata de conversie din unit1 în unit2:")
+            rate = prompt_conversion(unit1, new_unit2, db_conversion)
+            return {"action": "set_unit2", "unit": new_unit2, "rate": rate}
 
         if choice == "n":
             return {"action": "new"}
@@ -650,9 +685,12 @@ def main():
         db_unit1 = normalize_unit(db_item["unit"]) if db_item["unit"] else None
         db_unit2 = normalize_unit(db_item["unit2"]) if db_item["unit2"] else None
 
+        # Ingredient fără unitate → se consideră "piece"
+        effective_unit = unit_norm if unit_norm is not None else "piece"
+
         matches = (
-            unit_norm == db_unit1
-            or unit_norm == db_unit2
+            effective_unit == db_unit1
+            or effective_unit == db_unit2
             or unit_norm is None and not db_unit1
         )
 
@@ -660,7 +698,7 @@ def main():
             conflicts.append({
                 "name": name,
                 "raw_name": meta["raw_name"],
-                "unit": unit_norm,
+                "unit": effective_unit,  # None → "piece" implicit
                 "db_item": db_item,
                 "recipes": meta["recipes"],
             })
@@ -701,6 +739,12 @@ def main():
                 elif action == "new":
                     print(f"  [{i}/{len(conflicts)}] {name} ({unit or '?'}) → ingredient nou (din cache)")
                     continue
+                elif action == "set_unit2":
+                    cached_unit = cached.get("unit", "")
+                    rate = cached.get("rate")
+                    rate_str = f", conversie: 1 {cached.get('from_unit', unit1 or '?')} = {rate} {cached_unit}" if rate else ""
+                    print(f"  [{i}/{len(conflicts)}] {name} → unit2={cached_unit}{rate_str} (din cache)")
+                    continue
                 else:
                     chosen_unit = cached.get("unit", "")
                     rate = cached.get("rate")
@@ -721,7 +765,6 @@ def main():
         if result["action"] == "skip":
             choices[cache_key] = {"action": "skip"}
             print(f"  ↷ Sărit")
-            continue
         elif result["action"] == "new":
             new_ingredients.append({
                 "name": name,
@@ -730,6 +773,15 @@ def main():
             })
             choices[cache_key] = {"action": "new", "unit": unit or ""}
             print(f"  ✚ Adăugat la lista de ingrediente noi")
+        elif result["action"] == "set_unit2":
+            new_unit2 = result["unit"]
+            rate = result["rate"]
+            update_grocery_item_unit2(args.db, db_item["name"], new_unit2, rate)
+            # Actualizează și cache-ul local ca să nu mai fie conflict la rerulare
+            grocery_items[name]["unit2"] = new_unit2
+            choices[cache_key] = {"action": "set_unit2", "unit": new_unit2, "rate": rate}
+            rate_str = f"  (1 {db_item['unit']} = {rate} {new_unit2})" if rate else ""
+            print(f"  ✓ unit2 setat: {db_item['name']} → unit2={new_unit2}{rate_str}  [DB actualizat]")
         else:
             chosen_unit = result["unit"]
             rate = result["rate"]
@@ -738,9 +790,8 @@ def main():
             rate_str = f"  (1 {unit or 'buc'} = {rate} {chosen_unit})" if rate else ""
             print(f"  ✓ Ales: {chosen_unit}{rate_str}")
 
-    # ── Salvează alegeri ──────────────────────────────────────
-    save_choices(choices)
-    print(f"\n  Alegeri salvate în '{CHOICES_FILE}'")
+        # Salvează imediat după fiecare alegere (rezistență la întreruperi)
+        save_choices(choices)
 
     # ── Sumar ─────────────────────────────────────────────────
     print(f"\n{'═'*62}")
@@ -758,15 +809,93 @@ def main():
             rate_str = f"  [1 {r['old_unit'] or 'buc'} = {rate} {r['new_unit']}]" if rate else ""
             print(f"    • {r['name']}: {r['old_unit'] or '(fără)'} → {r['new_unit']}{rate_str}")
 
-    if new_ingredients:
-        print("\n  Ingrediente noi de adăugat în DB:")
-        for ni in new_ingredients:
-            print(f"    • {ni['name']}  (unit: {ni['unit'] or '?'})")
-        print()
-        print("  Pentru a le importa, adaugă-le manual în pagina /ingredients")
-        print("  sau rulează un script de import.")
-
     print()
+
+    # Creează interactiv ingredientele marcate __new__ în ingredient_mappings.json
+    prompt_new_grocery_items(args.db)
+
+
+def _read_optional_float(prompt: str) -> Optional[float]:
+    """Citește un număr opțional de la stdin. Enter gol → None."""
+    raw = input(prompt).strip().replace(",", ".")
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        print("    ⚠ Valoare invalidă, ignorată.")
+        return None
+
+
+def prompt_new_grocery_items(db_path: str, mappings_path: str = "data/ingredient_mappings.json"):
+    """
+    Găsește toate ingredientele marcate __new__ în ingredient_mappings.json,
+    le interoghează câmp cu câmp și le inserează în GroceryItem.
+    """
+    if not os.path.isfile(mappings_path):
+        return
+
+    with open(mappings_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    grocery_mappings = data.get("grocery_mappings", {})
+    new_names = sorted(k for k, v in grocery_mappings.items() if v == "__new__")
+
+    if not new_names:
+        return
+
+    print(f"\n{'═'*62}")
+    print(f"  INGREDIENTE NOI  ({len(new_names)} de creat)")
+    print(f"{'═'*62}")
+
+    conn = sqlite3.connect(db_path)
+    created = 0
+
+    for raw_name in new_names:
+        print(f"\n  ┌─────────────────────────────────────────────────────")
+        print(f"  │  Ingredient nou: {raw_name}")
+        print(f"  └─────────────────────────────────────────────────────")
+        print("  (Enter gol = câmp gol / sare peste)")
+
+        try:
+            name   = input(f"  Nume ingredient [{raw_name}]: ").strip() or raw_name
+            unit1  = input("  Unitate1 (ex: g, ml, piece): ").strip() or None
+            unit2  = input("  Unitate2 (ex: cup, tbsp):    ").strip() or None
+            conv   = _read_optional_float("  Conversie (1 unit1 = ? unit2): ")
+            kcal   = _read_optional_float("  Kcal/100g: ")
+            carbs  = _read_optional_float("  Carbs/100g: ")
+            fat    = _read_optional_float("  Fat/100g: ")
+            protein = _read_optional_float("  Protein/100g: ")
+        except (EOFError, KeyboardInterrupt):
+            print("\n  ✗ Întrerupt.")
+            break
+
+        item_id = _new_id()
+        try:
+            conn.execute(
+                """
+                INSERT INTO "GroceryItem"
+                  (id, name, unit, unit2, conversion, kcal, carbs, fat, protein)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (item_id, name, unit1, unit2, conv, kcal, carbs, fat, protein),
+            )
+            conn.commit()
+            grocery_mappings[raw_name] = name
+            print(f"  ✓ Creat: '{name}'  [id: {item_id}]")
+            created += 1
+        except Exception as e:
+            print(f"  ✗ Eroare la inserare: {e}")
+
+    conn.close()
+
+    # Salvează mappings actualizate (__new__ → nume real)
+    if created:
+        data["grocery_mappings"] = grocery_mappings
+        with open(mappings_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"\n  {created} ingrediente create în DB.")
+        print(f"  ingredient_mappings.json actualizat.\n")
 
 
 if __name__ == "__main__":

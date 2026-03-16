@@ -5,6 +5,7 @@ Folosește lista de grocery items din Notion pentru match-uri inteligente
 
 import os
 import re
+import sqlite3
 from typing import Dict, List, Optional, Tuple, Set
 from notion_client import Client
 from dotenv import load_dotenv
@@ -81,20 +82,56 @@ class IngredientProcessor:
         'dry', 'wet', 'soft', 'hard', 'firm', 'tender',
     }
     
-    def __init__(self, use_notion: bool = True):
+    def __init__(self, use_notion: bool = True, db_path: Optional[str] = None):
         """
         Args:
-            use_notion: Dacă True, încarcă grocery items din Notion
+            use_notion: Dacă True, încearcă să încarce grocery items din Notion
+            db_path: Cale opțională către webapp/dev.db pentru fallback local
         """
         self.grocery_items: Set[str] = set()
         self.all_ingredients: Set[str] = set()  # Notion + Common ingredients
         self.use_notion = use_notion
-        
+
         # Adaugă ingredientele comune de bază
         self.all_ingredients.update(self.COMMON_BASE_INGREDIENTS)
-        
-        if use_notion:
+
+        # Încearcă SQLite local mai întâi (mai rapid și nu necesită conexiune)
+        resolved_db = db_path or self._find_local_db()
+        if resolved_db:
+            self._load_grocery_items_from_db(resolved_db)
+
+        if use_notion and not self.grocery_items:
             self._load_grocery_items_from_notion()
+
+    def _find_local_db(self) -> Optional[str]:
+        """Caută webapp/dev.db relativ la directorul curent sau la script."""
+        candidates = [
+            "webapp/dev.db",
+            os.path.join(os.path.dirname(__file__), "..", "webapp", "dev.db"),
+        ]
+        for path in candidates:
+            if os.path.isfile(path):
+                return path
+        return None
+
+    def _load_grocery_items_from_db(self, db_path: str):
+        """Încarcă grocery items din SQLite local."""
+        try:
+            conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            cur.execute('SELECT name FROM "GroceryItem"')
+            rows = cur.fetchall()
+            conn.close()
+            for (name,) in rows:
+                name_lower = name.lower().strip()
+                self.grocery_items.add(name_lower)
+                self.all_ingredients.add(name_lower)
+                if name_lower.endswith("s"):
+                    self.grocery_items.add(name_lower[:-1])
+                    self.all_ingredients.add(name_lower[:-1])
+            print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din DB local")
+        except Exception as e:
+            print(f"  ⚠ Nu pot încărca grocery items din DB: {e}")
     
     def _load_grocery_items_from_notion(self):
         """Încarcă lista de grocery items din Notion pentru match-uri inteligente"""
