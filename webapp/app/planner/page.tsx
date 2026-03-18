@@ -196,10 +196,10 @@ function RecipeCard({
 
   return (
     <div className="relative overflow-hidden rounded-xl">
-      {/* Delete button revealed on swipe */}
+      {/* Delete button — mobile only, hidden until swipe */}
       <div
-        className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500"
-        style={{ width: SWIPE_REVEAL_WIDTH }}
+        className="md:hidden absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500 rounded-r-xl"
+        style={{ width: SWIPE_REVEAL_WIDTH, visibility: swipeX < 0 ? "visible" : "hidden" }}
       >
         <button
           onClick={onRemove}
@@ -214,19 +214,46 @@ function RecipeCard({
         ref={contentRef}
         style={{ transform: `translateX(${swipeX}px)`, transition: isHorizontal.current ? "none" : "transform 0.2s ease" }}
         onClick={revealed ? collapseSwipe : undefined}
-        className="flex items-center gap-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-xl px-3 py-2 group"
+        className="flex items-center gap-2 bg-orange-50 dark:bg-[#2d1a08] border border-orange-100 dark:border-orange-900/40 rounded-xl px-2.5 py-2 group relative"
       >
         <RecipeThumb recipe={entry.recipe} />
+
+        {/* Desktop layout: title + servings below */}
+        <div className="hidden md:flex flex-col flex-1 min-w-0 gap-1">
+          <Link
+            href={`/recipes/${entry.recipe.id}`}
+            className="text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
+          >
+            {entry.recipe.name}
+          </Link>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => { e.stopPropagation(); onServingsChange(Math.max(1, entry.servings - 1)); }}
+              className="w-6 h-6 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            >
+              <Minus size={10} />
+            </button>
+            <span className="text-xs font-semibold text-orange-700 dark:text-orange-300 w-4 text-center">
+              {entry.servings}
+            </span>
+            <button
+              onClick={(e) => { e.stopPropagation(); onServingsChange(entry.servings + 1); }}
+              className="w-6 h-6 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            >
+              <Plus size={10} />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile layout: title + inline servings */}
         <Link
           href={`/recipes/${entry.recipe.id}`}
           onClick={(e) => revealed && e.preventDefault()}
-          className="flex-1 min-w-0 text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
+          className="md:hidden flex-1 min-w-0 text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
         >
           {entry.recipe.name}
         </Link>
-
-        {/* Servings +/− */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="md:hidden flex items-center gap-1.5 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onServingsChange(Math.max(1, entry.servings - 1)); }}
             className="w-7 h-7 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
@@ -247,9 +274,9 @@ function RecipeCard({
         {/* X — desktop hover only */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="hidden md:flex w-7 h-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-700 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/40 shrink-0"
+          className="hidden md:flex absolute top-1 right-1 w-6 h-6 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-600 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
         >
-          <X size={14} />
+          <X size={13} />
         </button>
       </div>
     </div>
