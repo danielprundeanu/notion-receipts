@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -32,6 +32,7 @@ import {
   Loader2,
   Minus,
   Star,
+  Trash2,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -122,6 +123,8 @@ function RecipeThumb({
 
 // ─── Recipe Card (in planner slot) ────────────────────────────────────────────
 
+const SWIPE_REVEAL_WIDTH = 56;
+
 function RecipeCard({
   entry,
   onRemove,
@@ -131,45 +134,123 @@ function RecipeCard({
   onRemove: () => void;
   onServingsChange: (n: number) => void;
 }) {
+  const [swipeX, setSwipeX] = useState(0);
+  const [revealed, setRevealed] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const swipeXRef = useRef(0);
+  const revealedRef = useRef(false);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const isHorizontal = useRef(false);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+
+    function onTouchStart(e: TouchEvent) {
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+      isHorizontal.current = false;
+    }
+
+    function onTouchMove(e: TouchEvent) {
+      const dx = e.touches[0].clientX - touchStartX.current;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (!isHorizontal.current) {
+        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+        if (Math.abs(dy) >= Math.abs(dx)) return;
+        isHorizontal.current = true;
+      }
+      e.preventDefault();
+      const base = revealedRef.current ? -SWIPE_REVEAL_WIDTH : 0;
+      const next = Math.min(0, Math.max(-SWIPE_REVEAL_WIDTH - 12, base + dx));
+      swipeXRef.current = next;
+      setSwipeX(next);
+    }
+
+    function onTouchEnd() {
+      if (!isHorizontal.current) return;
+      const shouldReveal = swipeXRef.current < -(SWIPE_REVEAL_WIDTH / 2);
+      revealedRef.current = shouldReveal;
+      setRevealed(shouldReveal);
+      setSwipeX(shouldReveal ? -SWIPE_REVEAL_WIDTH : 0);
+      swipeXRef.current = shouldReveal ? -SWIPE_REVEAL_WIDTH : 0;
+    }
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, []);
+
+  function collapseSwipe() {
+    revealedRef.current = false;
+    setRevealed(false);
+    setSwipeX(0);
+    swipeXRef.current = 0;
+  }
+
   return (
-    <div className="flex items-center gap-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-xl p-2 group relative">
-      <button
-        onClick={onRemove}
-        className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-700 hover:text-orange-600 z-10"
+    <div className="relative overflow-hidden rounded-xl">
+      {/* Delete button revealed on swipe */}
+      <div
+        className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500"
+        style={{ width: SWIPE_REVEAL_WIDTH }}
       >
-        <X size={11} />
-      </button>
-      <RecipeThumb recipe={entry.recipe} />
-      <div className="flex-1 min-w-0">
+        <button
+          onClick={onRemove}
+          className="w-full h-full flex items-center justify-center active:bg-red-600"
+        >
+          <Trash2 size={18} className="text-white" />
+        </button>
+      </div>
+
+      {/* Card content */}
+      <div
+        ref={contentRef}
+        style={{ transform: `translateX(${swipeX}px)`, transition: isHorizontal.current ? "none" : "transform 0.2s ease" }}
+        onClick={revealed ? collapseSwipe : undefined}
+        className="flex items-center gap-2 bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/40 rounded-xl px-3 py-2 group"
+      >
+        <RecipeThumb recipe={entry.recipe} />
         <Link
           href={`/recipes/${entry.recipe.id}`}
-          className="text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline block"
+          onClick={(e) => revealed && e.preventDefault()}
+          className="flex-1 min-w-0 text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
         >
           {entry.recipe.name}
         </Link>
-        <div className="flex items-center gap-1 mt-1">
+
+        {/* Servings +/− */}
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onServingsChange(Math.max(1, entry.servings - 1));
-            }}
-            className="w-4 h-4 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onServingsChange(Math.max(1, entry.servings - 1)); }}
+            className="w-7 h-7 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
-            <Minus size={8} />
+            <Minus size={12} />
           </button>
-          <span className="text-xs font-medium text-orange-700 dark:text-orange-300 w-4 text-center">
+          <span className="text-sm font-semibold text-orange-700 dark:text-orange-300 w-5 text-center">
             {entry.servings}
           </span>
           <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onServingsChange(entry.servings + 1);
-            }}
-            className="w-4 h-4 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onServingsChange(entry.servings + 1); }}
+            className="w-7 h-7 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
-            <Plus size={8} />
+            <Plus size={12} />
           </button>
         </div>
+
+        {/* X — desktop hover only */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="hidden md:flex w-7 h-7 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-700 hover:text-orange-600 hover:bg-orange-100 dark:hover:bg-orange-900/40 shrink-0"
+        >
+          <X size={14} />
+        </button>
       </div>
     </div>
   );
