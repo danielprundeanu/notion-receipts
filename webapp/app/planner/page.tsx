@@ -545,7 +545,7 @@ function RecipeSelectorModal({
       className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col max-h-[88vh] sm:max-h-[80vh]">
+      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col h-[88svh] sm:h-auto sm:max-h-[80vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
@@ -658,7 +658,7 @@ function RecipeSelectorModal({
         </div>
 
         {/* Footer — servings + add */}
-        <div className="px-4 pt-3 pb-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0 flex items-center gap-3">
+        <div className="px-4 pt-3 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0 flex items-center gap-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
           {selected && (
             <div className="flex items-center gap-1.5 mr-auto min-w-0">
               <RecipeThumb recipe={selected} size="sm" />
