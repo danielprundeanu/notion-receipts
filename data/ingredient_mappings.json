@@ -193,7 +193,41 @@
     "cumin seeds": "__new__",
     "curry leaves": "__new__",
     "unsweetened cocoa powder": "__new__",
-    "sea jump": "Salt"
+    "sea jump": "Salt",
+    ". fresh basil": "Fresh Basil",
+    ". olive oil": "Olive Oil",
+    "b. ground chicken": "Ground Chicken",
+    "panko breadcrumbs": "Panko breadcrumb",
+    "yellow onion": " Yellow Onion",
+    ". fresh dill": "Fresh Dill",
+    ". jalapeño": "Jalapeno",
+    ". lemon": "Lemon",
+    ". salt": "Salt",
+    ". garlic powder": "Garlic Powder",
+    ". black pepper": "Black Pepper",
+    "cashews": "Cashew Nuts",
+    ". fresh parsley": "Fresh Parsley",
+    ". tahini": "Tahini",
+    ". ground cumin": "Ground Cumin",
+    ". smoked paprika": "Smoked Paprika Powder",
+    ". flour": "Flour",
+    ". oil": "Olive Oil",
+    ". fresh ginger": "Fresh ginger",
+    ". green curry paste": "Green Curry Paste",
+    "red bell pepper": " Red Bell Pepper",
+    ". coconut": "Coconut Milk (full fat) 6%",
+    ". almond butter": "Almond butter",
+    ". peanuts": "Peanuts",
+    ". lime": "Lime",
+    ". fish": "White fish fillet",
+    "jalapeño seeds": "Jalapeno",
+    ". garlic": "Garlic Powder",
+    ". onion powder": "Onion Powder",
+    "tsp. black pepper": "Black Pepper",
+    ". taco seasoning": "Taco Seasoning",
+    "tsp. adobo sauce (from a": "__new__",
+    "tomatoes": "Tomato",
+    ". cilantro": "Fresh coriander"
   },
   "unit_conversions": {
     "custom_rules": []
@@ -201,5 +235,6 @@
   "auto_create": {
     "enabled": false,
     "whitelist": []
-  }
+  },
+  "obs_mappings": {}
 }

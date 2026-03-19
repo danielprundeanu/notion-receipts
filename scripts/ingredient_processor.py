@@ -330,21 +330,8 @@ class IngredientProcessor:
         """
         # Verifică dacă are format bracket [quantity] sau [quantity unit]
         bracket_match = re.match(r'^\[([^\]]+)\]\s*(.+)$', line.strip())
-        
-        if bracket_match:
-            # Format: [1] ingredient sau [1 cup] ingredient
-            bracket_content = bracket_match.group(1).strip()
-            rest = bracket_match.group(2).strip()
-            
-            # Separă adjectivele din ingredient name
-            clean_name, adjectives = self.separate_adjectives(rest)
-            
-            # Reconstruiește cu bracket
-            processed = f"[{bracket_content}] {clean_name}"
-            return processed, adjectives
-        
-        # Format standard fără brackets
-        # Unități de măsură cunoscute
+
+        # Unități de măsură cunoscute (definite o singură dată, folosite și în bracket path)
         KNOWN_UNITS = {
             'cup', 'cups', 'tsp', 'tsp.', 'tsps', 'teaspoon', 'teaspoons',
             'tbsp', 'tbsp.', 'tbsps', 'tablespoon', 'tablespoons',
@@ -354,9 +341,46 @@ class IngredientProcessor:
             'pinch', 'dash', 'handful', 'piece', 'pieces',
             'clove', 'cloves', 'slice', 'slices', 'can', 'cans',
             'bottle', 'bottles', 'jar', 'jars', 'package', 'packages',
-            'buc', 'bucată', 'bucăți', 'lingură', 'linguri', 
+            'buc', 'bucată', 'bucăți', 'lingură', 'linguri',
             'linguriță', 'lingurițe', 'lingurita', 'lingurite'
         }
+        # Prefix-uri de unitate sortate descrescător după lungime (pentru split glued)
+        UNIT_PREFIXES = sorted(
+            [u.rstrip('.') for u in KNOWN_UNITS if len(u.rstrip('.')) >= 2],
+            key=len, reverse=True
+        )
+
+        def _split_glued_unit(word: str):
+            """Dacă cuvântul începe cu o unitate lipită (ex: 'tbspOlive'), returnează (unit, rest)."""
+            w_lower = word.lower()
+            for prefix in UNIT_PREFIXES:
+                if w_lower.startswith(prefix) and len(word) > len(prefix):
+                    remainder = word[len(prefix):]
+                    # Acceptă doar dacă restul începe cu literă mare sau cifră (ingredient real)
+                    if remainder and (remainder[0].isupper() or remainder[0].isdigit()):
+                        return prefix, remainder
+            return None, word
+
+        if bracket_match:
+            # Format: [1] ingredient sau [1 cup] ingredient
+            bracket_content = bracket_match.group(1).strip()
+            rest = bracket_match.group(2).strip()
+
+            # Elimină unitatea duplicată la început (ex: "[0.5 tsp] tsp. adobo sauce")
+            rest_words = rest.split()
+            if rest_words:
+                first = rest_words[0].lower().rstrip('.')
+                if first in {u.rstrip('.').lower() for u in KNOWN_UNITS}:
+                    rest = ' '.join(rest_words[1:]).strip()
+
+            # Separă adjectivele din ingredient name
+            clean_name, adjectives = self.separate_adjectives(rest)
+
+            # Reconstruiește cu bracket
+            processed = f"[{bracket_content}] {clean_name}"
+            return processed, adjectives
+
+        # Format standard fără brackets
         
         # Pattern pentru cantitate + opțional unitate + ingredient
         # Cantitate: număr (cu fracții, decimale, range)
@@ -380,12 +404,18 @@ class IngredientProcessor:
         if words and words[0].lower() in KNOWN_UNITS:
             unit = words[0]
             ingredient_start = 1
-            
+
             # Tratează pattern-ul "unit of ingredient" (ex: "cloves of garlic")
             if ingredient_start < len(words) and words[ingredient_start].lower() == 'of':
-                # Include "of" în unitate
                 unit = f"{unit} of"
                 ingredient_start = 2
+        elif words:
+            # Detectează unitate lipită fără spațiu (ex: "tbspOlive Oil" → unit="tbsp", name="Olive Oil")
+            glued_unit, glued_rest = _split_glued_unit(words[0])
+            if glued_unit:
+                unit = glued_unit
+                words[0] = glued_rest
+                ingredient_start = 0
         
         # Restul cuvintelor = ingredient name
         if ingredient_start < len(words):
