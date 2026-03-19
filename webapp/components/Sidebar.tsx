@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple } from "lucide-react";
+import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple, Download } from "lucide-react";
 import ThemeToggle from "./ThemeToggle";
 
 const nav = [
@@ -10,6 +10,7 @@ const nav = [
   { href: "/planner", label: "Planner", icon: Calendar },
   { href: "/grocery-list", label: "Grocery List", icon: ShoppingCart },
   { href: "/ingredients", label: "Ingredients", icon: Apple },
+  { href: "/recipes/import", label: "Import", icon: Download },
 ];
 
 export default function Sidebar() {
@@ -30,7 +31,11 @@ export default function Sidebar() {
       {/* Navigation links */}
       <nav className="flex-1 p-3 space-y-0.5">
         {nav.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+          // Exact match for /recipes to avoid matching /recipes/import
+          const active =
+            href === "/recipes"
+              ? pathname === "/recipes" || (pathname.startsWith("/recipes/") && !pathname.startsWith("/recipes/import"))
+              : pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
               key={href}

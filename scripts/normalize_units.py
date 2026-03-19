@@ -78,6 +78,57 @@ def normalize_unit(raw: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────
+# Conversie automată cu pint (sursă sigură pentru unități standard)
+# ──────────────────────────────────────────────────────────────
+
+# Mapare de la unitățile noastre la denumirile pint
+_PINT_ALIAS: dict[str, str] = {
+    "g": "gram", "kg": "kilogram",
+    "ml": "milliliter", "l": "liter",
+    "cup": "cup", "tbsp": "tablespoon", "tsp": "teaspoon",
+    "oz": "ounce", "lb": "pound", "pint": "pint",
+    "fl oz": "fluid_ounce",
+}
+
+try:
+    from pint import UnitRegistry as _UnitRegistry, errors as _pint_errors
+    _ureg = _UnitRegistry()
+    _PINT_AVAILABLE = True
+except ImportError:
+    _PINT_AVAILABLE = False
+    _pint_errors = None
+    _ureg = None  # type: ignore
+
+
+def pint_convert(qty: float, from_unit: str, to_unit: str) -> Optional[float]:
+    """
+    Convertește automat cantitatea între unități folosind librăria pint.
+
+    Funcționează pentru conversii în aceeași dimensiune (masă↔masă, volum↔volum).
+    Returnează None dacă pint nu e disponibil sau conversie imposibilă
+    (ex: cup→g — diferite dimensiuni fizice, necesită factor de densitate).
+
+    Exemple:
+        pint_convert(1, "cup", "ml")   → 236.588
+        pint_convert(1, "oz", "g")     → 28.3495
+        pint_convert(1, "lb", "kg")    → 0.453592
+        pint_convert(1, "cup", "g")    → None  (cross-dimension)
+    """
+    if not _PINT_AVAILABLE or qty is None:
+        return None
+
+    from_pint = _PINT_ALIAS.get(from_unit, from_unit)
+    to_pint = _PINT_ALIAS.get(to_unit, to_unit)
+
+    try:
+        result = (_ureg.Quantity(qty, from_pint)).to(to_pint)
+        return round(float(result.magnitude), 6)
+    except Exception:
+        # Dimensiuni incompatibile sau unitate necunoscută
+        return None
+
+
+# ──────────────────────────────────────────────────────────────
 # Parsare ingredient line
 # ──────────────────────────────────────────────────────────────
 
@@ -517,19 +568,40 @@ def parse_rate_input(raw: str) -> Optional[float]:
 def prompt_conversion(from_unit: Optional[str], to_unit: str, db_conversion: Optional[float]) -> Optional[float]:
     """
     Cere utilizatorului factorul de conversie: 1 [from_unit] = ? [to_unit]
+
+    Încearcă mai întâi conversie automată cu pint (pentru unități standard).
     Returnează rata ca float, sau None dacă utilizatorul sare.
     """
     from_label = from_unit or "bucată"
+
+    # ── Încearcă conversie automată cu pint ──────────────────────
+    auto_rate: Optional[float] = None
+    if from_unit:
+        auto_rate = pint_convert(1.0, normalize_unit(from_unit), normalize_unit(to_unit))
+
     print()
     print(f"  Conversie: 1 {from_label} = ? {to_unit}")
-    if db_conversion is not None:
-        print(f"  (DB are deja conversion={db_conversion} — poate fi util ca referință)")
-    print(f"  Exemplu: '100' sau '1/100' sau '0.01'  |  Enter = sare fără conversie")
+
+    if auto_rate is not None:
+        print(f"  ✓ Conversie automată pint: 1 {from_label} = {auto_rate} {to_unit}")
+        print(f"  Apasă Enter pentru a accepta, sau introdu altă valoare:")
+    else:
+        if _PINT_AVAILABLE:
+            print(f"  (pint nu poate converti automat {from_label}→{to_unit} — dimensiuni diferite)")
+        else:
+            print(f"  (instalează 'pip install pint' pentru conversie automată)")
+        if db_conversion is not None:
+            print(f"  (DB are deja conversion={db_conversion} — poate fi util ca referință)")
+        print(f"  Exemplu: '100' sau '1/100' sau '0.01'  |  Enter = sare fără conversie")
     print()
 
     while True:
         raw = input(f"  1 {from_label} = __ {to_unit} : ").strip()
         if not raw:
+            # Enter fără input: dacă pint a calculat auto → acceptăm auto_rate
+            if auto_rate is not None:
+                print(f"  ✓ Acceptat automat: {auto_rate}")
+                return auto_rate
             return None
         rate = parse_rate_input(raw)
         if rate is not None and rate > 0:
@@ -638,6 +710,11 @@ def main():
         default=0.80,
         help="Prag similaritate fuzzy (default: 0.80)",
     )
+    parser.add_argument(
+        "--report", "-r",
+        metavar="OUTPUT.json",
+        help="Exportă un raport JSON cu conflictele detectate (fără modul interactiv)",
+    )
     args = parser.parse_args()
 
     # ── Încarcă date ──────────────────────────────────────────
@@ -712,6 +789,38 @@ def main():
 
     if not conflicts:
         print("  ✓ Niciun conflict — toate unitățile sunt compatibile cu DB!\n")
+        return
+
+    # ── Modul raport: exportă JSON și iese ────────────────────
+    if args.report:
+        pint_status = "disponibil" if _PINT_AVAILABLE else "indisponibil (pip install pint)"
+        report = {
+            "pint_available": _PINT_AVAILABLE,
+            "pint_status": pint_status,
+            "total_conflicts": len(conflicts),
+            "conflicts": [
+                {
+                    "ingredient": c["name"],
+                    "raw_name": c.get("raw_name", c["name"]),
+                    "unit_in_recipe": c["unit"],
+                    "db_name": c["db_item"]["name"],
+                    "db_unit1": c["db_item"]["unit"],
+                    "db_unit2": c["db_item"]["unit2"],
+                    "recipes": c["recipes"],
+                    "pint_auto_convert": (
+                        pint_convert(1.0, normalize_unit(c["unit"]), normalize_unit(c["db_item"]["unit"]))
+                        if c["unit"] and c["db_item"]["unit"] else None
+                    ),
+                }
+                for c in conflicts
+            ],
+        }
+        out_path = args.report
+        os.makedirs(os.path.dirname(out_path) if os.path.dirname(out_path) else ".", exist_ok=True)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print(f"\n  ✓ Raport exportat în: {out_path}")
+        print(f"  Pint: {pint_status}")
         return
 
     # ── Interactiv ────────────────────────────────────────────
