@@ -60,7 +60,9 @@ def parse_urls(urls: list) -> list:
             with redirect_stdout(buf2):
                 txt = scraper.convert_to_txt_format(recipe_raw)
 
-            parsed_list = parse_scraped_file(txt)
+            buf3 = io.StringIO()
+            with redirect_stdout(buf3):
+                parsed_list = parse_scraped_file(txt)
             if not parsed_list:
                 results.append({"error": f"Nu s-a putut parsa rețeta de la {url}", "url": url})
                 continue
@@ -115,7 +117,9 @@ def parse_text(text: str) -> list:
     # Dacă textul conține format scraped (=== ... ===), parsăm direct
     if "===" in text:
         try:
-            return parse_scraped_file(text)
+            buf_sf = io.StringIO()
+            with redirect_stdout(buf_sf):
+                return parse_scraped_file(text)
         except Exception as e:
             return [{"error": str(e)}]
 
@@ -152,7 +156,9 @@ def parse_text(text: str) -> list:
                     buf4 = io.StringIO()
                     with redirect_stdout(buf4):
                         txt = scraper.convert_to_txt_format(recipe_raw)
-                    parsed = parse_scraped_file(txt)
+                    buf5 = io.StringIO()
+                    with redirect_stdout(buf5):
+                        parsed = parse_scraped_file(txt)
                     if parsed:
                         recipes.extend(parsed)
             finally:

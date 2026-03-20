@@ -5,6 +5,7 @@ Folosește lista de grocery items din Notion pentru match-uri inteligente
 
 import os
 import re
+import sys
 import sqlite3
 from typing import Dict, List, Optional, Tuple, Set
 from notion_client import Client
@@ -129,9 +130,9 @@ class IngredientProcessor:
                 if name_lower.endswith("s"):
                     self.grocery_items.add(name_lower[:-1])
                     self.all_ingredients.add(name_lower[:-1])
-            print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din DB local")
+            print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din DB local", file=sys.stderr)
         except Exception as e:
-            print(f"  ⚠ Nu pot încărca grocery items din DB: {e}")
+            print(f"  ⚠ Nu pot încărca grocery items din DB: {e}", file=sys.stderr)
     
     def _load_grocery_items_from_notion(self):
         """Încarcă lista de grocery items din Notion pentru match-uri inteligente"""
@@ -141,7 +142,7 @@ class IngredientProcessor:
             db_groceries = os.getenv('DB_GROCERIES_ID')
             
             if not db_groceries:
-                print("  ⚠ DB_GROCERIES_ID nu este setat - folosesc doar lista de adjective")
+                print("  ⚠ DB_GROCERIES_ID nu este setat - folosesc doar lista de adjective", file=sys.stderr)
                 return
             
             # Fetch toate grocery items (cu paginare pentru >100 items)
@@ -177,12 +178,12 @@ class IngredientProcessor:
                 has_more = results.get('has_more', False)
                 start_cursor = results.get('next_cursor')
             
-            print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din Notion")
-            print(f"  ℹ Total {len(self.all_ingredients)} ingrediente disponibile pentru matching")
-            
+            print(f"  ℹ Încărcate {len(self.grocery_items)} grocery items din Notion", file=sys.stderr)
+            print(f"  ℹ Total {len(self.all_ingredients)} ingrediente disponibile pentru matching", file=sys.stderr)
+
         except Exception as e:
-            print(f"  ⚠ Nu pot încărca grocery items din Notion: {e}")
-            print(f"  ℹ Folosesc doar lista de adjective comune")
+            print(f"  ⚠ Nu pot încărca grocery items din Notion: {e}", file=sys.stderr)
+            print(f"  ℹ Folosesc doar lista de adjective comune", file=sys.stderr)
     
     def separate_adjectives(self, ingredient_name: str) -> Tuple[str, Optional[str]]:
         """

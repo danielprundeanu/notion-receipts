@@ -48,11 +48,14 @@ export async function POST(req: NextRequest) {
     const newIngredientCount: number[] = [];
 
     for (const recipeData of recipes) {
+      // Normalize to 1 serving
+      const originalServings = recipeData.servings && recipeData.servings > 0 ? recipeData.servings : 1;
+
       // Create recipe
       const recipe = await prisma.recipe.create({
         data: {
           name: recipeData.name,
-          servings: recipeData.servings,
+          servings: 1,
           time: recipeData.time,
           difficulty: recipeData.difficulty,
           category: recipeData.category,
@@ -94,11 +97,14 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // Divide qty by original servings to get per-serving quantity
+        const normalizedQty = ing.qty != null ? ing.qty / originalServings : null;
+
         await prisma.ingredient.create({
           data: {
             recipeId: recipe.id,
             groceryItemId,
-            quantity: ing.qty,
+            quantity: normalizedQty,
             unit: ing.unit,
             groupName: ing.groupName,
             groupOrder: ing.groupOrder,
