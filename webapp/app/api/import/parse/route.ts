@@ -43,9 +43,10 @@ function runPythonHandler(mode: string, inputData: object): Promise<unknown[]> {
   return new Promise((resolve, reject) => {
     const scriptsDir = path.join(process.cwd(), "..", "scripts");
     // Caută python3 în locațiile standard (spawn nu moștenește PATH-ul shell-ului)
+    const venvPython = path.join(process.cwd(), "..", ".venv", "bin", "python3");
     const pythonBin =
       process.env.PYTHON_BIN ||
-      ["/usr/local/bin/python3", "/usr/bin/python3", "/usr/bin/python", "python3"]
+      [venvPython, "/usr/local/bin/python3", "/usr/bin/python3", "/usr/bin/python", "python3"]
         .find((p) => {
           try { require("fs").accessSync(p); return true; } catch { return false; }
         }) || "python3";
