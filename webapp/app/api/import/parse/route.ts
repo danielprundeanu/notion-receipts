@@ -42,8 +42,20 @@ export type ParsedRecipe = {
 function runPythonHandler(mode: string, inputData: object): Promise<unknown[]> {
   return new Promise((resolve, reject) => {
     const scriptsDir = path.join(process.cwd(), "..", "scripts");
-    const proc = spawn("python3", ["web_import_handler.py", "--mode", mode], {
+    // Caută python3 în locațiile standard (spawn nu moștenește PATH-ul shell-ului)
+    const pythonBin =
+      process.env.PYTHON_BIN ||
+      ["/usr/local/bin/python3", "/usr/bin/python3", "/usr/bin/python", "python3"]
+        .find((p) => {
+          try { require("fs").accessSync(p); return true; } catch { return false; }
+        }) || "python3";
+
+    const proc = spawn(pythonBin, ["web_import_handler.py", "--mode", mode], {
       cwd: scriptsDir,
+      env: {
+        ...process.env,
+        PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
+      },
     });
 
     let stdout = "";
