@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.4.0] — 2026-03-21
+
+### ✨ Features
+- **TypeScript recipe scraper** — înlocuiește complet subprocess-ul Python cu un scraper nativ TypeScript; funcționează pe Vercel fără niciun runtime extern
+
+### 🐛 Fixes
+- Fix `spawn python3 ENOENT` pe Vercel (mediu serverless fără Python)
+- Fix import Google Fonts și eroare TypeScript în pagina de import
+
+### ⚙️ Internals
+- `webapp/lib/recipe-scraper.ts` — scraper nou: fetch URL → Schema.org JSON-LD → structură rețetă; parser format text `=== ... ===`
+- Eliminat dependența de `child_process` din `api/import/parse/route.ts`
+
 ## [0.3.0] — 2026-03-20
 
 ### ✨ Features
