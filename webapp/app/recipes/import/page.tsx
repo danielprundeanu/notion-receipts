@@ -271,19 +271,6 @@ function ConflictRow({
     } else if (mode === "new") {
       onUpdate(recipeIndex, ingIndex, {
         ...ing,
-        match: {
-          ...ing.match,
-          status: "new",
-        },
-        // Store new item config in a custom field
-        ...(({ newItem: _ }) => ({}))({}), // trick to exclude
-      } as ReviewIngredient & {
-        newItem: { name: string; unit: string | null; category: string | null };
-      });
-
-      // We store the new config via the update
-      onUpdate(recipeIndex, ingIndex, {
-        ...ing,
         match: { ...ing.match, status: "new" },
         // @ts-expect-error – newItem is a runtime extension
         newItem: { name: newName.trim() || ing.name, unit: newUnit, category: newCategory || null },
