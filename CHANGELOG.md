@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] — 2026-03-20
+
+### ✨ Features
+- **Căutare ingredient la import** — input de search cu debounce în modul „Mapează la existent" (Step 3)
+- **Upload imagine la import** — buton per card de rețetă în Step 2 (Review), thumbnail după upload
+- **Normalizare servings la import** — cantitățile se împart la nr. original de porții, salvate la baza de 1 serving
+- **Nume editabil ingredient nou** — câmp de editare a numelui în modul „Creează nou" (Step 3)
+- **Editor instrucțiuni** — înlocuiește textarea cu editor linie-cu-linie: pași numerotați, secțiuni portocalii, paste multi-linie, navigare cu săgeți
+- **Timestamp rețetă** — data adăugării afișată discret sub Nutrition Facts
+- **Comanda `/release`** — versionare și actualizare CHANGELOG automat
+
+### 🎨 UI / UX
+- Buton import mutat lângă „New Recipe" în header-ul paginii Recipes (sidebar/bottom nav mai curate)
+- Spacing mai mare între rândurile de ingrediente în formular
+
+### 🐛 Fixes
+- Fix JSON parse error la import: print-urile Python redirecționate pe `stderr` (ingredient_processor, web_import_handler)
+- Fix stdout poluat cu log-uri la apelurile `parse_scraped_file` din subproces
+
+### ⚙️ Internals
+- `api/import/search-items` — endpoint GET pentru căutare GroceryItem
+- `api/import/upload-image` — endpoint POST pentru upload imagine rețetă (hash MD5, consistent cu convenția existentă)
+- `api/import/confirm` — normalizare qty/servings la import
+
 ## [0.2.0] — 2026-03-20
 
 ### ✨ Features
