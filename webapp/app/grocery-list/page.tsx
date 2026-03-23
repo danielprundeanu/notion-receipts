@@ -153,19 +153,19 @@ export default function GroceryListPage() {
                           }`}
                         >
                           <div
-                            className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            className={`w-6 h-6 rounded border flex items-center justify-center shrink-0 transition-colors ${
                               done
                                 ? "bg-orange-500 border-orange-500"
                                 : "border-gray-300 dark:border-[#4a4a4a]"
                             }`}
                           >
-                            {done && <Check size={12} className="text-white" strokeWidth={3} />}
+                            {done && <Check size={14} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`flex-1 text-sm ${done ? "line-through text-gray-400 dark:text-[#555555]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
+                          <span className={`flex-1 text-[15px] ${done ? "line-through text-gray-400 dark:text-[#555555]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
                             {item.name}
                           </span>
                           {item.quantity > 0 && (
-                            <span className={`text-sm font-medium ${done ? "text-gray-300 dark:text-[#444444]" : "text-gray-900 dark:text-[#e3e3e3]"}`}>
+                            <span className={`text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#444444]" : "text-gray-900 dark:text-[#e3e3e3]"}`}>
                               {item.quantity}
                               {item.unit && ` ${item.unit}`}
                             </span>
