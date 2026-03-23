@@ -3,8 +3,11 @@
  *
  * Supports:
  * - URL parsing via Schema.org JSON-LD (fetch + extract)
+ * - URL parsing via HTML fallback (WP Recipe Maker, Tasty Recipes, generic)
  * - Text parsing (=== format from import_recipes.py)
  */
+
+import { parse as parseHtml } from "node-html-parser";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -77,7 +80,7 @@ const KNOWN_UNITS = [
   "pints", "pieces", "handfuls",
 ];
 const UNIT_PATTERN = new RegExp(
-  `^(${KNOWN_UNITS.sort((a, b) => b.length - a.length).join("|")})\\.?\\s*`,
+  `^(${KNOWN_UNITS.sort((a, b) => b.length - a.length).join("|")})\\b\\.?\\s*`,
   "i"
 );
 
@@ -305,6 +308,164 @@ function parseRecipeSchema(data: any, url: string): RawRecipe {
   };
 }
 
+// ─── HTML fallback parser ─────────────────────────────────────────────────────
+
+function extractFromHtml(html: string, url: string): RawRecipe | null {
+  const root = parseHtml(html, { lowerCaseTagName: true });
+
+  // ── Detect plugin ─────────────────────────────────────────────────────────
+  const hasWprm = root.querySelector(".wprm-recipe-ingredient") !== null;
+  const hasEasyRecipe = root.querySelector(".easyrecipe") !== null;
+  const hasTasty = root.querySelector(".tasty-recipes") !== null;
+
+  // ── Title ────────────────────────────────────────────────────────────────
+  let name = "";
+  if (hasWprm) name = root.querySelector(".wprm-recipe-name")?.text.trim() ?? "";
+  else if (hasEasyRecipe) name = root.querySelector(".ERSName")?.text.trim() ?? "";
+  else if (hasTasty) name = root.querySelector(".tasty-recipes-title")?.text.trim() ?? "";
+  if (!name) name = root.querySelector("h1")?.text.trim() ?? "";
+  if (!name) return null;
+
+  // ── Servings ─────────────────────────────────────────────────────────────
+  let servings: number | null = null;
+  if (hasWprm) {
+    servings = parseInt(root.querySelector(".wprm-recipe-servings")?.text.trim() ?? "") || null;
+  } else if (hasEasyRecipe) {
+    const s = root.querySelector(".ERSServes [itemprop='recipeYield'], .ERSServes span")?.text.trim() ?? "";
+    servings = parseInt(s.match(/\d+/)?.[0] ?? "") || null;
+  }
+
+  // ── Time ─────────────────────────────────────────────────────────────────
+  let time: number | null = null;
+  if (hasWprm) {
+    const t = root.querySelector(".wprm-recipe-total_time-container .wprm-recipe-time")?.text.trim();
+    if (t) time = parseInt(t) || null;
+  } else if (hasEasyRecipe) {
+    // EasyRecipe uses ISO 8601 in the datetime attribute of <time> elements
+    const totalTimeEl = root.querySelector("time[itemprop='totalTime']");
+    if (totalTimeEl) time = parseDuration(totalTimeEl.getAttribute("datetime")) ?? null;
+    if (!time) {
+      const cookTimeEl = root.querySelector("time[itemprop='cookTime']");
+      if (cookTimeEl) time = parseDuration(cookTimeEl.getAttribute("datetime")) ?? null;
+    }
+  }
+
+  // ── Image ─────────────────────────────────────────────────────────────────
+  let image: string | null = null;
+  if (hasWprm) image = root.querySelector(".wprm-recipe-image img")?.getAttribute("src") ?? null;
+  else if (hasEasyRecipe) image = root.querySelector(".ERSTopRight img")?.getAttribute("src") ?? null;
+  else if (hasTasty) image = root.querySelector(".tasty-recipes-image img")?.getAttribute("src") ?? null;
+
+  // ── Category ──────────────────────────────────────────────────────────────
+  const category = root.querySelector(".wprm-recipe-course")?.text.trim() ?? null;
+
+  // ── Ingredients ───────────────────────────────────────────────────────────
+  const ingredients: RawIngredient[] = [];
+
+  if (hasWprm) {
+    let groupOrder = 0;
+    for (const group of root.querySelectorAll(".wprm-recipe-ingredient-group")) {
+      const groupName = group.querySelector(".wprm-recipe-ingredient-group-name")?.text.trim() || null;
+      for (const item of group.querySelectorAll(".wprm-recipe-ingredient")) {
+        const qty = parseQty(item.querySelector(".wprm-recipe-ingredient-amount")?.text.trim() ?? "");
+        const rawUnit = item.querySelector(".wprm-recipe-ingredient-unit")?.text.trim() ?? null;
+        const unit = rawUnit ? normalizeUnit(rawUnit) : null;
+        const ingName = item.querySelector(".wprm-recipe-ingredient-name")?.text.trim().toLowerCase() ?? item.text.trim().toLowerCase();
+        if (ingName) ingredients.push({ name: ingName, qty, unit, groupName, groupOrder });
+      }
+      groupOrder++;
+    }
+  } else if (hasEasyRecipe) {
+    // EasyRecipe: .ERSSectionHead for group names, li.ingredient for items
+    const ingBlock = root.querySelector(".ERSIngredients");
+    if (ingBlock) {
+      let groupName: string | null = null;
+      let groupOrder = 0;
+      for (const child of ingBlock.childNodes) {
+        const el = child as typeof root;
+        if (!el.tagName) continue;
+        const tag = el.tagName.toLowerCase();
+        const cls = (el.getAttribute?.("class") ?? "").toLowerCase();
+
+        if (cls.includes("erssectionhead")) {
+          if (groupName !== null) groupOrder++;
+          groupName = el.text.trim().replace(/:$/, "") || null;
+        } else if (tag === "ul" || tag === "ol") {
+          for (const li of el.querySelectorAll("li")) {
+            const text = li.text.trim();
+            if (!text) continue;
+            const parsed = parseIngredientString(text);
+            if (parsed.name) ingredients.push({ ...parsed, groupName, groupOrder });
+          }
+          if (groupName !== null) groupOrder++;
+          groupName = null;
+        }
+      }
+    }
+  } else {
+    // Generic fallback: containers with "ingredient" in class/id
+    const containers = root.querySelectorAll("ul, ol, div").filter((el) => {
+      const cls = (el.getAttribute("class") ?? "").toLowerCase();
+      const id = (el.getAttribute("id") ?? "").toLowerCase();
+      return cls.includes("ingredient") || id.includes("ingredient") ||
+             cls.includes("ingrediente") || id.includes("ingrediente");
+    }).slice(0, 5);
+
+    let groupOrder = 0;
+    for (const container of containers) {
+      for (const li of container.querySelectorAll("li")) {
+        const text = li.text.trim();
+        if (!text) continue;
+        const parsed = parseIngredientString(text);
+        if (parsed.name) ingredients.push({ ...parsed, groupName: null, groupOrder });
+      }
+      if (ingredients.length > 0) break;
+      groupOrder++;
+    }
+  }
+
+  // ── Instructions ──────────────────────────────────────────────────────────
+  const instructions: RawInstruction[] = [];
+
+  if (hasWprm) {
+    for (const group of root.querySelectorAll(".wprm-recipe-instruction-group")) {
+      const sectionName = group.querySelector(".wprm-recipe-instruction-group-name")?.text.trim();
+      if (sectionName) instructions.push({ text: sectionName, isSection: true });
+      for (const step of group.querySelectorAll(".wprm-recipe-instruction")) {
+        const text = step.querySelector(".wprm-recipe-instruction-text")?.text.trim() ?? step.text.trim();
+        if (text) instructions.push({ text, isSection: false });
+      }
+    }
+  } else if (hasTasty) {
+    for (const step of root.querySelectorAll(".tasty-recipes-instructions li, .tasty-recipes-instructions p")) {
+      const text = step.text.trim();
+      if (text) instructions.push({ text, isSection: false });
+    }
+  } else {
+    // Generic fallback
+    const instrContainers = root.querySelectorAll("ul, ol, div").filter((el) => {
+      const cls = (el.getAttribute("class") ?? "").toLowerCase();
+      const id = (el.getAttribute("id") ?? "").toLowerCase();
+      return cls.includes("instruction") || id.includes("instruction") ||
+             cls.includes("step") || id.includes("step") ||
+             cls.includes("preparare") || id.includes("preparare") ||
+             cls.includes("mod-de-preparare") || id.includes("mod-de-preparare");
+    }).slice(0, 3);
+
+    for (const container of instrContainers) {
+      for (const item of container.querySelectorAll("li, p")) {
+        const text = item.text.trim();
+        if (text && text.length > 10) instructions.push({ text, isSection: false });
+      }
+      if (instructions.length > 0) break;
+    }
+  }
+
+  if (!ingredients.length && !instructions.length) return null;
+
+  return { name, servings, time, difficulty: null, category, link: url, image, favorite: false, ingredients, instructions };
+}
+
 // ─── URL fetcher ──────────────────────────────────────────────────────────────
 
 async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
@@ -350,6 +511,10 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
     }
   }
 
+  // Fallback: try generic HTML parsing
+  const htmlResult = extractFromHtml(html, url);
+  if (htmlResult) return htmlResult;
+
   return {
     name: "",
     servings: null,
@@ -361,7 +526,7 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
     favorite: false,
     ingredients: [],
     instructions: [],
-    error: `Nu s-a găsit Schema.org Recipe markup la ${url}`,
+    error: `Nu s-a putut extrage rețeta de la ${url}`,
     url,
   };
 }
@@ -483,6 +648,122 @@ export function parseTextFormat(content: string): RawRecipe[] {
   return recipes;
 }
 
+// ─── Free-form text parser (# Ingredients / # Steps format) ─────────────────
+
+function parseFreeFormBlock(content: string): RawRecipe | null {
+  const lines = content.split("\n").map((l) => l.trim());
+
+  // First non-empty line = title
+  let title = "";
+  let startIdx = 0;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]) {
+      title = lines[i].replace(/^[\d.\-–•*]+\s*/, "").trim();
+      startIdx = i + 1;
+      break;
+    }
+  }
+  if (!title) return null;
+
+  let servings: number | null = null;
+  let time: number | null = null;
+  let link: string | null = null;
+  type Section = "ingredients" | "steps" | "description" | "extra" | null;
+  let section: Section = null;
+
+  const ingredientGroups: { groupName: string | null; items: string[] }[] = [];
+  const instructions: RawInstruction[] = [];
+  let currentGroupName: string | null = null;
+  let currentIngredients: string[] = [];
+
+  function flushIngredients() {
+    if (currentIngredients.length > 0) {
+      ingredientGroups.push({ groupName: currentGroupName, items: [...currentIngredients] });
+      currentIngredients = [];
+    }
+    currentGroupName = null;
+  }
+
+  for (let i = startIdx; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+
+    // Section header
+    if (line.startsWith("#")) {
+      const sl = line.replace(/^#+\s*/, "").replace(/:$/, "").toLowerCase();
+      if (/ingredient|ingrediente/.test(sl)) {
+        flushIngredients(); section = "ingredients";
+      } else if (/step|method|preparare|mod de preparare|instruction|direction/.test(sl)) {
+        flushIngredients(); section = "steps";
+      } else if (/description|descriere/.test(sl)) {
+        flushIngredients(); section = "description";
+      } else {
+        flushIngredients(); section = "extra";
+      }
+      continue;
+    }
+
+    // Servings (with or without colon)
+    if (/^(servings?|por[țt]ii|yields?)\s*:?\s*\d/i.test(line)) {
+      const m = line.match(/(\d+)/);
+      if (m) servings = parseInt(m[1]);
+      continue;
+    }
+
+    // Time
+    if (/^(prep time|cook time|total time|timp|time|durat)\s*:/i.test(line)) {
+      const h = line.match(/(\d+)\s*(?:h|ore|ora|hour)/i);
+      const m = line.match(/(\d+)\s*(?:m|min|minute)/i);
+      if (h || m) time = (h ? parseInt(h[1]) * 60 : 0) + (m ? parseInt(m[1]) : 0) || null;
+      continue;
+    }
+
+    // Link
+    if (/^link\s*:/i.test(line)) {
+      link = line.replace(/^link\s*:\s*/i, "").trim();
+      continue;
+    }
+
+    if (section === "ingredients") {
+      const clean = line.replace(/^[-–•*▢☐□▪◦✓✔→◆■●○]\s*/, "").trim();
+      if (!clean) continue;
+      const hasNumber = /[\d½⅓⅔¼¾]/.test(clean);
+      const wordCount = clean.split(/\s+/).length;
+      // Group name: no number, ≤2 words, or ends with ":"
+      // Everything else (including no-qty ingredients like "pátrunjel verde") → ingredient
+      if (!hasNumber && (wordCount <= 2 || clean.endsWith(":"))) {
+        flushIngredients();
+        currentGroupName = clean.replace(/:$/, "");
+      } else {
+        currentIngredients.push(clean);
+      }
+    } else if (section === "steps") {
+      const clean = line.replace(/^[\d.)–\-•*]\s*/, "").trim();
+      if (clean.length >= 5) instructions.push({ text: clean, isSection: false });
+    }
+  }
+
+  flushIngredients();
+
+  if (ingredientGroups.length === 0 && instructions.length === 0) return null;
+
+  const ingredients: RawIngredient[] = [];
+  ingredientGroups.forEach((group, groupOrder) => {
+    for (const item of group.items) {
+      const parsed = parseIngredientString(item);
+      if (parsed.name) ingredients.push({ ...parsed, groupName: group.groupName, groupOrder });
+    }
+  });
+
+  return { name: title, servings, time, difficulty: null, category: null, link, image: null, favorite: false, ingredients, instructions };
+}
+
+function parseFreeFormText(content: string): RawRecipe[] {
+  // Split on recipe separators (4+ dashes on their own line)
+  const blocks = content.split(/\n\s*-{4,}\s*\n/).filter((b) => b.trim());
+  return blocks.map(parseFreeFormBlock).filter((r): r is RawRecipe => r !== null);
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function parseUrls(urls: string[]): Promise<RawRecipe[]> {
@@ -491,5 +772,8 @@ export async function parseUrls(urls: string[]): Promise<RawRecipe[]> {
 
 export function parseText(text: string): RawRecipe[] {
   if (!text.trim()) return [];
-  return parseTextFormat(text);
+  // === format (export from import_recipes.py)
+  if (text.includes("===")) return parseTextFormat(text);
+  // # Ingredients / # Steps free-form format
+  return parseFreeFormText(text);
 }
