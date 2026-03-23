@@ -29,6 +29,7 @@ export type RecipeData = {
   link: string | null;
   notes: string | null;
   imageUrl: string | null;
+  createdAt: Date;
   ingredients: Array<{
     id: string;
     quantity: number | null;
@@ -458,6 +459,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             {recipe.notes}
           </p>
         )}
+
       </div>
 
       {/* Servings control */}
@@ -584,6 +586,10 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
               </div>
             </div>
           )}
+
+          <p className="mt-4 text-[11px] text-gray-400 dark:text-[#555]">
+            Adăugată {new Date(recipe.createdAt).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" })}
+          </p>
         </div>
 
         {/* Instructions */}

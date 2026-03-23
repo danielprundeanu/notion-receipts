@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
 import { prisma } from "@/lib/db";
+import { parseUrls, parseText, type RawRecipe } from "@/lib/recipe-scraper";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -36,55 +35,6 @@ export type ParsedRecipe = {
   ingredients: ReviewIngredient[];
   instructions: Array<{ text: string; isSection: boolean }>;
 };
-
-// ─── Python subprocess helper ─────────────────────────────────────────────────
-
-function runPythonHandler(mode: string, inputData: object): Promise<unknown[]> {
-  return new Promise((resolve, reject) => {
-    const scriptsDir = path.join(process.cwd(), "..", "scripts");
-    // Caută python3 în locațiile standard (spawn nu moștenește PATH-ul shell-ului)
-    const pythonBin =
-      process.env.PYTHON_BIN ||
-      ["/usr/local/bin/python3", "/usr/bin/python3", "/usr/bin/python", "python3"]
-        .find((p) => {
-          try { require("fs").accessSync(p); return true; } catch { return false; }
-        }) || "python3";
-
-    const proc = spawn(pythonBin, ["web_import_handler.py", "--mode", mode], {
-      cwd: scriptsDir,
-      env: {
-        ...process.env,
-        PATH: process.env.PATH || "/usr/local/bin:/usr/bin:/bin",
-      },
-    });
-
-    let stdout = "";
-    let stderr = "";
-
-    proc.stdout.on("data", (d) => (stdout += d.toString()));
-    proc.stderr.on("data", (d) => (stderr += d.toString()));
-
-    proc.stdin.write(JSON.stringify(inputData));
-    proc.stdin.end();
-
-    proc.on("close", (code) => {
-      if (code !== 0 && !stdout) {
-        reject(new Error(`Python process exited with code ${code}: ${stderr}`));
-        return;
-      }
-      try {
-        const result = JSON.parse(stdout);
-        resolve(Array.isArray(result) ? result : [result]);
-      } catch {
-        reject(new Error(`JSON parse error. stdout: ${stdout.slice(0, 500)}`));
-      }
-    });
-
-    proc.on("error", (err) => {
-      reject(new Error(`Failed to start Python process: ${err.message}`));
-    });
-  });
-}
 
 // ─── Ingredient matching ──────────────────────────────────────────────────────
 
@@ -172,12 +122,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { type } = body as { type: "urls" | "text" };
 
-    // Call Python subprocess
-    let rawRecipes: unknown[];
+    // Parse recipes using TypeScript scraper
+    let rawRecipes: RawRecipe[];
     if (type === "urls") {
-      rawRecipes = await runPythonHandler("parse-urls", { urls: body.urls });
+      rawRecipes = await parseUrls(body.urls ?? []);
     } else if (type === "text") {
-      rawRecipes = await runPythonHandler("parse-text", { text: body.content });
+      rawRecipes = parseText(body.content ?? "");
     } else {
       return NextResponse.json({ error: "type trebuie să fie 'urls' sau 'text'" }, { status: 400 });
     }
@@ -185,49 +135,40 @@ export async function POST(req: NextRequest) {
     // For each recipe, match ingredients against DB
     const reviewRecipes: ParsedRecipe[] = [];
 
-    for (const raw of rawRecipes) {
-      const r = raw as Record<string, unknown>;
-
+    for (const r of rawRecipes) {
       if (r.error) {
-        // Pass through errors so UI can show them
         reviewRecipes.push({ ...(r as unknown as ParsedRecipe) });
         continue;
       }
 
-      const rawIngredients = (r.ingredients as Array<Record<string, unknown>>) ?? [];
-
       const matchedIngredients: ReviewIngredient[] = await Promise.all(
-        rawIngredients.map(async (ing, idx) => {
-          const name = (ing.name as string) ?? "";
-          const match = name ? await matchIngredient(name) : { status: "new" as const };
+        r.ingredients.map(async (ing, idx) => {
+          const match = ing.name ? await matchIngredient(ing.name) : { status: "new" as const };
           return {
-            name,
-            qty: (ing.qty as number | null) ?? null,
-            unit: (ing.unit as string | null) ?? null,
-            groupName: (ing.groupName as string | null) ?? null,
-            groupOrder: (ing.groupOrder as number) ?? 0,
+            name: ing.name,
+            qty: ing.qty,
+            unit: ing.unit,
+            groupName: ing.groupName,
+            groupOrder: ing.groupOrder,
             order: idx,
             match,
           };
         })
       );
 
-      const instructions = (r.instructions as Array<Record<string, unknown>>) ?? [];
+      const instructions = r.instructions;
 
       reviewRecipes.push({
-        name: (r.name as string) ?? "Rețetă fără nume",
-        servings: (r.servings as number | null) ?? null,
-        time: (r.time as number | null) ?? null,
-        difficulty: (r.difficulty as string | null) ?? null,
-        category: (r.category as string | null) ?? null,
-        link: (r.link as string | null) ?? null,
-        image: (r.image as string | null) ?? null,
-        favorite: (r.favorite as boolean) ?? false,
+        name: r.name || "Rețetă fără nume",
+        servings: r.servings,
+        time: r.time,
+        difficulty: r.difficulty,
+        category: r.category,
+        link: r.link,
+        image: r.image,
+        favorite: r.favorite,
         ingredients: matchedIngredients,
-        instructions: instructions.map((inst) => ({
-          text: (inst.text as string) ?? "",
-          isSection: (inst.isSection as boolean) ?? false,
-        })),
+        instructions,
       });
     }
 

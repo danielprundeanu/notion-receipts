@@ -527,7 +527,7 @@ def fuzzy_match(name: str, grocery_items: dict[str, dict], threshold: float = 0.
 # Persistare alegeri utilizator
 # ──────────────────────────────────────────────────────────────
 
-CHOICES_FILE = "data/local/unit_choices.json"
+CHOICES_FILE = "data/unit_choices.json"
 
 
 def load_choices() -> dict:

@@ -284,6 +284,126 @@ function GroceryItemEditModal({
   );
 }
 
+// ─── Instructions Editor ─────────────────────────────────────────────────────
+
+function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const lines = value ? value.split("\n") : [""];
+
+  function update(idx: number, newLine: string) {
+    const next = [...lines];
+    next[idx] = newLine;
+    onChange(next.join("\n"));
+  }
+
+  function focusAt(idx: number, end = true) {
+    setTimeout(() => {
+      const el = inputsRef.current[idx];
+      if (!el) return;
+      el.focus();
+      if (end) el.setSelectionRange(el.value.length, el.value.length);
+    }, 0);
+  }
+
+  function handlePaste(idx: number, isSection: boolean, e: React.ClipboardEvent<HTMLInputElement>) {
+    const text = e.clipboardData.getData("text");
+    if (!text.includes("\n")) return; // single line — let browser handle it normally
+    e.preventDefault();
+    const pasted = text.split("\n").map((l) => l.trimEnd()).filter((l) => l !== "" || true); // keep empty lines
+    // For the first pasted line, prepend the section prefix if current line is a section
+    const prefix = isSection ? "# " : "";
+    const next = [...lines];
+    next.splice(idx, 1, ...pasted.map((l, i) => (i === 0 ? prefix + l : l)));
+    onChange(next.join("\n"));
+    focusAt(idx + pasted.length - 1);
+  }
+
+  function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const next = [...lines];
+      next.splice(idx + 1, 0, "");
+      onChange(next.join("\n"));
+      focusAt(idx + 1);
+    } else if (e.key === "Backspace" && lines[idx] === "" && lines.length > 1) {
+      e.preventDefault();
+      const next = lines.filter((_, i) => i !== idx);
+      onChange(next.join("\n"));
+      focusAt(Math.max(0, idx - 1));
+    } else if (e.key === "ArrowUp" && idx > 0) {
+      e.preventDefault();
+      focusAt(idx - 1);
+    } else if (e.key === "ArrowDown" && idx < lines.length - 1) {
+      e.preventDefault();
+      focusAt(idx + 1);
+    }
+  }
+
+  function addStep() {
+    onChange(value ? `${value}\n` : "");
+    focusAt(lines.length);
+  }
+
+  function addSection() {
+    onChange(value ? `${value}\n# ` : "# ");
+    focusAt(lines.length);
+  }
+
+  let stepCounter = 0;
+
+  return (
+    <div className="border border-gray-200 dark:border-[#3a3a3a] rounded-xl overflow-hidden">
+      {lines.map((line, idx) => {
+        const isSection = line.startsWith("# ");
+        if (!isSection && line.trim()) stepCounter++;
+        const stepNum = !isSection && line.trim() ? stepCounter : null;
+
+        return (
+          <div
+            key={idx}
+            className={`flex items-center gap-3 px-3 ${
+              isSection
+                ? "py-2 bg-gray-50 dark:bg-[#2a2a2a] border-b border-gray-200 dark:border-[#3a3a3a]"
+                : "py-1.5 border-b border-gray-100 dark:border-[#262626] last:border-b-0"
+            }`}
+          >
+            {isSection ? (
+              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest w-5 shrink-0">#</span>
+            ) : (
+              <span className="text-xs text-gray-300 dark:text-[#444] w-5 shrink-0 text-right tabular-nums">
+                {stepNum ?? ""}
+              </span>
+            )}
+            <input
+              ref={(el) => { inputsRef.current[idx] = el; }}
+              value={isSection ? line.slice(2) : line}
+              onChange={(e) => update(idx, isSection ? `# ${e.target.value}` : e.target.value)}
+              onKeyDown={(e) => handleKeyDown(idx, e)}
+              onPaste={(e) => handlePaste(idx, isSection, e)}
+              placeholder={isSection ? "Section header…" : "Describe this step…"}
+              className={`flex-1 text-sm bg-transparent border-0 focus:outline-none placeholder:text-gray-300 dark:placeholder:text-[#444] ${
+                isSection
+                  ? "font-semibold text-orange-600 dark:text-orange-400"
+                  : "text-gray-700 dark:text-[#c0c0c0]"
+              }`}
+            />
+          </div>
+        );
+      })}
+      <div className="px-3 py-2 flex items-center gap-3 bg-white dark:bg-[#1f1f1f]">
+        <button type="button" onClick={addStep}
+          className="text-xs text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1 transition-colors">
+          <Plus size={11} /> Add step
+        </button>
+        <button type="button" onClick={addSection}
+          className="text-xs text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#9a9a9a] font-medium flex items-center gap-1 transition-colors">
+          <Plus size={11} /> Add section
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Field label ─────────────────────────────────────────────────────────────
 
 function Label({ children }: { children: React.ReactNode }) {
@@ -743,7 +863,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
               </div>
 
               {/* Ingredient rows */}
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-3">
                 {/* Column headers — desktop only */}
                 <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 mb-1 px-0.5">
                   {["Qty", "Unit", "Ingredient", "Notes", ""].map((h) => (
@@ -840,17 +960,8 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
 
       {/* ── Instructions ─────────────────────────────────────────── */}
       <div>
-        <div className="flex items-center justify-between mb-2">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">Instructions</h2>
-          <span className="text-xs text-gray-400 dark:text-[#555555]">Lines starting with <code className="bg-gray-100 dark:bg-[#2a2a2a] px-1 rounded"># </code> become section headers</span>
-        </div>
-        <textarea
-          value={instructionsText}
-          onChange={(e) => setInstructionsText(e.target.value)}
-          placeholder={"# Prep\nChop the onions and garlic.\nHeat oil in a pan.\n\n# Cook\nAdd onions and cook until soft."}
-          rows={12}
-          className="w-full px-3 py-2.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-400 resize-y font-mono leading-relaxed text-gray-800 dark:text-[#d4d4d4] placeholder:font-sans placeholder:text-gray-400 dark:placeholder:text-[#555555]"
-        />
+        <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-2">Instructions</h2>
+        <InstructionsEditor value={instructionsText} onChange={setInstructionsText} />
       </div>
 
       {/* Error */}

@@ -54,5 +54,11 @@
     "unit": "g",
     "rate": 20.0,
     "from_unit": "piece"
+  },
+  "fresh coriander|cup": {
+    "action": "use_unit",
+    "unit": "handful",
+    "rate": 1.8,
+    "from_unit": "cup"
   }
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ArrowRight, Upload, Link2, FileText,
   CheckCircle, AlertCircle, PlusCircle, Loader2,
-  ChevronDown, ChevronUp, X, Check,
+  ChevronDown, ChevronUp, X, Check, Search,
 } from "lucide-react";
 import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
 
@@ -75,12 +75,32 @@ function RecipeReviewCard({
   recipe,
   index,
   onRemove,
+  onImageChange,
 }: {
   recipe: ParsedRecipe & { error?: string };
   index: number;
   onRemove: () => void;
+  onImageChange: (url: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const imgRef = useRef<HTMLInputElement>(null);
+
+  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/import/upload-image", { method: "POST", body: form });
+      const data = await res.json();
+      if (res.ok) onImageChange(data.url);
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
 
   if ((recipe as { error?: string }).error) {
     return (
@@ -143,6 +163,19 @@ function RecipeReviewCard({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {/* Image upload */}
+          <button
+            onClick={() => imgRef.current?.click()}
+            title={recipe.image ? "Schimbă imaginea" : "Adaugă imagine"}
+            className={`transition-colors ${recipe.image ? "text-orange-400 hover:text-orange-600" : "text-gray-300 dark:text-[#444] hover:text-orange-400"}`}
+          >
+            {uploading ? <Loader2 size={16} className="animate-spin" /> : (
+              recipe.image
+                ? <img src={recipe.image} className="w-5 h-5 rounded object-cover" alt="" />
+                : <Upload size={16} />
+            )}
+          </button>
+          <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           <button
             onClick={onRemove}
             className="text-gray-300 dark:text-[#444] hover:text-red-500 transition-colors"
@@ -201,9 +234,27 @@ function ConflictRow({
   const [mode, setMode] = useState<"map" | "new">(
     ing.match.status === "similar" ? "map" : "new"
   );
+  const [newName, setNewName] = useState(ing.name);
   const [newUnit, setNewUnit] = useState(ing.unit ?? "g");
   const [newCategory, setNewCategory] = useState("");
   const [selectedId, setSelectedId] = useState(ing.match.groceryItemId ?? "");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; unit: string | null }>>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (searchQuery.length < 2) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/import/search-items?q=${encodeURIComponent(searchQuery)}`);
+        setSearchResults(await res.json());
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const apply = () => {
     if (mode === "map" && selectedId) {
@@ -222,7 +273,7 @@ function ConflictRow({
         ...ing,
         match: { ...ing.match, status: "new" },
         // @ts-expect-error – newItem is a runtime extension
-        newItem: { name: ing.name, unit: newUnit, category: newCategory || null },
+        newItem: { name: newName.trim() || ing.name, unit: newUnit, category: newCategory || null },
       });
     }
   };
@@ -268,51 +319,82 @@ function ConflictRow({
 
       {mode === "map" && (
         <div className="space-y-2">
-          {ing.match.candidates && ing.match.candidates.length > 0 ? (
-            <div className="space-y-1">
-              {ing.match.candidates.map((c) => (
-                <label key={c.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a2a2a] cursor-pointer">
-                  <input
-                    type="radio"
-                    name={`map-${recipeIndex}-${ingIndex}`}
-                    value={c.id}
-                    checked={selectedId === c.id}
-                    onChange={() => setSelectedId(c.id)}
-                    className="text-orange-500"
-                  />
-                  <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
-                  {c.unit && <span className="text-xs text-gray-400 dark:text-[#555]">({c.unit})</span>}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-400 dark:text-[#555]">Nu s-au găsit candidați. Alege &ldquo;Creează nou&rdquo;.</p>
-          )}
+          {/* Search input */}
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555]" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Caută în baza de date..."
+              className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
+          </div>
+
+          {/* Results: search results take priority, otherwise show candidates */}
+          {(() => {
+            const list = searchQuery.length >= 2 ? searchResults : (ing.match.candidates ?? []);
+            if (list.length === 0) {
+              return searchQuery.length >= 2
+                ? <p className="text-xs text-gray-400 dark:text-[#555]">Niciun rezultat pentru &ldquo;{searchQuery}&rdquo;.</p>
+                : <p className="text-xs text-gray-400 dark:text-[#555]">Nu s-au găsit candidați. Caută sau alege &ldquo;Creează nou&rdquo;.</p>;
+            }
+            return (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {list.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a2a2a] cursor-pointer">
+                    <input
+                      type="radio"
+                      name={`map-${recipeIndex}-${ingIndex}`}
+                      value={c.id}
+                      checked={selectedId === c.id}
+                      onChange={() => setSelectedId(c.id)}
+                      className="text-orange-500"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
+                    {c.unit && <span className="text-xs text-gray-400 dark:text-[#555]">({c.unit})</span>}
+                  </label>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       )}
 
       {mode === "new" && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
           <div>
-            <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Unitate</label>
-            <select
-              value={newUnit}
-              onChange={(e) => setNewUnit(e.target.value)}
-              className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
-            >
-              {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
-            </select>
+            <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Nume ingredient</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
           </div>
-          <div>
-            <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Categorie</label>
-            <select
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
-            >
-              <option value="">— selectează —</option>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Unitate</label>
+              <select
+                value={newUnit}
+                onChange={(e) => setNewUnit(e.target.value)}
+                className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
+              >
+                {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Categorie</label>
+              <select
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
+              >
+                <option value="">— selectează —</option>
+                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
           </div>
         </div>
       )}
@@ -387,6 +469,14 @@ export default function ImportPage() {
       setInputMode("text");
     };
     reader.readAsText(file, "utf-8");
+  }
+
+  // ── Update recipe image ────────────────────────────────────────────────────
+
+  function updateImage(ri: number, url: string) {
+    setRecipes((prev) =>
+      prev.map((r, idx) => idx === ri ? { ...r, image: url } : r)
+    );
   }
 
   // ── Update ingredient resolution ───────────────────────────────────────────
@@ -605,6 +695,7 @@ export default function ImportPage() {
                 recipe={recipe as ParsedRecipe & { error?: string }}
                 index={i}
                 onRemove={() => setRecipes((prev) => prev.filter((_, idx) => idx !== i))}
+                onImageChange={(url) => updateImage(i, url)}
               />
             ))}
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getRecipes } from "@/lib/actions";
-import { Clock, Users, Star, Search, Plus } from "lucide-react";
+import { Clock, Users, Star, Search, Plus, Download } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const CATEGORIES = [
@@ -40,6 +40,13 @@ export default async function RecipesPage({
           <div className="md:hidden">
             <ThemeToggle compact />
           </div>
+          <Link
+            href="/recipes/import"
+            className="p-2 text-gray-500 dark:text-[#787878] hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+            title="Import rețete"
+          >
+            <Download size={18} />
+          </Link>
           <Link
             href="/recipes/new"
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"

@@ -1582,7 +1582,9 @@ class RecipeScraper:
         # Acceptă: "500g", "500 g", "1/2 cup", "1 1/2 tbsp", "1/4 onion", "2 cloves"
         # Ordinea e importantă: fracție cu număr mixt, apoi fracție simplă, apoi număr
         # Unități cunoscute (opțional) - folosim word boundary pentru a evita match parțiale
-        units = r'(?:cups?|tsps?|teaspoons?|tbsps?|tablespoons?|ozs?|ounces?|grams?|kgs?|mls?|liters?|lbs?|pounds?|g|ml|l)\b'
+        # \b nu funcționează când unitatea e lipită de o literă mare (ex: tbspOlive)
+        # Folosim lookahead: unitatea trebuie urmată de spațiu, literă mare, cifră, EOF sau virgulă
+        units = r'(?:tablespoons?|teaspoons?|tbsps?\.?|cups?|tsps?\.?|ounces?|ozs?|pounds?|lbs?|grams?|kgs?|mls?|liters?|g|ml|l)(?=\s|[A-Z,]|$)'
         pattern = rf'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*({units})?\s*'
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
