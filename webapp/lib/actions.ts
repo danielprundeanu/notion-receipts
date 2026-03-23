@@ -161,7 +161,14 @@ export async function getRecipes(search?: string, category?: string, favorites?:
   return prisma.recipe.findMany({
     where: {
       AND: [
-        search ? { name: { contains: search, mode: "insensitive" } } : {},
+        search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { ingredients: { some: { groceryItem: { name: { contains: search, mode: "insensitive" } } } } },
+              ],
+            }
+          : {},
         category ? { category: { contains: category, mode: "insensitive" } } : {},
         favorites ? { favorite: true } : {},
       ],
@@ -197,7 +204,12 @@ export async function getRecipe(id: string) {
 
 export async function searchRecipesForPlanner(query: string) {
   return prisma.recipe.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
+    where: {
+      OR: [
+        { name: { contains: query, mode: "insensitive" } },
+        { ingredients: { some: { groceryItem: { name: { contains: query, mode: "insensitive" } } } } },
+      ],
+    },
     take: 10,
     orderBy: { name: "asc" },
     select: { id: true, name: true, category: true, servings: true, imageUrl: true },
@@ -208,7 +220,14 @@ export async function getRecipesPanel(search?: string, category?: string, favori
   return prisma.recipe.findMany({
     where: {
       AND: [
-        search ? { name: { contains: search, mode: "insensitive" } } : {},
+        search
+          ? {
+              OR: [
+                { name: { contains: search, mode: "insensitive" } },
+                { ingredients: { some: { groceryItem: { name: { contains: search, mode: "insensitive" } } } } },
+              ],
+            }
+          : {},
         category ? { category: { contains: category, mode: "insensitive" } } : {},
         favorites ? { favorite: true } : {},
       ],

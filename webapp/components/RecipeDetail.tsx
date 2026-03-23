@@ -324,6 +324,15 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const [, startTransition] = useTransition();
   const [showPlanner, setShowPlanner] = useState(false);
   const [plannerServings, setPlannerServings] = useState(0);
+  const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
+
+  function toggleIngredient(id: string) {
+    setCheckedIngredients((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   useEffect(() => {
     const weekStart = getMondayOf(new Date());
@@ -514,26 +523,39 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       {group.name ?? `Part ${groupOrder}`}
                     </p>
                   )}
-                  <ul className="space-y-2">
-                    {group.items.map((ing) => (
-                      <li key={ing.id} className="flex items-baseline gap-2 text-sm">
-                        <span className="w-1.5 h-1.5 rounded-full bg-orange-400 shrink-0 mt-[5px]" />
-                        <span>
-                          {ing.quantity != null && (
-                            <span className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
-                              {formatQty(ing.quantity, scale)}
-                              {ing.unit ? ` ${ing.unit}` : ""}
-                            </span>
-                          )}{" "}
-                          <span className="text-gray-800 dark:text-[#d4d4d4]">
-                            {ing.groceryItem?.name ?? "—"}
+                  <ul className="space-y-3">
+                    {group.items.map((ing) => {
+                      const checked = checkedIngredients.has(ing.id);
+                      return (
+                        <li
+                          key={ing.id}
+                          className="flex items-start gap-3 text-sm cursor-pointer select-none"
+                          onClick={() => toggleIngredient(ing.id)}
+                        >
+                          <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#555]"}`}>
+                            {checked && (
+                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                                <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            )}
                           </span>
-                          {ing.notes && (
-                            <span className="text-gray-500 dark:text-[#787878]"> · {ing.notes}</span>
-                          )}
-                        </span>
-                      </li>
-                    ))}
+                          <span className={checked ? "line-through text-gray-400 dark:text-[#555]" : ""}>
+                            {ing.quantity != null && (
+                              <span className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+                                {formatQty(ing.quantity, scale)}
+                                {ing.unit ? ` ${ing.unit}` : ""}
+                              </span>
+                            )}{" "}
+                            <span className="text-gray-800 dark:text-[#d4d4d4]">
+                              {ing.groceryItem?.name ?? "—"}
+                            </span>
+                            {ing.notes && (
+                              <span className="text-gray-500 dark:text-[#787878]"> · {ing.notes}</span>
+                            )}
+                          </span>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               ))}
