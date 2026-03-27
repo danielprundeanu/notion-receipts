@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/core";
 import {
   getWeekPlan,
+  getWeekNutrition,
   addToWeekPlan,
   removeFromWeekPlan,
   updateWeekPlanServings,
@@ -699,6 +700,7 @@ function RecipeSelectorModal({
 export default function PlannerPage() {
   const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()));
   const [plans, setPlans] = useState<PlanEntry[]>([]);
+  const [dayNutrition, setDayNutrition] = useState<Record<number, { kcal: number; carbs: number; fat: number; protein: number }>>({});
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [modal, setModal] = useState<{ day: number; meal: MealType } | null>(
     null
@@ -713,8 +715,12 @@ export default function PlannerPage() {
 
   const loadPlans = useCallback(async () => {
     setLoadingPlans(true);
-    const data = await getWeekPlan(weekStart.toISOString());
+    const [data, nutrition] = await Promise.all([
+      getWeekPlan(weekStart.toISOString()),
+      getWeekNutrition(weekStart.toISOString()),
+    ]);
     setPlans(data as PlanEntry[]);
+    setDayNutrition(nutrition);
     setLoadingPlans(false);
   }, [weekStart]);
 
@@ -729,6 +735,7 @@ export default function PlannerPage() {
   async function handleRemove(id: string) {
     setPlans((prev) => prev.filter((p) => p.id !== id));
     await removeFromWeekPlan(id);
+    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
   }
 
   async function handleServingsChange(id: string, newServings: number) {
@@ -736,6 +743,7 @@ export default function PlannerPage() {
       prev.map((p) => (p.id === id ? { ...p, servings: newServings } : p))
     );
     await updateWeekPlanServings(id, newServings);
+    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -781,6 +789,7 @@ export default function PlannerPage() {
     setPlans((prev) =>
       prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p))
     );
+    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
   }
 
   const weekNav = (
@@ -878,6 +887,11 @@ export default function PlannerPage() {
                         {day}
                       </span>
                       <span className="font-bold text-sm">{date.getDate()}</span>
+                      {dayNutrition[i] && (
+                        <span className="text-[9px] font-medium opacity-80 leading-tight">
+                          {Math.round(dayNutrition[i].kcal)}
+                        </span>
+                      )}
                       {hasEntries && mobileDay !== i && (
                         <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-orange-400" />
                       )}
@@ -934,6 +948,7 @@ export default function PlannerPage() {
                     const isToday =
                       date.toLocaleDateString() ===
                       new Date().toLocaleDateString();
+                    const nut = dayNutrition[i];
                     return (
                       <div key={day} className="text-center">
                         <span
@@ -950,6 +965,16 @@ export default function PlannerPage() {
                         >
                           {date.getDate()}
                         </div>
+                        {nut && (
+                          <div className="mt-1 space-y-0.5">
+                            <div className="text-[10px] font-semibold text-gray-500 dark:text-[#787878]">
+                              {Math.round(nut.kcal)} kcal
+                            </div>
+                            <div className="text-[9px] text-gray-400 dark:text-[#555555] leading-tight">
+                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · F {Math.round(nut.fat)}g
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -996,6 +1021,7 @@ export default function PlannerPage() {
             onSelect={(entry) => {
               setPlans((prev) => [...prev, entry]);
               setModal(null);
+              getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
             }}
           />
         )}

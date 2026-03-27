@@ -161,7 +161,7 @@ export default function GroceryListPage() {
                           >
                             {done && <Check size={14} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`flex-1 text-[15px] ${done ? "line-through decoration-orange-500 text-gray-400 dark:text-[#555555]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
+                          <span className={`flex-1 text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#555555]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
                             {item.name}
                           </span>
                           {item.quantity > 0 && (

@@ -48,7 +48,7 @@ export async function getGroceryItemDetails(id: string) {
     where: { id },
     select: {
       id: true, name: true, unit: true, unit2: true,
-      conversion: true, kcal: true, carbs: true, fat: true, protein: true,
+      conversion: true, kcal: true, carbs: true, fat: true, protein: true, unitWeight: true,
     },
   });
 }
@@ -274,6 +274,50 @@ export async function getWeekPlan(weekStartIso: string) {
   });
 }
 
+export async function getWeekNutrition(
+  weekStartIso: string
+): Promise<Record<number, { kcal: number; carbs: number; fat: number; protein: number }>> {
+  const weekStart = new Date(weekStartIso);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const plans = await prisma.weekPlan.findMany({
+    where: { weekStart: { gte: weekStart, lt: weekEnd } },
+    include: {
+      recipe: {
+        select: {
+          servings: true,
+          ingredients: { include: { groceryItem: true } },
+        },
+      },
+    },
+  });
+
+  const totals: Record<number, { kcal: number; carbs: number; fat: number; protein: number }> = {};
+
+  for (const plan of plans) {
+    const recipeServings = plan.recipe.servings || 1;
+    const scale = plan.servings / recipeServings;
+
+    for (const ing of plan.recipe.ingredients) {
+      if (!ing.groceryItem || !ing.quantity) continue;
+      const gi = ing.groceryItem;
+      if (!gi.kcal && !gi.protein) continue;
+      const isMassUnit = gi.unit === "g" || gi.unit === "ml";
+      const gramFactor = isMassUnit ? 1 : gi.unitWeight;
+      if (!gramFactor) continue;
+      const factor = (ing.quantity * scale * gramFactor) / 100;
+      if (!totals[plan.dayOfWeek]) totals[plan.dayOfWeek] = { kcal: 0, carbs: 0, fat: 0, protein: 0 };
+      totals[plan.dayOfWeek].kcal    += (gi.kcal    ?? 0) * factor;
+      totals[plan.dayOfWeek].carbs   += (gi.carbs   ?? 0) * factor;
+      totals[plan.dayOfWeek].fat     += (gi.fat     ?? 0) * factor;
+      totals[plan.dayOfWeek].protein += (gi.protein ?? 0) * factor;
+    }
+  }
+
+  return totals;
+}
+
 export async function addToWeekPlan(data: {
   recipeId: string;
   weekStartIso: string;
@@ -400,6 +444,7 @@ export async function updateGroceryItem(
     carbs?: number | null;
     fat?: number | null;
     protein?: number | null;
+    unitWeight?: number | null;
   }
 ): Promise<void> {
   await prisma.groceryItem.update({ where: { id }, data });
@@ -419,6 +464,7 @@ export async function getGroceryItems() {
       carbs: true,
       fat: true,
       protein: true,
+      unitWeight: true,
     },
   });
 }

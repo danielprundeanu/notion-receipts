@@ -8,7 +8,7 @@ import {
   CheckCircle, AlertCircle, PlusCircle, Loader2,
   ChevronDown, ChevronUp, X, Check, Search,
 } from "lucide-react";
-import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
+import type { ParsedRecipe, ReviewIngredient, UnitConflict } from "@/app/api/import/parse/route";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -410,6 +410,106 @@ function ConflictRow({
   );
 }
 
+// ─── Unit conflict resolver ───────────────────────────────────────────────────
+
+function UnitConflictRow({
+  recipeIndex,
+  ingIndex,
+  ing,
+  recipeName,
+  onUpdate,
+}: {
+  recipeIndex: number;
+  ingIndex: number;
+  ing: ReviewIngredient;
+  recipeName: string;
+  onUpdate: (ri: number, ii: number, updated: ReviewIngredient) => void;
+}) {
+  const conflict = ing.unitConflict!;
+  const [targetUnit, setTargetUnit] = useState(conflict.targetUnit ?? conflict.allowedUnits[0]);
+  const [factor, setFactor] = useState(conflict.factor?.toString() ?? "");
+  const resolved = conflict.autoResolved || (factor !== "" && !isNaN(parseFloat(factor)));
+
+  function apply() {
+    const f = parseFloat(factor);
+    if (isNaN(f) || f <= 0) return;
+    onUpdate(recipeIndex, ingIndex, {
+      ...ing,
+      unitConflict: { ...conflict, autoResolved: true, targetUnit, factor: f },
+    });
+  }
+
+  return (
+    <div className={`border rounded-xl p-4 space-y-3 ${
+      conflict.autoResolved
+        ? "border-green-200 dark:border-green-900 bg-green-50/50 dark:bg-green-950/10"
+        : "border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/10"
+    }`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">
+            &ldquo;{ing.name}&rdquo;
+          </p>
+          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">
+            {recipeName} · {ing.qty} <strong>{conflict.foreignUnit}</strong>
+            {" → "}unități permise: <strong>{conflict.allowedUnits.join(", ")}</strong>
+          </p>
+        </div>
+        {conflict.autoResolved ? (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 font-medium shrink-0">
+            <Check size={10} /> auto
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-medium shrink-0">
+            <AlertCircle size={10} /> conversie
+          </span>
+        )}
+      </div>
+
+      {conflict.autoResolved ? (
+        <p className="text-xs text-green-700 dark:text-green-400">
+          1 {conflict.foreignUnit} = {conflict.factor} {conflict.targetUnit}
+          {" · "}rezultat: {ing.qty != null ? +(ing.qty * conflict.factor!).toFixed(4) : "?"} {conflict.targetUnit}
+        </p>
+      ) : (
+        <div className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">
+              1 {conflict.foreignUnit} =
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={factor}
+              onChange={(e) => setFactor(e.target.value)}
+              placeholder="ex: 240"
+              className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </div>
+          <div className="w-28">
+            <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">unitate țintă</label>
+            <select
+              value={targetUnit}
+              onChange={(e) => setTargetUnit(e.target.value)}
+              className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
+            >
+              {conflict.allowedUnits.map((u) => <option key={u} value={u}>{u}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={apply}
+            disabled={!resolved}
+            className="px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40"
+          >
+            Aplică
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function ImportPage() {
@@ -502,17 +602,33 @@ export default function ImportPage() {
     setError(null);
     setLoading(true);
     try {
-      // Build payload — resolve ingredient references
+      // Build payload — resolve ingredient references + apply unit conversions
+      const newUnitRules: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }> = [];
+
       const payload = recipes.filter((r) => !(r as { error?: string }).error).map((r) => ({
         ...r,
         ingredients: r.ingredients.map((ing) => {
           const ext = ing as ReviewIngredient & {
             newItem?: { name: string; unit: string | null; category: string | null };
           };
+
+          // Apply unit conversion if needed
+          let qty = ing.qty;
+          let unit = ing.unit;
+          const uc = ing.unitConflict;
+          if (uc?.targetUnit && uc.factor != null) {
+            qty = qty != null ? +(qty * uc.factor).toFixed(6) : null;
+            unit = uc.targetUnit;
+            // Collect new rules (not previously auto-resolved from file)
+            if (!uc.autoResolved) {
+              newUnitRules.push({ name: ing.name, foreignUnit: uc.foreignUnit, targetUnit: uc.targetUnit, factor: uc.factor });
+            }
+          }
+
           return {
             name: ing.name,
-            qty: ing.qty,
-            unit: ing.unit,
+            qty,
+            unit,
             groupName: ing.groupName,
             groupOrder: ing.groupOrder,
             order: ing.order,
@@ -521,7 +637,7 @@ export default function ImportPage() {
               : null,
             newItem: ing.match.status === "new" ? (ext.newItem ?? {
               name: ing.name,
-              unit: ing.unit ?? "piece",
+              unit: unit ?? "piece",
               category: null,
             }) : undefined,
           };
@@ -531,7 +647,7 @@ export default function ImportPage() {
       const res = await fetch("/api/import/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ recipes: payload }),
+        body: JSON.stringify({ recipes: payload, newUnitRules }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Eroare la import");
@@ -549,18 +665,22 @@ export default function ImportPage() {
 
   const validRecipes = recipes.filter((r) => !(r as { error?: string }).error);
   const conflictIngredients: Array<{ ri: number; ii: number; ing: ReviewIngredient }> = [];
+  const unitConflictIngredients: Array<{ ri: number; ii: number; ing: ReviewIngredient }> = [];
   validRecipes.forEach((r, ri) => {
     r.ingredients.forEach((ing, ii) => {
       const ext = ing as ReviewIngredient & { newItem?: unknown };
-      // Similar without explicit resolution OR new without newItem
       if (
         (ing.match.status === "similar" && !ing.match.groceryItemId) ||
         (ing.match.status === "new" && !ext.newItem)
       ) {
         conflictIngredients.push({ ri, ii, ing });
       }
+      if (ing.unitConflict && !ing.unitConflict.autoResolved) {
+        unitConflictIngredients.push({ ri, ii, ing });
+      }
     });
   });
+  const totalConflicts = conflictIngredients.length + unitConflictIngredients.length;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -717,11 +837,11 @@ export default function ImportPage() {
                   <ArrowLeft size={14} /> Înapoi
                 </button>
                 <button
-                  onClick={() => setStep(conflictIngredients.length > 0 ? 3 : 4)}
+                  onClick={() => setStep(totalConflicts > 0 ? 3 : 4)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
                 >
-                  {conflictIngredients.length > 0
-                    ? `Rezolvă ${conflictIngredients.length} conflicte`
+                  {totalConflicts > 0
+                    ? `Rezolvă ${totalConflicts} conflicte`
                     : "Confirmă import"}
                   <ArrowRight size={16} />
                 </button>
@@ -733,25 +853,51 @@ export default function ImportPage() {
         {/* ── STEP 3: Resolve conflicts ─────────────────────────────────── */}
         {step === 3 && (
           <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
-                Ingrediente neclare ({conflictIngredients.length})
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
-                Pentru fiecare ingredient, alege un item existent sau configurează unul nou.
-              </p>
-            </div>
+            {conflictIngredients.length > 0 && (
+              <>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
+                    Ingrediente neclare ({conflictIngredients.length})
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
+                    Pentru fiecare ingredient, alege un item existent sau configurează unul nou.
+                  </p>
+                </div>
+                {conflictIngredients.map(({ ri, ii, ing }) => (
+                  <ConflictRow
+                    key={`${ri}-${ii}`}
+                    recipeIndex={ri}
+                    ingIndex={ii}
+                    ing={ing}
+                    recipes={validRecipes}
+                    onUpdate={updateIngredient}
+                  />
+                ))}
+              </>
+            )}
 
-            {conflictIngredients.map(({ ri, ii, ing }) => (
-              <ConflictRow
-                key={`${ri}-${ii}`}
-                recipeIndex={ri}
-                ingIndex={ii}
-                ing={ing}
-                recipes={validRecipes}
-                onUpdate={updateIngredient}
-              />
-            ))}
+            {unitConflictIngredients.length > 0 && (
+              <>
+                <div>
+                  <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
+                    Conversii unități ({unitConflictIngredients.length})
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
+                    Unitatea din rețetă diferă de unitățile permise ale ingredientului. Introdu factorul de conversie — va fi salvat pentru utilizări viitoare.
+                  </p>
+                </div>
+                {unitConflictIngredients.map(({ ri, ii, ing }) => (
+                  <UnitConflictRow
+                    key={`unit-${ri}-${ii}`}
+                    recipeIndex={ri}
+                    ingIndex={ii}
+                    ing={ing}
+                    recipeName={validRecipes[ri]?.name ?? ""}
+                    onUpdate={updateIngredient}
+                  />
+                ))}
+              </>
+            )}
 
             {error && (
               <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl p-3 text-sm text-red-700 dark:text-red-400">

@@ -44,6 +44,7 @@ export type RecipeData = {
       carbs: number | null;
       fat: number | null;
       protein: number | null;
+      unitWeight: number | null;
     } | null;
   }>;
   instructions: Array<{
@@ -361,9 +362,11 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
     if (!ing.groceryItem || !ing.quantity) continue;
     const gi = ing.groceryItem;
     if (!gi.kcal && !gi.protein) continue;
-    if (gi.unit !== "g" && gi.unit !== "ml") continue;
+    const isMassUnit = gi.unit === "g" || gi.unit === "ml";
+    const gramFactor = isMassUnit ? 1 : gi.unitWeight;
+    if (!gramFactor) continue;
     hasNutrition = true;
-    const factor = (ing.quantity * scale) / 100;
+    const factor = (ing.quantity * scale * gramFactor) / 100;
     totalKcal += (gi.kcal ?? 0) * factor;
     totalCarbs += (gi.carbs ?? 0) * factor;
     totalFat += (gi.fat ?? 0) * factor;

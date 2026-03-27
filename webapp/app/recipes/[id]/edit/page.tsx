@@ -31,7 +31,7 @@ export default async function EditRecipePage({
       groceryItemName: ing.groceryItem?.name ?? "",
       notes: ing.notes ?? "",
       groceryItemId: ing.groceryItemId ?? null,
-      availableUnits: null,
+      availableUnits: (() => { const u = [ing.groceryItem?.unit, ing.groceryItem?.unit2].filter(Boolean) as string[]; return u.length ? u : null; })(),
     });
   }
   const groups = [...groupMap.entries()]

@@ -1,6 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { revalidatePath } from "next/cache";
+import fs from "fs";
+import path from "path";
+
+const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
+
+function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>) {
+  if (rules.length === 0) return;
+  let choices: Record<string, unknown> = {};
+  try { choices = JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8")); } catch { /* new file */ }
+  for (const r of rules) {
+    const key = `${r.name.toLowerCase()}|${r.foreignUnit.toLowerCase()}`;
+    choices[key] = { action: "use_unit", unit: r.targetUnit, rate: r.factor, from_unit: r.foreignUnit };
+  }
+  fs.writeFileSync(UNIT_CHOICES_PATH, JSON.stringify(choices, null, 2), "utf-8");
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +53,11 @@ type ConfirmedRecipe = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { recipes } = (await req.json()) as { recipes: ConfirmedRecipe[] };
+    const { recipes, newUnitRules = [] } = (await req.json()) as {
+      recipes: ConfirmedRecipe[];
+      newUnitRules?: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>;
+    };
+    saveUnitRules(newUnitRules);
 
     if (!Array.isArray(recipes) || recipes.length === 0) {
       return NextResponse.json({ error: "Nu sunt rețete de importat" }, { status: 400 });

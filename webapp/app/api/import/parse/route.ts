@@ -1,6 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
+import { spawn } from "child_process";
+import path from "path";
+import fs from "fs";
 import { prisma } from "@/lib/db";
-import { parseUrls, parseText, type RawRecipe } from "@/lib/recipe-scraper";
+import type { RawRecipe } from "@/lib/recipe-scraper";
+
+const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
+
+type UnitChoice = { action: string; unit: string; rate: number; from_unit?: string | null };
+
+function loadUnitChoices(): Record<string, UnitChoice> {
+  try {
+    return JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+const PYTHON = path.resolve(process.cwd(), "../.venv/bin/python3");
+const HANDLER = path.resolve(process.cwd(), "../scripts/web_import_handler.py");
+
+async function callPython(mode: "parse-urls" | "parse-text", payload: object): Promise<RawRecipe[]> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(PYTHON, [HANDLER, "--mode", mode], { timeout: 60000 });
+    let stdout = "";
+    let stderr = "";
+    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
+    proc.on("close", (code) => {
+      if (stderr) console.warn("[python]", stderr.slice(0, 500));
+      if (code !== 0) return reject(new Error(`Python exited ${code}: ${stderr.slice(0, 300)}`));
+      try { resolve(JSON.parse(stdout)); }
+      catch { reject(new Error(`JSON parse error: ${stdout.slice(0, 200)}`)); }
+    });
+    proc.on("error", reject);
+    proc.stdin.write(JSON.stringify(payload));
+    proc.stdin.end();
+  });
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,10 +55,22 @@ export type IngredientMatch = {
   groceryItemId?: string;
   groceryItemName?: string;
   groceryItemUnit?: string | null;
+  groceryItemUnit2?: string | null;
   candidates?: Array<{ id: string; name: string; unit: string | null }>;
 };
 
-export type ReviewIngredient = ParsedIngredient & { match: IngredientMatch };
+export type UnitConflict = {
+  foreignUnit: string;           // unitatea din rețetă (ex: "cup")
+  allowedUnits: string[];        // [unit, unit2] ale grocery item-ului
+  autoResolved: boolean;         // true dacă există deja în unit_choices.json
+  targetUnit?: string;           // cunoscut dacă autoResolved
+  factor?: number;               // factor de conversie cunoscut
+};
+
+export type ReviewIngredient = ParsedIngredient & {
+  match: IngredientMatch;
+  unitConflict?: UnitConflict;
+};
 
 export type ParsedRecipe = {
   name: string;
@@ -62,7 +111,7 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
   // 1. Exact match (case-insensitive)
   const exact = await prisma.groceryItem.findFirst({
     where: { name: { equals: name, mode: "insensitive" } },
-    select: { id: true, name: true, unit: true },
+    select: { id: true, name: true, unit: true, unit2: true },
   });
   if (exact) {
     return {
@@ -70,6 +119,7 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
       groceryItemId: exact.id,
       groceryItemName: exact.name,
       groceryItemUnit: exact.unit,
+      groceryItemUnit2: exact.unit2,
     };
   }
 
@@ -82,7 +132,7 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
       ],
     },
     take: 20,
-    select: { id: true, name: true, unit: true },
+    select: { id: true, name: true, unit: true, unit2: true },
   });
 
   if (candidates.length === 0) {
@@ -104,6 +154,7 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
       groceryItemId: best.id,
       groceryItemName: best.name,
       groceryItemUnit: best.unit,
+      groceryItemUnit2: best.unit2,
       candidates: scored,
     };
   }
@@ -115,6 +166,20 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
   };
 }
 
+function resolveUnitConflict(
+  ingName: string,
+  foreignUnit: string,
+  allowedUnits: string[],
+  choices: Record<string, UnitChoice>
+): UnitConflict {
+  const key = `${ingName.toLowerCase()}|${foreignUnit.toLowerCase()}`;
+  const choice = choices[key];
+  if (choice && choice.action === "use_unit") {
+    return { foreignUnit, allowedUnits, autoResolved: true, targetUnit: choice.unit, factor: choice.rate };
+  }
+  return { foreignUnit, allowedUnits, autoResolved: false };
+}
+
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -122,12 +187,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { type } = body as { type: "urls" | "text" };
 
-    // Parse recipes using TypeScript scraper
     let rawRecipes: RawRecipe[];
     if (type === "urls") {
-      rawRecipes = await parseUrls(body.urls ?? []);
+      rawRecipes = await callPython("parse-urls", { urls: body.urls ?? [] });
     } else if (type === "text") {
-      rawRecipes = parseText(body.content ?? "");
+      rawRecipes = await callPython("parse-text", { text: body.content ?? "" });
     } else {
       return NextResponse.json({ error: "type trebuie să fie 'urls' sau 'text'" }, { status: 400 });
     }
@@ -141,9 +205,19 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
+      const unitChoices = loadUnitChoices();
       const matchedIngredients: ReviewIngredient[] = await Promise.all(
         r.ingredients.map(async (ing, idx) => {
           const match = ing.name ? await matchIngredient(ing.name) : { status: "new" as const };
+
+          let unitConflict: UnitConflict | undefined;
+          if (ing.unit && match.groceryItemId) {
+            const allowed = [match.groceryItemUnit, match.groceryItemUnit2].filter(Boolean) as string[];
+            if (allowed.length > 0 && !allowed.includes(ing.unit)) {
+              unitConflict = resolveUnitConflict(ing.name, ing.unit, allowed, unitChoices);
+            }
+          }
+
           return {
             name: ing.name,
             qty: ing.qty,
@@ -152,6 +226,7 @@ export async function POST(req: NextRequest) {
             groupOrder: ing.groupOrder,
             order: idx,
             match,
+            unitConflict,
           };
         })
       );

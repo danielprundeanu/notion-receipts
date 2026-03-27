@@ -847,6 +847,7 @@ export const GroceryItemScalarFieldEnum = {
   carbs: 'carbs',
   fat: 'fat',
   protein: 'protein',
+  unitWeight: 'unitWeight',
   notionId: 'notionId'
 } as const
 

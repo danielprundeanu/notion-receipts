@@ -15,13 +15,14 @@ type GroceryItem = {
   carbs: number | null;
   fat: number | null;
   protein: number | null;
+  unitWeight: number | null;
 };
 
-type NumField = "conversion" | "kcal" | "carbs" | "fat" | "protein";
+type NumField = "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight";
 type TextField = "name" | "category" | "unit" | "unit2";
 type EditableField = TextField | NumField;
 
-const NUM_FIELDS: NumField[] = ["conversion", "kcal", "carbs", "fat", "protein"];
+const NUM_FIELDS: NumField[] = ["conversion", "kcal", "carbs", "fat", "protein", "unitWeight"];
 
 function fmt(n: number | null): string {
   if (n == null) return "";
@@ -189,6 +190,7 @@ export default function IngredientsPage() {
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Unit</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Unit 2</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Conv.</th>
+                <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">g/unit</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">kcal</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Carbs g</th>
                 <th className="px-4 py-2.5 text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide text-right">Fat g</th>
@@ -198,7 +200,7 @@ export default function IngredientsPage() {
             <tbody className="divide-y divide-gray-100 dark:divide-[#2e2e2e]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
                     No ingredients found
                   </td>
                 </tr>
@@ -235,6 +237,15 @@ export default function IngredientsPage() {
                         isNumber
                         align="right"
                         onSave={(v) => handleSave(item.id, "conversion", v)}
+                        placeholder="—"
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                      <EditableCell
+                        value={item.unitWeight != null ? fmt(item.unitWeight) : null}
+                        isNumber
+                        align="right"
+                        onSave={(v) => handleSave(item.id, "unitWeight", v)}
                         placeholder="—"
                       />
                     </td>
@@ -280,7 +291,7 @@ export default function IngredientsPage() {
 
       {!loading && filtered.length > 0 && (
         <p className="text-xs text-gray-400 dark:text-[#555555] mt-3">
-          Showing {filtered.length} of {items.length} · Macros per 100g/ml · Click any cell to edit
+          Showing {filtered.length} of {items.length} · Macros per 100g · g/unit = grame per unitate (piece, tsp etc.) · Click any cell to edit
         </p>
       )}
     </div>

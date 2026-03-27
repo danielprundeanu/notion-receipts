@@ -37,6 +37,7 @@ model GroceryItem {
   carbs       Float?
   fat         Float?
   protein     Float?
+  unitWeight  Float?
   notionId    String?      @unique
   ingredients Ingredient[]
 }
