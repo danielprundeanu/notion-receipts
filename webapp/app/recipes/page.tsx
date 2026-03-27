@@ -1,6 +1,7 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getRecipes } from "@/lib/actions";
-import { Clock, Users, Star, Search, Plus, Download } from "lucide-react";
+import { Clock, Users, Star, Search, Plus, Download, ArrowDownAZ, CalendarArrowDown, CalendarArrowUp } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 
 const CATEGORIES = [
@@ -22,11 +23,21 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default async function RecipesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cat?: string; fav?: string }>;
+  searchParams: Promise<{ q?: string; cat?: string; fav?: string; sort?: string }>;
 }) {
-  const { q, cat, fav } = await searchParams;
+  const { q, cat, fav, sort } = await searchParams;
   const favOnly = fav === "1";
-  const recipes = await getRecipes(q, cat, favOnly);
+  const recipes = await getRecipes(q, cat, favOnly, sort);
+
+  function sortUrl(s: string) {
+    const p = new URLSearchParams();
+    if (q) p.set("q", q);
+    if (cat) p.set("cat", cat);
+    if (fav) p.set("fav", fav);
+    if (s !== "name_asc") p.set("sort", s);
+    const qs = p.toString();
+    return `/recipes${qs ? `?${qs}` : ""}`;
+  }
 
   return (
     <div className="p-4 md:p-8">
@@ -107,6 +118,20 @@ export default async function RecipesPage({
         </div>
       </div>
 
+      {/* Sort */}
+      <div className="flex items-center gap-1.5 mb-4">
+        <span className="text-xs text-gray-400 dark:text-[#555] mr-1">Sort:</span>
+        <Link href={sortUrl("name_asc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!sort || sort === "name_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
+          <ArrowDownAZ size={13} /> A–Z
+        </Link>
+        <Link href={sortUrl("date_desc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${sort === "date_desc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
+          <CalendarArrowDown size={13} /> Newest
+        </Link>
+        <Link href={sortUrl("date_asc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${sort === "date_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
+          <CalendarArrowUp size={13} /> Oldest
+        </Link>
+      </div>
+
       {/* Grid */}
       {recipes.length === 0 ? (
         <div className="text-center py-20 text-gray-500 dark:text-[#787878]">
@@ -128,13 +153,15 @@ export default async function RecipesPage({
                 href={`/recipes/${recipe.id}`}
                 className="bg-white dark:bg-[#252525] rounded-xl border border-gray-100 dark:border-[#2e2e2e] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a3a3a] transition-all group overflow-hidden"
               >
-                <div className="h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] flex items-center justify-center overflow-hidden">
-                  {recipe.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] flex items-center justify-center overflow-hidden">
+                  {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
+                    <Image
                       src={recipe.imageUrl}
                       alt={recipe.name}
-                      className="w-full h-full object-cover"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                      className="object-cover"
+                      loading="lazy"
                     />
                   ) : (
                     <span className="text-4xl opacity-20">🍽️</span>

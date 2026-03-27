@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.5.1] - 2026-03-28
+
+### Added
+- Sort rețete după dată (Newest / Oldest / A–Z) cu `next/image` optimizat
+
+### Fixed
+- Imagini cu path relativ invalid nu mai cauzează crash (`data/local/img/...` → placeholder)
+- `next/image` cu lazy load + WebP + resize înlocuiește `<img>` nativ pentru performanță
+
 ## [0.5.0] - 2026-03-28
 
 ### Added

@@ -157,7 +157,12 @@ export async function toggleFavorite(id: string, favorite: boolean): Promise<voi
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
-export async function getRecipes(search?: string, category?: string, favorites?: boolean) {
+export async function getRecipes(search?: string, category?: string, favorites?: boolean, sort?: string) {
+  const orderBy =
+    sort === "date_asc"  ? { createdAt: "asc"  as const } :
+    sort === "date_desc" ? { createdAt: "desc" as const } :
+                           { name: "asc" as const };
+
   return prisma.recipe.findMany({
     where: {
       AND: [
@@ -173,7 +178,7 @@ export async function getRecipes(search?: string, category?: string, favorites?:
         favorites ? { favorite: true } : {},
       ],
     },
-    orderBy: { name: "asc" },
+    orderBy,
     select: {
       id: true,
       name: true,
