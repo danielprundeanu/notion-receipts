@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getRecipes } from "@/lib/actions";
-import { Clock, Users, Star, Search, Plus, Download, ArrowDownAZ, CalendarArrowDown, CalendarArrowUp } from "lucide-react";
+import { Clock, Users, Star, Search, Plus, Download } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import SortSelect from "@/components/SortSelect";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
@@ -28,16 +29,6 @@ export default async function RecipesPage({
   const { q, cat, fav, sort } = await searchParams;
   const favOnly = fav === "1";
   const recipes = await getRecipes(q, cat, favOnly, sort);
-
-  function sortUrl(s: string) {
-    const p = new URLSearchParams();
-    if (q) p.set("q", q);
-    if (cat) p.set("cat", cat);
-    if (fav) p.set("fav", fav);
-    if (s !== "name_asc") p.set("sort", s);
-    const qs = p.toString();
-    return `/recipes${qs ? `?${qs}` : ""}`;
-  }
 
   return (
     <div className="p-4 md:p-8">
@@ -79,44 +70,38 @@ export default async function RecipesPage({
         {cat && <input type="hidden" name="cat" value={cat} />}
       </form>
 
-      {/* Filters + Sort — horizontal scroll on mobile */}
-      <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1 scrollbar-none">
-        <Link
-          href={q ? `?q=${q}` : "/recipes"}
-          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-            !cat && !favOnly ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
-          }`}
-        >All</Link>
-        <Link
-          href={`?${q ? `q=${q}&` : ""}fav=1`}
-          className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-            favOnly ? "bg-amber-400 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
-          }`}
-        >
-          <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-          Favorites
-        </Link>
-        {CATEGORIES.map((c) => (
+      {/* Filters row + Sort dropdown */}
+      <div className="flex items-center gap-2 mb-6">
+        {/* Scrollable filter chips */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
           <Link
-            key={c}
-            href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
+            href={q ? `?q=${q}` : "/recipes"}
             className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              cat === c ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
+              !cat && !favOnly ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
             }`}
-          >{c}</Link>
-        ))}
+          >All</Link>
+          <Link
+            href={`?${q ? `q=${q}&` : ""}fav=1`}
+            className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              favOnly ? "bg-amber-400 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
+            }`}
+          >
+            <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+            Favorites
+          </Link>
+          {CATEGORIES.map((c) => (
+            <Link
+              key={c}
+              href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
+              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                cat === c ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
+              }`}
+            >{c}</Link>
+          ))}
+        </div>
 
-        <div className="shrink-0 w-px h-4 bg-gray-200 dark:bg-[#3a3a3a] mx-1" />
-
-        <Link href={sortUrl("name_asc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${!sort || sort === "name_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
-          <ArrowDownAZ size={12} /> A–Z
-        </Link>
-        <Link href={sortUrl("date_desc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${sort === "date_desc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
-          <CalendarArrowDown size={12} /> Newest
-        </Link>
-        <Link href={sortUrl("date_asc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${sort === "date_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
-          <CalendarArrowUp size={12} /> Oldest
-        </Link>
+        {/* Sort dropdown — always visible */}
+        <SortSelect current={sort || "name_asc"} q={q} cat={cat} fav={fav} />
       </div>
 
       {/* Grid */}

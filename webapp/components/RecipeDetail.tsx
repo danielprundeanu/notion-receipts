@@ -509,6 +509,16 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         )}
       </div>
 
+      {/* Servings callout */}
+      {servings > 1 && (
+        <div className="flex items-center gap-2.5 px-4 py-3 mb-6 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
+          <span className="text-base">🍽️</span>
+          <span className="text-sm">
+            Ingredientele sunt pentru <strong>{servings} porții</strong>
+          </span>
+        </div>
+      )}
+
       {/* Body */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Ingredients */}

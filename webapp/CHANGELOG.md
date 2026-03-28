@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1] - 2026-03-28
+
+### Fixed
+- Sort buttons replaced with compact dropdown (`<select>`) — always visible, outside the scrollable chips row
+- "Add new ingredient" dropdown no longer clipped by `overflow-hidden` on ingredient group container
+- Ingredient inputs no longer flicker with autocomplete dropdowns on edit page load (`hasTouched` guard)
+- Servings callout (orange banner) now also appears on the recipe detail page when servings > 1
+
 ## [0.6.0] - 2026-03-28
 
 ### Added

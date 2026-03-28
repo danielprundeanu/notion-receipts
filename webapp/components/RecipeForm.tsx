@@ -83,13 +83,14 @@ function GroceryItemInput({
   const [results, setResults] = useState<GroceryItemOption[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const hasTouched = useRef(false);
 
   useEffect(() => {
     const t = setTimeout(async () => {
       if (value.length < 2) { setResults([]); setOpen(false); return; }
       const r = await searchGroceryItems(value);
       setResults(r as GroceryItemOption[]);
-      setOpen(true);
+      if (hasTouched.current) setOpen(true);
     }, 250);
     return () => clearTimeout(t);
   }, [value]);
@@ -108,7 +109,7 @@ function GroceryItemInput({
     <div ref={ref} className="relative flex-1 min-w-0">
       <input
         value={value}
-        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onChange={(e) => { hasTouched.current = true; onChange(e.target.value); setOpen(true); }}
         placeholder="Ingredient name"
         className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
       />
@@ -993,9 +994,9 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
 
         <div className="space-y-4">
           {groups.map((group, groupIdx) => (
-            <div key={group.id} className="border border-gray-200 dark:border-[#3a3a3a] rounded-xl overflow-hidden">
+            <div key={group.id} className="border border-gray-200 dark:border-[#3a3a3a] rounded-xl">
               {/* Group header */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border-b border-gray-200 dark:border-[#3a3a3a]">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border-b border-gray-200 dark:border-[#3a3a3a] rounded-t-xl">
                 <input
                   value={group.name}
                   onChange={(e) => updateGroupName(group.id, e.target.value)}
