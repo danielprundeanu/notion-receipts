@@ -29,6 +29,7 @@ model Recipe {
 model GroceryItem {
   id          String       @id @default(cuid())
   name        String       @unique
+  nameRo      String?
   category    String?
   unit        String?
   unit2       String?
@@ -63,6 +64,7 @@ model Instruction {
   step      Int
   text      String
   isSection Boolean @default(false)
+  instrType String? // "numbered" | "bullet" | "plain" | null = numbered (legacy)
 }
 
 model WeekPlan {

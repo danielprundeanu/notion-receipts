@@ -6,12 +6,22 @@ import { prisma } from "@/lib/db";
 import type { RawRecipe } from "@/lib/recipe-scraper";
 
 const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
+const INGREDIENT_MAPPINGS_PATH = path.resolve(process.cwd(), "../data/ingredient_name_mappings.json");
 
 type UnitChoice = { action: string; unit: string; rate: number; from_unit?: string | null };
+type IngredientNameMapping = { groceryItemId: string; groceryItemName: string };
 
 function loadUnitChoices(): Record<string, UnitChoice> {
   try {
     return JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8"));
+  } catch {
+    return {};
+  }
+}
+
+function loadIngredientNameMappings(): Record<string, IngredientNameMapping> {
+  try {
+    return JSON.parse(fs.readFileSync(INGREDIENT_MAPPINGS_PATH, "utf-8"));
   } catch {
     return {};
   }
@@ -75,6 +85,7 @@ export type ReviewIngredient = ParsedIngredient & {
 export type ParsedRecipe = {
   name: string;
   servings: number | null;
+  batch: boolean;            // true = per batch (N porții), false = per serving (÷N, salvat cu servings=1)
   time: number | null;
   difficulty: string | null;
   category: string | null;
@@ -105,12 +116,35 @@ function similarity(a: string, b: string): number {
   return (2 * intersection) / (bg1.size + bg2.size);
 }
 
-async function matchIngredient(name: string): Promise<IngredientMatch> {
+async function matchIngredient(name: string, nameMappings: Record<string, IngredientNameMapping>): Promise<IngredientMatch> {
   const nameLower = name.toLowerCase().trim();
 
-  // 1. Exact match (case-insensitive)
+  // 0. Saved manual mapping
+  const saved = nameMappings[nameLower];
+  if (saved) {
+    const item = await prisma.groceryItem.findUnique({
+      where: { id: saved.groceryItemId },
+      select: { id: true, name: true, unit: true, unit2: true },
+    });
+    if (item) {
+      return {
+        status: "matched",
+        groceryItemId: item.id,
+        groceryItemName: item.name,
+        groceryItemUnit: item.unit,
+        groceryItemUnit2: item.unit2,
+      };
+    }
+  }
+
+  // 1. Exact match (case-insensitive) — EN sau RO
   const exact = await prisma.groceryItem.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
+    where: {
+      OR: [
+        { name:   { equals: name, mode: "insensitive" } },
+        { nameRo: { equals: name, mode: "insensitive" } },
+      ],
+    },
     select: { id: true, name: true, unit: true, unit2: true },
   });
   if (exact) {
@@ -123,25 +157,34 @@ async function matchIngredient(name: string): Promise<IngredientMatch> {
     };
   }
 
-  // 2. Contains search — get top candidates
+  // 2. Contains search — EN și RO
+  const firstWord = nameLower.split(" ")[0];
   const candidates = await prisma.groceryItem.findMany({
     where: {
       OR: [
-        { name: { contains: nameLower, mode: "insensitive" } },
-        { name: { contains: nameLower.split(" ")[0], mode: "insensitive" } },
+        { name:   { contains: nameLower,  mode: "insensitive" } },
+        { name:   { contains: firstWord,  mode: "insensitive" } },
+        { nameRo: { contains: nameLower,  mode: "insensitive" } },
+        { nameRo: { contains: firstWord,  mode: "insensitive" } },
       ],
     },
     take: 20,
-    select: { id: true, name: true, unit: true, unit2: true },
+    select: { id: true, name: true, nameRo: true, unit: true, unit2: true },
   });
 
   if (candidates.length === 0) {
     return { status: "new" };
   }
 
-  // Score candidates by similarity
+  // Score candidates — ia maximul dintre similaritatea EN și RO
   const scored = candidates
-    .map((c) => ({ ...c, score: similarity(nameLower, c.name) }))
+    .map((c) => ({
+      ...c,
+      score: Math.max(
+        similarity(nameLower, c.name.toLowerCase()),
+        c.nameRo ? similarity(nameLower, c.nameRo.toLowerCase()) : 0,
+      ),
+    }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
@@ -206,9 +249,10 @@ export async function POST(req: NextRequest) {
       }
 
       const unitChoices = loadUnitChoices();
+      const nameMappings = loadIngredientNameMappings();
       const matchedIngredients: ReviewIngredient[] = await Promise.all(
         r.ingredients.map(async (ing, idx) => {
-          const match = ing.name ? await matchIngredient(ing.name) : { status: "new" as const };
+          const match = ing.name ? await matchIngredient(ing.name, nameMappings) : { status: "new" as const };
 
           let unitConflict: UnitConflict | undefined;
           if (ing.unit && match.groceryItemId) {
@@ -236,6 +280,7 @@ export async function POST(req: NextRequest) {
       reviewRecipes.push({
         name: r.name || "Rețetă fără nume",
         servings: r.servings,
+        batch: r.batch ?? true,
         time: r.time,
         difficulty: r.difficulty,
         category: r.category,

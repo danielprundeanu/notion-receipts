@@ -27,6 +27,7 @@ export type RawInstruction = {
 export type RawRecipe = {
   name: string;
   servings: number | null;
+  batch?: boolean;           // true = rețeta e per batch (N porții), false = per serving
   time: number | null;
   difficulty: string | null;
   category: string | null;

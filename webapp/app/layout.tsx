@@ -1,8 +1,23 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { Work_Sans, DM_Serif_Text } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import ThemeProvider from "@/components/ThemeProvider";
+
+const dmSerifText = DM_Serif_Text({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-serif",
+  display: "swap",
+});
+
+const workSans = Work_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
+
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -26,8 +41,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body>
+    <html lang="en" suppressHydrationWarning className={`${workSans.variable} ${dmSerifText.variable}`}>
+      <body className={workSans.className}>
         <ThemeProvider>
           <div className="flex h-screen">
             <Sidebar />

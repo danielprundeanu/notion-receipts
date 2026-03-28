@@ -28,6 +28,7 @@ export type RecipeFormInput = {
     text: string;
     isSection: boolean;
     step: number;
+    instrType?: string | null;
   }>;
 };
 
@@ -36,10 +37,15 @@ export type RecipeFormInput = {
 export async function searchGroceryItems(query: string) {
   if (query.trim().length < 2) return [];
   return prisma.groceryItem.findMany({
-    where: { name: { contains: query, mode: "insensitive" } },
+    where: {
+      OR: [
+        { name:   { contains: query, mode: "insensitive" } },
+        { nameRo: { contains: query, mode: "insensitive" } },
+      ],
+    },
     take: 10,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, unit: true, unit2: true },
+    select: { id: true, name: true, nameRo: true, unit: true, unit2: true },
   });
 }
 
@@ -47,7 +53,7 @@ export async function getGroceryItemDetails(id: string) {
   return prisma.groceryItem.findUnique({
     where: { id },
     select: {
-      id: true, name: true, unit: true, unit2: true,
+      id: true, name: true, nameRo: true, category: true, unit: true, unit2: true,
       conversion: true, kcal: true, carbs: true, fat: true, protein: true, unitWeight: true,
     },
   });
@@ -85,16 +91,17 @@ async function buildIngredientsAndInstructions(
     });
   }
 
-  let stepCounter = 0;
+  let order = 0;
   for (const inst of data.instructions) {
     if (!inst.text.trim()) continue;
-    if (!inst.isSection) stepCounter++;
+    order++;
     await prisma.instruction.create({
       data: {
         recipeId,
-        step: inst.isSection ? 0 : stepCounter,
+        step: order,
         text: inst.text.trim(),
         isSection: inst.isSection,
+        instrType: inst.isSection ? null : (inst.instrType ?? "numbered"),
       },
     });
   }
@@ -170,7 +177,8 @@ export async function getRecipes(search?: string, category?: string, favorites?:
           ? {
               OR: [
                 { name: { contains: search, mode: "insensitive" } },
-                { ingredients: { some: { groceryItem: { name: { contains: search, mode: "insensitive" } } } } },
+                { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
+                { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },
               ],
             }
           : {},
@@ -212,7 +220,8 @@ export async function searchRecipesForPlanner(query: string) {
     where: {
       OR: [
         { name: { contains: query, mode: "insensitive" } },
-        { ingredients: { some: { groceryItem: { name: { contains: query, mode: "insensitive" } } } } },
+        { ingredients: { some: { groceryItem: { name:   { contains: query, mode: "insensitive" } } } } },
+        { ingredients: { some: { groceryItem: { nameRo: { contains: query, mode: "insensitive" } } } } },
       ],
     },
     take: 10,
@@ -229,7 +238,8 @@ export async function getRecipesPanel(search?: string, category?: string, favori
           ? {
               OR: [
                 { name: { contains: search, mode: "insensitive" } },
-                { ingredients: { some: { groceryItem: { name: { contains: search, mode: "insensitive" } } } } },
+                { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
+                { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },
               ],
             }
           : {},
@@ -239,7 +249,7 @@ export async function getRecipesPanel(search?: string, category?: string, favori
     },
     take: 80,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+    select: { id: true, name: true, category: true, servings: true, imageUrl: true, favorite: true },
   });
 }
 
@@ -439,6 +449,7 @@ export async function getGroceryList(
 
 export async function createGroceryItem(data: {
   name: string;
+  nameRo?: string | null;
   category?: string | null;
   unit?: string | null;
   unit2?: string | null;
@@ -457,6 +468,7 @@ export async function updateGroceryItem(
   id: string,
   data: {
     name?: string;
+    nameRo?: string | null;
     category?: string | null;
     unit?: string | null;
     unit2?: string | null;
@@ -477,6 +489,7 @@ export async function getGroceryItems() {
     select: {
       id: true,
       name: true,
+      nameRo: true,
       category: true,
       unit: true,
       unit2: true,

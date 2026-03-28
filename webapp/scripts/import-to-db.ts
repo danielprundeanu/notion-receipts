@@ -102,6 +102,7 @@ async function main() {
           favorite: recipe.favorite ?? false,
           link: recipe.link ?? null,
           imageUrl: recipe.imageUrl ?? null,
+          ...(recipe.createdAt ? { createdAt: new Date(recipe.createdAt) } : {}),
         },
       });
 

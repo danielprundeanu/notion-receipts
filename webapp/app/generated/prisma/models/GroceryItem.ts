@@ -47,6 +47,7 @@ export type GroceryItemSumAggregateOutputType = {
 export type GroceryItemMinAggregateOutputType = {
   id: string | null
   name: string | null
+  nameRo: string | null
   category: string | null
   unit: string | null
   unit2: string | null
@@ -62,6 +63,7 @@ export type GroceryItemMinAggregateOutputType = {
 export type GroceryItemMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  nameRo: string | null
   category: string | null
   unit: string | null
   unit2: string | null
@@ -77,6 +79,7 @@ export type GroceryItemMaxAggregateOutputType = {
 export type GroceryItemCountAggregateOutputType = {
   id: number
   name: number
+  nameRo: number
   category: number
   unit: number
   unit2: number
@@ -112,6 +115,7 @@ export type GroceryItemSumAggregateInputType = {
 export type GroceryItemMinAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
   category?: true
   unit?: true
   unit2?: true
@@ -127,6 +131,7 @@ export type GroceryItemMinAggregateInputType = {
 export type GroceryItemMaxAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
   category?: true
   unit?: true
   unit2?: true
@@ -142,6 +147,7 @@ export type GroceryItemMaxAggregateInputType = {
 export type GroceryItemCountAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
   category?: true
   unit?: true
   unit2?: true
@@ -244,6 +250,7 @@ export type GroceryItemGroupByArgs<ExtArgs extends runtime.Types.Extensions.Inte
 export type GroceryItemGroupByOutputType = {
   id: string
   name: string
+  nameRo: string | null
   category: string | null
   unit: string | null
   unit2: string | null
@@ -282,6 +289,7 @@ export type GroceryItemWhereInput = {
   NOT?: Prisma.GroceryItemWhereInput | Prisma.GroceryItemWhereInput[]
   id?: Prisma.StringFilter<"GroceryItem"> | string
   name?: Prisma.StringFilter<"GroceryItem"> | string
+  nameRo?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   category?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   unit?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   unit2?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
@@ -298,6 +306,7 @@ export type GroceryItemWhereInput = {
 export type GroceryItemOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrderInput | Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
   unit?: Prisma.SortOrderInput | Prisma.SortOrder
   unit2?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -318,6 +327,7 @@ export type GroceryItemWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.GroceryItemWhereInput | Prisma.GroceryItemWhereInput[]
   OR?: Prisma.GroceryItemWhereInput[]
   NOT?: Prisma.GroceryItemWhereInput | Prisma.GroceryItemWhereInput[]
+  nameRo?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   category?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   unit?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   unit2?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
@@ -333,6 +343,7 @@ export type GroceryItemWhereUniqueInput = Prisma.AtLeast<{
 export type GroceryItemOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrderInput | Prisma.SortOrder
   category?: Prisma.SortOrderInput | Prisma.SortOrder
   unit?: Prisma.SortOrderInput | Prisma.SortOrder
   unit2?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -356,6 +367,7 @@ export type GroceryItemScalarWhereWithAggregatesInput = {
   NOT?: Prisma.GroceryItemScalarWhereWithAggregatesInput | Prisma.GroceryItemScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"GroceryItem"> | string
   name?: Prisma.StringWithAggregatesFilter<"GroceryItem"> | string
+  nameRo?: Prisma.StringNullableWithAggregatesFilter<"GroceryItem"> | string | null
   category?: Prisma.StringNullableWithAggregatesFilter<"GroceryItem"> | string | null
   unit?: Prisma.StringNullableWithAggregatesFilter<"GroceryItem"> | string | null
   unit2?: Prisma.StringNullableWithAggregatesFilter<"GroceryItem"> | string | null
@@ -371,6 +383,7 @@ export type GroceryItemScalarWhereWithAggregatesInput = {
 export type GroceryItemCreateInput = {
   id?: string
   name: string
+  nameRo?: string | null
   category?: string | null
   unit?: string | null
   unit2?: string | null
@@ -387,6 +400,7 @@ export type GroceryItemCreateInput = {
 export type GroceryItemUncheckedCreateInput = {
   id?: string
   name: string
+  nameRo?: string | null
   category?: string | null
   unit?: string | null
   unit2?: string | null
@@ -403,6 +417,7 @@ export type GroceryItemUncheckedCreateInput = {
 export type GroceryItemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -419,6 +434,7 @@ export type GroceryItemUpdateInput = {
 export type GroceryItemUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -435,6 +451,7 @@ export type GroceryItemUncheckedUpdateInput = {
 export type GroceryItemCreateManyInput = {
   id?: string
   name: string
+  nameRo?: string | null
   category?: string | null
   unit?: string | null
   unit2?: string | null
@@ -450,6 +467,7 @@ export type GroceryItemCreateManyInput = {
 export type GroceryItemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -465,6 +483,7 @@ export type GroceryItemUpdateManyMutationInput = {
 export type GroceryItemUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -480,6 +499,7 @@ export type GroceryItemUncheckedUpdateManyInput = {
 export type GroceryItemCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
   category?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   unit2?: Prisma.SortOrder
@@ -504,6 +524,7 @@ export type GroceryItemAvgOrderByAggregateInput = {
 export type GroceryItemMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
   category?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   unit2?: Prisma.SortOrder
@@ -519,6 +540,7 @@ export type GroceryItemMaxOrderByAggregateInput = {
 export type GroceryItemMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
   category?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   unit2?: Prisma.SortOrder
@@ -572,6 +594,7 @@ export type GroceryItemUpdateOneWithoutIngredientsNestedInput = {
 export type GroceryItemCreateWithoutIngredientsInput = {
   id?: string
   name: string
+  nameRo?: string | null
   category?: string | null
   unit?: string | null
   unit2?: string | null
@@ -587,6 +610,7 @@ export type GroceryItemCreateWithoutIngredientsInput = {
 export type GroceryItemUncheckedCreateWithoutIngredientsInput = {
   id?: string
   name: string
+  nameRo?: string | null
   category?: string | null
   unit?: string | null
   unit2?: string | null
@@ -618,6 +642,7 @@ export type GroceryItemUpdateToOneWithWhereWithoutIngredientsInput = {
 export type GroceryItemUpdateWithoutIngredientsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -633,6 +658,7 @@ export type GroceryItemUpdateWithoutIngredientsInput = {
 export type GroceryItemUncheckedUpdateWithoutIngredientsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -679,6 +705,7 @@ export type GroceryItemCountOutputTypeCountIngredientsArgs<ExtArgs extends runti
 export type GroceryItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
   category?: boolean
   unit?: boolean
   unit2?: boolean
@@ -696,6 +723,7 @@ export type GroceryItemSelect<ExtArgs extends runtime.Types.Extensions.InternalA
 export type GroceryItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
   category?: boolean
   unit?: boolean
   unit2?: boolean
@@ -711,6 +739,7 @@ export type GroceryItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
 export type GroceryItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
   category?: boolean
   unit?: boolean
   unit2?: boolean
@@ -726,6 +755,7 @@ export type GroceryItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
 export type GroceryItemSelectScalar = {
   id?: boolean
   name?: boolean
+  nameRo?: boolean
   category?: boolean
   unit?: boolean
   unit2?: boolean
@@ -738,7 +768,7 @@ export type GroceryItemSelectScalar = {
   notionId?: boolean
 }
 
-export type GroceryItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "category" | "unit" | "unit2" | "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight" | "notionId", ExtArgs["result"]["groceryItem"]>
+export type GroceryItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameRo" | "category" | "unit" | "unit2" | "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight" | "notionId", ExtArgs["result"]["groceryItem"]>
 export type GroceryItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | Prisma.GroceryItem$ingredientsArgs<ExtArgs>
   _count?: boolean | Prisma.GroceryItemCountOutputTypeDefaultArgs<ExtArgs>
@@ -754,6 +784,7 @@ export type $GroceryItemPayload<ExtArgs extends runtime.Types.Extensions.Interna
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
+    nameRo: string | null
     category: string | null
     unit: string | null
     unit2: string | null
@@ -1190,6 +1221,7 @@ export interface Prisma__GroceryItemClient<T, Null = never, ExtArgs extends runt
 export interface GroceryItemFieldRefs {
   readonly id: Prisma.FieldRef<"GroceryItem", 'String'>
   readonly name: Prisma.FieldRef<"GroceryItem", 'String'>
+  readonly nameRo: Prisma.FieldRef<"GroceryItem", 'String'>
   readonly category: Prisma.FieldRef<"GroceryItem", 'String'>
   readonly unit: Prisma.FieldRef<"GroceryItem", 'String'>
   readonly unit2: Prisma.FieldRef<"GroceryItem", 'String'>

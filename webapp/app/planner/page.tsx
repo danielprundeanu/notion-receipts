@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   DndContext,
   DragOverlay,
@@ -38,6 +39,17 @@ import {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+
+const CATEGORY_COLORS: Record<string, string> = {
+  Breakfast:       "bg-yellow-100 text-yellow-700 dark:bg-[#3f3217] dark:text-yellow-300",
+  Lunch:           "bg-green-100  text-green-700  dark:bg-[#1b3725] dark:text-green-300",
+  Dinner:          "bg-blue-100   text-blue-700   dark:bg-[#1e2a45] dark:text-blue-300",
+  Snack:           "bg-purple-100 text-purple-700 dark:bg-[#342045] dark:text-purple-300",
+  Smoothie:        "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
+  "Smoothie Bowl": "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
+  Soup:            "bg-orange-100 text-orange-700 dark:bg-[#452819] dark:text-orange-300",
+  "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
+};
 type MealType = (typeof MEALS)[number];
 
 type RecipeRef = {
@@ -46,6 +58,7 @@ type RecipeRef = {
   category: string | null;
   servings: number | null;
   imageUrl: string | null;
+  favorite?: boolean;
 };
 
 type PlanEntry = {
@@ -284,9 +297,9 @@ function RecipeCard({
   );
 }
 
-// ─── Draggable Recipe (in panel) ──────────────────────────────────────────────
+// ─── Draggable Large Recipe Card (in panel) ───────────────────────────────────
 
-function DraggableRecipeItem({ recipe }: { recipe: RecipeRef }) {
+function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: `drag-${recipe.id}`, data: { recipe } });
 
@@ -294,20 +307,58 @@ function DraggableRecipeItem({ recipe }: { recipe: RecipeRef }) {
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
     : undefined;
 
+  const cats = (recipe.category ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       {...listeners}
       {...attributes}
-      className={`flex items-center gap-2 p-2 bg-white dark:bg-[#252525] border border-gray-100 dark:border-[#2e2e2e] rounded-xl cursor-grab active:cursor-grabbing hover:border-orange-200 dark:hover:border-orange-800/50 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors select-none ${
+      className={`bg-white dark:bg-[#252525] rounded-xl border border-gray-100 dark:border-[#2e2e2e] overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800/50 transition-all select-none ${
         isDragging ? "opacity-30" : ""
       }`}
     >
-      <RecipeThumb recipe={recipe} size="md" />
-      <span className="text-xs font-medium text-gray-700 dark:text-[#b8b8b8] leading-snug line-clamp-2">
-        {recipe.name}
-      </span>
+      <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+        {recipe.imageUrl ? (
+          <Image
+            src={recipe.imageUrl}
+            alt={recipe.name}
+            fill
+            sizes="200px"
+            className="object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-3xl opacity-20">🍽️</span>
+          </div>
+        )}
+        {cats.length > 0 && (
+          <div className="absolute top-1.5 right-1.5 flex gap-1">
+            {cats.map((c) => {
+              const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
+              return (
+                <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
+                  {c}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div className="p-2.5 flex items-start justify-between gap-1">
+        <p className="text-xs font-semibold text-gray-900 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+          {recipe.name}
+        </p>
+        {recipe.favorite && (
+          <Star size={11} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />
+        )}
+      </div>
     </div>
   );
 }
@@ -316,11 +367,21 @@ function DraggableRecipeItem({ recipe }: { recipe: RecipeRef }) {
 
 function DragOverlayCard({ recipe }: { recipe: RecipeRef }) {
   return (
-    <div className="flex items-center gap-2 p-2 bg-white border border-orange-300 rounded-xl shadow-xl w-44 rotate-1">
-      <RecipeThumb recipe={recipe} size="md" />
-      <span className="text-xs font-medium text-gray-800 leading-snug line-clamp-2">
-        {recipe.name}
-      </span>
+    <div className="bg-white dark:bg-[#252525] rounded-xl border border-orange-300 shadow-2xl w-44 overflow-hidden rotate-1 opacity-95">
+      <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+        {recipe.imageUrl ? (
+          <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="176px" className="object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-2xl opacity-20">🍽️</span>
+          </div>
+        )}
+      </div>
+      <div className="p-2">
+        <p className="text-xs font-semibold text-gray-800 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+          {recipe.name}
+        </p>
+      </div>
     </div>
   );
 }
@@ -347,7 +408,7 @@ function DroppableMealSlot({
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[72px] flex flex-col gap-1.5 rounded-xl p-0.5 transition-all ${
+      className={`h-full flex flex-col gap-1.5 rounded-xl p-0.5 transition-all ${
         isOver
           ? "bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-300 dark:ring-orange-700 ring-inset"
           : ""
@@ -363,11 +424,10 @@ function DroppableMealSlot({
       ))}
       <button
         onClick={onAddClick}
-        className="w-full bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
-        style={{ minHeight: entries.length === 0 ? "56px" : "28px" }}
+        className="flex-1 min-h-[40px] w-full bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
       >
         <Plus
-          size={entries.length === 0 ? 16 : 12}
+          size={16}
           className="text-gray-300 group-hover:text-orange-400"
         />
       </button>
@@ -470,9 +530,9 @@ function RecipePanel() {
       ) : recipes.length === 0 ? (
         <p className="text-sm text-gray-400 py-4">No recipes found.</p>
       ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-2">
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
           {recipes.map((recipe) => (
-            <DraggableRecipeItem key={recipe.id} recipe={recipe} />
+            <DraggableLargeCard key={recipe.id} recipe={recipe} />
           ))}
         </div>
       )}
@@ -984,7 +1044,7 @@ export default function PlannerPage() {
                 {MEALS.map((meal) => (
                   <div
                     key={meal}
-                    className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2"
+                    className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2 items-stretch"
                   >
                     <div className="flex items-start pt-2">
                       <span className="text-xs font-medium text-gray-400 dark:text-[#555555] uppercase tracking-wide">

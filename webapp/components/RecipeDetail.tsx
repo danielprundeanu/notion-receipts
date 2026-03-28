@@ -510,11 +510,11 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       </div>
 
       {/* Servings callout */}
-      {servings > 1 && (
+      {defaultServings > 1 && (
         <div className="flex items-center gap-2.5 px-4 py-3 mb-6 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
           <span className="text-base">🍽️</span>
           <span className="text-sm">
-            Ingredientele sunt pentru <strong>{servings} porții</strong>
+            1 batch = <strong>{defaultServings} porții</strong>
           </span>
         </div>
       )}
@@ -523,10 +523,6 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Ingredients */}
         <div className="lg:col-span-2">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-4">
-            Ingredients
-          </h2>
-
           {sortedGroups.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-[#787878]">No ingredients listed</p>
           ) : (
@@ -534,9 +530,9 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
               {sortedGroups.map(([groupOrder, group]) => (
                 <div key={groupOrder}>
                   {(sortedGroups.length > 1 || group.name) && (
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-[#787878] mb-2">
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-2">
                       {group.name ?? `Part ${groupOrder}`}
-                    </p>
+                    </h2>
                   )}
                   <ul className="space-y-3">
                     {group.items.map((ing) => {
@@ -554,18 +550,18 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                               </svg>
                             )}
                           </span>
-                          <span className={checked ? "line-through text-gray-400 dark:text-[#555]" : ""}>
+                          <span className={checked ? "line-through text-gray-400 dark:text-[#ffffff]" : ""}>
                             {ing.quantity != null && (
-                              <span className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+                              <span className={`font-semibold ${checked ? "" : "text-gray-900 dark:text-[#e3e3e3]"}`}>
                                 {formatQty(ing.quantity, scale)}
                                 {ing.unit ? ` ${ing.unit}` : ""}
                               </span>
                             )}{" "}
-                            <span className="text-gray-800 dark:text-[#d4d4d4]">
+                            <span className={checked ? "" : "text-gray-800 dark:text-[#d4d4d4]"}>
                               {ing.groceryItem?.name ?? "—"}
                             </span>
                             {ing.notes && (
-                              <span className="text-gray-500 dark:text-[#787878]"> · {ing.notes}</span>
+                              <span className={checked ? "" : "text-gray-500 dark:text-[#787878]"}> · {ing.notes}</span>
                             )}
                           </span>
                         </li>
@@ -607,27 +603,47 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
         {/* Instructions */}
         <div className="lg:col-span-3">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-4">
-            Instructions
-          </h2>
           {recipe.instructions.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-[#787878]">No instructions yet</p>
           ) : (
             <div className="space-y-4">
-              {recipe.instructions.map((inst, i) =>
-                inst.isSection ? (
-                  <h3 key={i} className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-[#9a9a9a] pt-1">
-                    {inst.text}
-                  </h3>
-                ) : (
-                  <div key={i} className="flex gap-3">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
-                      {inst.step}
-                    </span>
-                    <p className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
-                  </div>
-                )
-              )}
+              {(() => {
+                let numCounter = 0;
+                return recipe.instructions.map((inst, i) => {
+                  if (inst.isSection) {
+                    numCounter = 0;
+                    return (
+                      <h3 key={i} className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] pt-2">
+                        {inst.text}
+                      </h3>
+                    );
+                  }
+                  const type = inst.instrType ?? "numbered";
+                  if (type === "bullet") {
+                    return (
+                      <div key={i} className="flex gap-3 items-start">
+                        <span className="flex-shrink-0 w-6 text-center text-gray-400 dark:text-[#555] font-bold mt-0.5">•</span>
+                        <p className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                      </div>
+                    );
+                  }
+                  if (type === "plain") {
+                    return (
+                      <p key={i} className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                    );
+                  }
+                  // numbered (default)
+                  numCounter++;
+                  return (
+                    <div key={i} className="flex gap-3">
+                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
+                        {numCounter}
+                      </span>
+                      <p className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                    </div>
+                  );
+                });
+              })()}
             </div>
           )}
         </div>

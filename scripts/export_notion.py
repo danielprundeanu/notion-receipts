@@ -221,6 +221,7 @@ def export_recipes(grocery_items):
         recipe = {
             'notionId': page['id'],
             'name': name,
+            'createdAt': page.get('created_time'),
             'servings': props.get('Servings / Receipt', {}).get('number'),
             'time': props.get('Time / Min', {}).get('number'),
             'difficulty': props.get('Dificulty', {}).get('select', {}).get('name') if props.get('Dificulty', {}).get('select') else None,

@@ -40,6 +40,7 @@ export type InstructionMinAggregateOutputType = {
   step: number | null
   text: string | null
   isSection: boolean | null
+  instrType: string | null
 }
 
 export type InstructionMaxAggregateOutputType = {
@@ -48,6 +49,7 @@ export type InstructionMaxAggregateOutputType = {
   step: number | null
   text: string | null
   isSection: boolean | null
+  instrType: string | null
 }
 
 export type InstructionCountAggregateOutputType = {
@@ -56,6 +58,7 @@ export type InstructionCountAggregateOutputType = {
   step: number
   text: number
   isSection: number
+  instrType: number
   _all: number
 }
 
@@ -74,6 +77,7 @@ export type InstructionMinAggregateInputType = {
   step?: true
   text?: true
   isSection?: true
+  instrType?: true
 }
 
 export type InstructionMaxAggregateInputType = {
@@ -82,6 +86,7 @@ export type InstructionMaxAggregateInputType = {
   step?: true
   text?: true
   isSection?: true
+  instrType?: true
 }
 
 export type InstructionCountAggregateInputType = {
@@ -90,6 +95,7 @@ export type InstructionCountAggregateInputType = {
   step?: true
   text?: true
   isSection?: true
+  instrType?: true
   _all?: true
 }
 
@@ -185,6 +191,7 @@ export type InstructionGroupByOutputType = {
   step: number
   text: string
   isSection: boolean
+  instrType: string | null
   _count: InstructionCountAggregateOutputType | null
   _avg: InstructionAvgAggregateOutputType | null
   _sum: InstructionSumAggregateOutputType | null
@@ -216,6 +223,7 @@ export type InstructionWhereInput = {
   step?: Prisma.IntFilter<"Instruction"> | number
   text?: Prisma.StringFilter<"Instruction"> | string
   isSection?: Prisma.BoolFilter<"Instruction"> | boolean
+  instrType?: Prisma.StringNullableFilter<"Instruction"> | string | null
   recipe?: Prisma.XOR<Prisma.RecipeScalarRelationFilter, Prisma.RecipeWhereInput>
 }
 
@@ -225,6 +233,7 @@ export type InstructionOrderByWithRelationInput = {
   step?: Prisma.SortOrder
   text?: Prisma.SortOrder
   isSection?: Prisma.SortOrder
+  instrType?: Prisma.SortOrderInput | Prisma.SortOrder
   recipe?: Prisma.RecipeOrderByWithRelationInput
 }
 
@@ -237,6 +246,7 @@ export type InstructionWhereUniqueInput = Prisma.AtLeast<{
   step?: Prisma.IntFilter<"Instruction"> | number
   text?: Prisma.StringFilter<"Instruction"> | string
   isSection?: Prisma.BoolFilter<"Instruction"> | boolean
+  instrType?: Prisma.StringNullableFilter<"Instruction"> | string | null
   recipe?: Prisma.XOR<Prisma.RecipeScalarRelationFilter, Prisma.RecipeWhereInput>
 }, "id">
 
@@ -246,6 +256,7 @@ export type InstructionOrderByWithAggregationInput = {
   step?: Prisma.SortOrder
   text?: Prisma.SortOrder
   isSection?: Prisma.SortOrder
+  instrType?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.InstructionCountOrderByAggregateInput
   _avg?: Prisma.InstructionAvgOrderByAggregateInput
   _max?: Prisma.InstructionMaxOrderByAggregateInput
@@ -262,6 +273,7 @@ export type InstructionScalarWhereWithAggregatesInput = {
   step?: Prisma.IntWithAggregatesFilter<"Instruction"> | number
   text?: Prisma.StringWithAggregatesFilter<"Instruction"> | string
   isSection?: Prisma.BoolWithAggregatesFilter<"Instruction"> | boolean
+  instrType?: Prisma.StringNullableWithAggregatesFilter<"Instruction"> | string | null
 }
 
 export type InstructionCreateInput = {
@@ -269,6 +281,7 @@ export type InstructionCreateInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
   recipe: Prisma.RecipeCreateNestedOneWithoutInstructionsInput
 }
 
@@ -278,6 +291,7 @@ export type InstructionUncheckedCreateInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
 }
 
 export type InstructionUpdateInput = {
@@ -285,6 +299,7 @@ export type InstructionUpdateInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   recipe?: Prisma.RecipeUpdateOneRequiredWithoutInstructionsNestedInput
 }
 
@@ -294,6 +309,7 @@ export type InstructionUncheckedUpdateInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type InstructionCreateManyInput = {
@@ -302,6 +318,7 @@ export type InstructionCreateManyInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
 }
 
 export type InstructionUpdateManyMutationInput = {
@@ -309,6 +326,7 @@ export type InstructionUpdateManyMutationInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type InstructionUncheckedUpdateManyInput = {
@@ -317,6 +335,7 @@ export type InstructionUncheckedUpdateManyInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type InstructionListRelationFilter = {
@@ -335,6 +354,7 @@ export type InstructionCountOrderByAggregateInput = {
   step?: Prisma.SortOrder
   text?: Prisma.SortOrder
   isSection?: Prisma.SortOrder
+  instrType?: Prisma.SortOrder
 }
 
 export type InstructionAvgOrderByAggregateInput = {
@@ -347,6 +367,7 @@ export type InstructionMaxOrderByAggregateInput = {
   step?: Prisma.SortOrder
   text?: Prisma.SortOrder
   isSection?: Prisma.SortOrder
+  instrType?: Prisma.SortOrder
 }
 
 export type InstructionMinOrderByAggregateInput = {
@@ -355,6 +376,7 @@ export type InstructionMinOrderByAggregateInput = {
   step?: Prisma.SortOrder
   text?: Prisma.SortOrder
   isSection?: Prisma.SortOrder
+  instrType?: Prisma.SortOrder
 }
 
 export type InstructionSumOrderByAggregateInput = {
@@ -408,6 +430,7 @@ export type InstructionCreateWithoutRecipeInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
 }
 
 export type InstructionUncheckedCreateWithoutRecipeInput = {
@@ -415,6 +438,7 @@ export type InstructionUncheckedCreateWithoutRecipeInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
 }
 
 export type InstructionCreateOrConnectWithoutRecipeInput = {
@@ -452,6 +476,7 @@ export type InstructionScalarWhereInput = {
   step?: Prisma.IntFilter<"Instruction"> | number
   text?: Prisma.StringFilter<"Instruction"> | string
   isSection?: Prisma.BoolFilter<"Instruction"> | boolean
+  instrType?: Prisma.StringNullableFilter<"Instruction"> | string | null
 }
 
 export type InstructionCreateManyRecipeInput = {
@@ -459,6 +484,7 @@ export type InstructionCreateManyRecipeInput = {
   step: number
   text: string
   isSection?: boolean
+  instrType?: string | null
 }
 
 export type InstructionUpdateWithoutRecipeInput = {
@@ -466,6 +492,7 @@ export type InstructionUpdateWithoutRecipeInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type InstructionUncheckedUpdateWithoutRecipeInput = {
@@ -473,6 +500,7 @@ export type InstructionUncheckedUpdateWithoutRecipeInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type InstructionUncheckedUpdateManyWithoutRecipeInput = {
@@ -480,6 +508,7 @@ export type InstructionUncheckedUpdateManyWithoutRecipeInput = {
   step?: Prisma.IntFieldUpdateOperationsInput | number
   text?: Prisma.StringFieldUpdateOperationsInput | string
   isSection?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  instrType?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 
@@ -490,6 +519,7 @@ export type InstructionSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   step?: boolean
   text?: boolean
   isSection?: boolean
+  instrType?: boolean
   recipe?: boolean | Prisma.RecipeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["instruction"]>
 
@@ -499,6 +529,7 @@ export type InstructionSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   step?: boolean
   text?: boolean
   isSection?: boolean
+  instrType?: boolean
   recipe?: boolean | Prisma.RecipeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["instruction"]>
 
@@ -508,6 +539,7 @@ export type InstructionSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   step?: boolean
   text?: boolean
   isSection?: boolean
+  instrType?: boolean
   recipe?: boolean | Prisma.RecipeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["instruction"]>
 
@@ -517,9 +549,10 @@ export type InstructionSelectScalar = {
   step?: boolean
   text?: boolean
   isSection?: boolean
+  instrType?: boolean
 }
 
-export type InstructionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recipeId" | "step" | "text" | "isSection", ExtArgs["result"]["instruction"]>
+export type InstructionOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "recipeId" | "step" | "text" | "isSection" | "instrType", ExtArgs["result"]["instruction"]>
 export type InstructionInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   recipe?: boolean | Prisma.RecipeDefaultArgs<ExtArgs>
 }
@@ -541,6 +574,7 @@ export type $InstructionPayload<ExtArgs extends runtime.Types.Extensions.Interna
     step: number
     text: string
     isSection: boolean
+    instrType: string | null
   }, ExtArgs["result"]["instruction"]>
   composites: {}
 }
@@ -970,6 +1004,7 @@ export interface InstructionFieldRefs {
   readonly step: Prisma.FieldRef<"Instruction", 'Int'>
   readonly text: Prisma.FieldRef<"Instruction", 'String'>
   readonly isSection: Prisma.FieldRef<"Instruction", 'Boolean'>
+  readonly instrType: Prisma.FieldRef<"Instruction", 'String'>
 }
     
 

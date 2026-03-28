@@ -96,6 +96,7 @@ export type RecipeScalarFieldEnum = (typeof RecipeScalarFieldEnum)[keyof typeof 
 export const GroceryItemScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  nameRo: 'nameRo',
   category: 'category',
   unit: 'unit',
   unit2: 'unit2',
@@ -131,7 +132,8 @@ export const InstructionScalarFieldEnum = {
   recipeId: 'recipeId',
   step: 'step',
   text: 'text',
-  isSection: 'isSection'
+  isSection: 'isSection',
+  instrType: 'instrType'
 } as const
 
 export type InstructionScalarFieldEnum = (typeof InstructionScalarFieldEnum)[keyof typeof InstructionScalarFieldEnum]

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getRecipes } from "@/lib/actions";
-import { Clock, Users, Star, Search, Plus, Download } from "lucide-react";
+import { Star, Search, Plus, Download } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import SortSelect from "@/components/SortSelect";
 
@@ -10,15 +10,16 @@ const CATEGORIES = [
   "Smoothie", "Smoothie Bowl", "Soup", "High Protein",
 ];
 
+// Dark bg values = color-mix(in srgb, tag-color 20%, #1c1c1c 80%)
 const CATEGORY_COLORS: Record<string, string> = {
-  Breakfast:        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-  Lunch:            "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  Dinner:           "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  Snack:            "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  Smoothie:         "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
-  "Smoothie Bowl":  "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
-  Soup:             "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  "High Protein":   "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  Breakfast:       "bg-yellow-100 text-yellow-700 dark:bg-[#3f3217] dark:text-yellow-300",
+  Lunch:           "bg-green-100  text-green-700  dark:bg-[#1b3725] dark:text-green-300",
+  Dinner:          "bg-blue-100   text-blue-700   dark:bg-[#1e2a45] dark:text-blue-300",
+  Snack:           "bg-purple-100 text-purple-700 dark:bg-[#342045] dark:text-purple-300",
+  Smoothie:        "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
+  "Smoothie Bowl": "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
+  Soup:            "bg-orange-100 text-orange-700 dark:bg-[#452819] dark:text-orange-300",
+  "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
 };
 
 export default async function RecipesPage({
@@ -28,7 +29,7 @@ export default async function RecipesPage({
 }) {
   const { q, cat, fav, sort } = await searchParams;
   const favOnly = fav === "1";
-  const recipes = await getRecipes(q, cat, favOnly, sort);
+  const recipes = await getRecipes(q, cat, favOnly, sort ?? "date_desc");
 
   return (
     <div className="p-4 md:p-8">
@@ -65,7 +66,7 @@ export default async function RecipesPage({
           name="q"
           defaultValue={q}
           placeholder="Search recipes…"
-          className="w-full max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
+          className="w-full md:max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
         />
         {cat && <input type="hidden" name="cat" value={cat} />}
       </form>
@@ -101,7 +102,7 @@ export default async function RecipesPage({
         </div>
 
         {/* Sort dropdown — always visible */}
-        <SortSelect current={sort || "name_asc"} q={q} cat={cat} fav={fav} />
+        <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
       </div>
 
       {/* Grid */}
@@ -113,11 +114,13 @@ export default async function RecipesPage({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {recipes.map((recipe) => {
-            const primaryCat = recipe.category?.split(",")[0].trim();
-            const colorClass =
-              CATEGORY_COLORS[primaryCat ?? ""] ?? "bg-gray-100 text-gray-700 dark:bg-[#2a2a2a] dark:text-[#b8b8b8]";
+            const cats = (recipe.category ?? "")
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+              .slice(0, 3);
 
             return (
               <Link
@@ -138,34 +141,27 @@ export default async function RecipesPage({
                   ) : (
                     <span className="text-4xl opacity-20">🍽️</span>
                   )}
+                  {cats.length > 0 && (
+                    <div className="absolute top-2 right-2 flex flex-row items-center gap-1">
+                      {cats.map((c) => {
+                        const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
+                        return (
+                          <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
+                            {c}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="p-3">
+                  <div className="flex items-start justify-between gap-2">
                     <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3] text-sm leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
                       {recipe.name}
                     </h3>
                     {recipe.favorite && (
                       <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />
-                    )}
-                  </div>
-
-                  {primaryCat && (
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold mb-3 ${colorClass}`}>
-                      {primaryCat}
-                    </span>
-                  )}
-
-                  <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-[#9a9a9a] font-medium">
-                    {recipe.time && (
-                      <span className="flex items-center gap-1">
-                        <Clock size={11} className="text-gray-500 dark:text-[#787878]" /> {recipe.time} min
-                      </span>
-                    )}
-                    {recipe.servings && (
-                      <span className="flex items-center gap-1">
-                        <Users size={11} className="text-gray-500 dark:text-[#787878]" /> {recipe.servings}
-                      </span>
                     )}
                   </div>
                 </div>

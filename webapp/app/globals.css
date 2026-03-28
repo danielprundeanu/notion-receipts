@@ -1,8 +1,13 @@
 @import "tailwindcss";
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
+
+h1 {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
 
 /* ─── Class-based dark mode for Tailwind v4 ─── */
 @variant dark (&:where(.dark, .dark *));

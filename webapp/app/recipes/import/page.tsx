@@ -258,7 +258,8 @@ function ConflictRow({
 
   const apply = () => {
     if (mode === "map" && selectedId) {
-      const candidate = ing.match.candidates?.find((c) => c.id === selectedId);
+      const candidate = ing.match.candidates?.find((c) => c.id === selectedId)
+        ?? searchResults.find((c) => c.id === selectedId);
       onUpdate(recipeIndex, ingIndex, {
         ...ing,
         match: {
@@ -266,6 +267,8 @@ function ConflictRow({
           groceryItemId: selectedId,
           groceryItemName: candidate?.name ?? selectedId,
           groceryItemUnit: candidate?.unit ?? null,
+          // @ts-expect-error – runtime flag for saving mapping
+          manuallyMapped: true,
         },
       });
     } else if (mode === "new") {
@@ -625,6 +628,7 @@ export default function ImportPage() {
             }
           }
 
+          const manuallyMapped = !!(ing.match as { manuallyMapped?: boolean }).manuallyMapped;
           return {
             name: ing.name,
             qty,
@@ -635,11 +639,9 @@ export default function ImportPage() {
             groceryItemId: ing.match.status === "matched" || ing.match.status === "similar"
               ? ing.match.groceryItemId
               : null,
-            newItem: ing.match.status === "new" ? (ext.newItem ?? {
-              name: ing.name,
-              unit: unit ?? "piece",
-              category: null,
-            }) : undefined,
+            groceryItemName: manuallyMapped ? ing.match.groceryItemName : undefined,
+            saveMapping: manuallyMapped || undefined,
+            newItem: ing.match.status === "new" ? ext.newItem ?? undefined : undefined,
           };
         }),
       }));
@@ -758,12 +760,12 @@ export default function ImportPage() {
                   <textarea
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
-                    placeholder={"=== Nume Rețetă ===\nServings: 4\nTime: 30\nDifficulty: Easy\nCategory: Dinner\n\nIngrediente principale\n[500 g] faina\n[2 cup] lapte\n\nSteps:\n1. Pas unu\n2. Pas doi"}
+                    placeholder={"=== Nume Rețetă ===\nServings: 4 Batch: True\nTime: 30\nDifficulty: Easy\nCategories: Dinner, Lunch\nFavorite: No\nLink: https://...\nImage: data/local/img/photo.jpg\n\n# Ingrediente principale\n200g Ciocolată\n1 cup Lapte\n\n# Sosuri\n2 tbsp Ulei de cocos\n\n## Pași\n1. Primul pas\n2. Al doilea pas\n\n## Tips\n- Sfat util\n- Alt sfat"}
                     rows={12}
                     className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
                   />
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-xs text-gray-400 dark:text-[#555]">sau</span>
                   <button
                     onClick={() => fileRef.current?.click()}
@@ -899,6 +901,15 @@ export default function ImportPage() {
               </>
             )}
 
+            {conflictIngredients.length > 0 && (
+              <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400 flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>
+                  Mai sunt <strong>{conflictIngredients.length} ingrediente nerezolvate</strong>. Toate ingredientele trebuie să fie mapate la un item existent sau să aibă un item nou creat înainte de import.
+                </span>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl p-3 text-sm text-red-700 dark:text-red-400">
                 {error}
@@ -914,8 +925,8 @@ export default function ImportPage() {
               </button>
               <button
                 onClick={handleImport}
-                disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40"
+                disabled={loading || conflictIngredients.length > 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 {loading ? "Se importă..." : `Importă ${validRecipes.length} rețete`}
@@ -1000,8 +1011,8 @@ export default function ImportPage() {
               </button>
               <button
                 onClick={handleImport}
-                disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40"
+                disabled={loading || conflictIngredients.length > 0}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 {loading ? "Se importă..." : `Importă ${validRecipes.length} rețete`}

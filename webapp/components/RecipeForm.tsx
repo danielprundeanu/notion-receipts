@@ -10,8 +10,8 @@ import {
   searchGroceryItems,
   getGroceryItemDetails,
   updateGroceryItem,
-  createGroceryItem,
 } from "@/lib/actions";
+import GroceryItemModal from "@/components/GroceryItemModal";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
@@ -67,7 +67,7 @@ function defaultGroup(name = "Ingredients"): IngredientGroup {
 
 // ─── Grocery Item Autocomplete ──────────────────────────────────────────────
 
-type GroceryItemOption = { id: string; name: string; unit: string | null; unit2: string | null };
+type GroceryItemOption = { id: string; name: string; nameRo?: string | null; unit: string | null; unit2: string | null };
 
 function GroceryItemInput({
   value,
@@ -127,9 +127,14 @@ function GroceryItemInput({
               }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-between"
             >
-              <span className="text-gray-800 dark:text-[#d4d4d4]">{r.name}</span>
+              <span className="text-gray-800 dark:text-[#d4d4d4]">
+                {r.name}
+                {r.nameRo && (
+                  <span className="text-xs text-gray-400 dark:text-[#555555] ml-1.5">({r.nameRo})</span>
+                )}
+              </span>
               {r.unit && (
-                <span className="text-xs text-gray-500 dark:text-[#787878] ml-2">
+                <span className="text-xs text-gray-500 dark:text-[#787878] ml-2 shrink-0">
                   {r.unit}{r.unit2 ? ` / ${r.unit2}` : ""}
                 </span>
               )}
@@ -177,6 +182,27 @@ function GroceryItemEditModal({
   const [fat, setFat] = useState("");
   const [protein, setProtein] = useState("");
   const [saving, setSaving] = useState(false);
+  const [fetchingNutrition, setFetchingNutrition] = useState(false);
+  const [nutritionError, setNutritionError] = useState<string | null>(null);
+
+  async function handleFetchNutrition() {
+    if (!item) return;
+    setFetchingNutrition(true);
+    setNutritionError(null);
+    try {
+      const res = await fetch(`/api/nutrition?q=${encodeURIComponent(item.name)}`);
+      const data = await res.json();
+      if (!res.ok) { setNutritionError(data.error ?? "Nu s-au găsit date"); return; }
+      if (data.kcal != null) setKcal(String(data.kcal));
+      if (data.carbs != null) setCarbs(String(data.carbs));
+      if (data.fat != null) setFat(String(data.fat));
+      if (data.protein != null) setProtein(String(data.protein));
+    } catch {
+      setNutritionError("Eroare la conexiune");
+    } finally {
+      setFetchingNutrition(false);
+    }
+  }
 
   useEffect(() => {
     getGroceryItemDetails(itemId).then((data) => {
@@ -255,9 +281,26 @@ function GroceryItemEditModal({
             </div>
 
             <div>
-              <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">
-                Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                  Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
+                </span>
+                <button
+                  type="button"
+                  onClick={handleFetchNutrition}
+                  disabled={fetchingNutrition}
+                  className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-50 transition-colors"
+                  title="Caută automat din Open Food Facts"
+                >
+                  {fetchingNutrition
+                    ? <Loader2 size={11} className="animate-spin" />
+                    : <span>↓</span>}
+                  {fetchingNutrition ? "Se caută..." : "Auto-fill"}
+                </button>
+              </div>
+              {nutritionError && (
+                <p className="text-xs text-red-500 dark:text-red-400 mb-1.5">{nutritionError}</p>
+              )}
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: "kcal", value: kcal, set: setKcal },
@@ -303,248 +346,28 @@ function GroceryItemEditModal({
   );
 }
 
-// ─── Grocery Item Create Modal ────────────────────────────────────────────────
-
-const GROCERY_CATEGORIES = [
-  "🍎 Fruits", "🥕 Vegetables", "🥩 Meat & Alt", "🐟 Fish & Seafood",
-  "🥚 Dairy & Eggs", "🌾 Grains & Legumes", "🥜 Nuts & Seeds",
-  "🫙 Oils & Fats", "🍯 Sweeteners", "🧂 Spices & Herbs",
-  "🥫 Canned & Preserved", "🧊 Frozen", "🥤 Drinks", "🍞 Bakery", "Other",
-];
-
-function GroceryItemCreateModal({
-  initialName,
-  onClose,
-  onCreated,
-}: {
-  initialName: string;
-  onClose: () => void;
-  onCreated: (item: GroceryItemOption) => void;
-}) {
-  const [name, setName] = useState(initialName);
-  const [category, setCategory] = useState("");
-  const [unit, setUnit] = useState("");
-  const [unit2, setUnit2] = useState("");
-  const [conversion, setConversion] = useState("");
-  const [kcal, setKcal] = useState("");
-  const [carbs, setCarbs] = useState("");
-  const [fat, setFat] = useState("");
-  const [protein, setProtein] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  async function handleCreate() {
-    if (!name.trim() || !unit.trim()) return;
-    setSaving(true);
-    const item = await createGroceryItem({
-      name: name.trim(),
-      category: category || null,
-      unit: unit.trim(),
-      unit2: unit2.trim() || null,
-      conversion: conversion ? parseFloat(conversion) : null,
-      kcal: kcal ? parseFloat(kcal) : null,
-      carbs: carbs ? parseFloat(carbs) : null,
-      fat: fat ? parseFloat(fat) : null,
-      protein: protein ? parseFloat(protein) : null,
-    });
-    onCreated({ id: item.id, name: item.name, unit: item.unit, unit2: item.unit2 });
-    setSaving(false);
-    onClose();
-  }
-
-  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
-  const labelCls = "text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5";
-
-  return (
-    <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">Ingredient nou</h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 p-1"><X size={18} /></button>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <label className={labelCls}>Nume</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: făină integrală" className={inputCls} />
-          </div>
-
-          <div>
-            <label className={labelCls}>Categorie</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-              <option value="">— selectează —</option>
-              {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Unitate principală *</label>
-              <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="g, ml, piece…" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Unitate secundară</label>
-              <input value={unit2} onChange={(e) => setUnit2(e.target.value)} placeholder="cup, tbsp…" className={inputCls} />
-            </div>
-          </div>
-
-          {unit2 && (
-            <div>
-              <label className={labelCls}>Conversie (1 {unit2} = ? {unit || "unit"})</label>
-              <input type="number" step="0.001" min="0" value={conversion} onChange={(e) => setConversion(e.target.value)} placeholder="ex: 240" className={inputCls} />
-            </div>
-          )}
-
-          <div>
-            <label className={labelCls}>Nutriție (per 100{unit === "ml" ? "ml" : "g"})</label>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: "kcal", value: kcal, set: setKcal },
-                { label: "carbs g", value: carbs, set: setCarbs },
-                { label: "fat g", value: fat, set: setFat },
-                { label: "protein g", value: protein, set: setProtein },
-              ].map(({ label, value, set }) => (
-                <div key={label}>
-                  <span className="text-xs text-gray-400 dark:text-[#555555] block mb-1">{label}</span>
-                  <input type="number" step="0.1" min="0" value={value} onChange={(e) => set(e.target.value)}
-                    className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex gap-3 mt-6">
-          <button type="button" onClick={handleCreate} disabled={saving || !name.trim() || !unit.trim()}
-            className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors">
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            Creează ingredient
-          </button>
-          <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors">
-            Anulează
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Instructions Editor ─────────────────────────────────────────────────────
 
 function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
-  const lines = value ? value.split("\n") : [""];
+  const ref = useRef<HTMLTextAreaElement>(null);
 
-  function update(idx: number, newLine: string) {
-    const next = [...lines];
-    next[idx] = newLine;
-    onChange(next.join("\n"));
+  function autoResize() {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
   }
-
-  function focusAt(idx: number, end = true) {
-    setTimeout(() => {
-      const el = inputsRef.current[idx];
-      if (!el) return;
-      el.focus();
-      if (end) el.setSelectionRange(el.value.length, el.value.length);
-    }, 0);
-  }
-
-  function handlePaste(idx: number, isSection: boolean, e: React.ClipboardEvent<HTMLInputElement>) {
-    const text = e.clipboardData.getData("text");
-    if (!text.includes("\n")) return; // single line — let browser handle it normally
-    e.preventDefault();
-    const pasted = text.split("\n").map((l) => l.trimEnd()).filter((l) => l !== "" || true); // keep empty lines
-    // For the first pasted line, prepend the section prefix if current line is a section
-    const prefix = isSection ? "# " : "";
-    const next = [...lines];
-    next.splice(idx, 1, ...pasted.map((l, i) => (i === 0 ? prefix + l : l)));
-    onChange(next.join("\n"));
-    focusAt(idx + pasted.length - 1);
-  }
-
-  function handleKeyDown(idx: number, e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      const next = [...lines];
-      next.splice(idx + 1, 0, "");
-      onChange(next.join("\n"));
-      focusAt(idx + 1);
-    } else if (e.key === "Backspace" && lines[idx] === "" && lines.length > 1) {
-      e.preventDefault();
-      const next = lines.filter((_, i) => i !== idx);
-      onChange(next.join("\n"));
-      focusAt(Math.max(0, idx - 1));
-    } else if (e.key === "ArrowUp" && idx > 0) {
-      e.preventDefault();
-      focusAt(idx - 1);
-    } else if (e.key === "ArrowDown" && idx < lines.length - 1) {
-      e.preventDefault();
-      focusAt(idx + 1);
-    }
-  }
-
-  function addStep() {
-    onChange(value ? `${value}\n` : "");
-    focusAt(lines.length);
-  }
-
-  function addSection() {
-    onChange(value ? `${value}\n# ` : "# ");
-    focusAt(lines.length);
-  }
-
-  let stepCounter = 0;
 
   return (
-    <div className="border border-gray-200 dark:border-[#3a3a3a] rounded-xl overflow-hidden">
-      {lines.map((line, idx) => {
-        const isSection = line.startsWith("# ");
-        if (!isSection && line.trim()) stepCounter++;
-        const stepNum = !isSection && line.trim() ? stepCounter : null;
-
-        return (
-          <div
-            key={idx}
-            className={`flex items-center gap-3 px-3 ${
-              isSection
-                ? "py-2 bg-gray-50 dark:bg-[#2a2a2a] border-b border-gray-200 dark:border-[#3a3a3a]"
-                : "py-1.5 border-b border-gray-100 dark:border-[#262626] last:border-b-0"
-            }`}
-          >
-            {isSection ? (
-              <span className="text-[10px] font-bold text-orange-400 uppercase tracking-widest w-5 shrink-0">#</span>
-            ) : (
-              <span className="text-xs text-gray-300 dark:text-[#444] w-5 shrink-0 text-right tabular-nums">
-                {stepNum ?? ""}
-              </span>
-            )}
-            <input
-              ref={(el) => { inputsRef.current[idx] = el; }}
-              value={isSection ? line.slice(2) : line}
-              onChange={(e) => update(idx, isSection ? `# ${e.target.value}` : e.target.value)}
-              onKeyDown={(e) => handleKeyDown(idx, e)}
-              onPaste={(e) => handlePaste(idx, isSection, e)}
-              placeholder={isSection ? "Section header…" : "Describe this step…"}
-              className={`flex-1 text-sm bg-transparent border-0 focus:outline-none placeholder:text-gray-300 dark:placeholder:text-[#444] ${
-                isSection
-                  ? "font-semibold text-orange-600 dark:text-orange-400"
-                  : "text-gray-700 dark:text-[#c0c0c0]"
-              }`}
-            />
-          </div>
-        );
-      })}
-      <div className="px-3 py-2 flex items-center gap-3 bg-white dark:bg-[#1f1f1f]">
-        <button type="button" onClick={addStep}
-          className="text-xs text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1 transition-colors">
-          <Plus size={11} /> Add step
-        </button>
-        <button type="button" onClick={addSection}
-          className="text-xs text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#9a9a9a] font-medium flex items-center gap-1 transition-colors">
-          <Plus size={11} /> Add section
-        </button>
-      </div>
-    </div>
+    <textarea
+      ref={ref}
+      value={value}
+      onChange={(e) => { onChange(e.target.value); autoResize(); }}
+      onFocus={autoResize}
+      placeholder={"## Steps\n1. First step\n2. Second step\n\n## Tips\n- Use cold butter\n- Or plain text"}
+      rows={8}
+      className="w-full px-4 py-3 text-sm bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#3a3a3a] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c0c0c0] placeholder:text-gray-300 dark:placeholder:text-[#444] leading-relaxed font-mono"
+    />
   );
 }
 
@@ -596,7 +419,7 @@ function UnitSelect({
 
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
-export default function RecipeForm({ initial }: { initial?: InitialRecipeData }) {
+export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRecipeData; noWrapper?: boolean }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -756,16 +579,20 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
         }))
     );
 
-    const instructions: Array<{ text: string; isSection: boolean; step: number }> = [];
-    let stepNum = 0;
+    const instructions: Array<{ text: string; isSection: boolean; step: number; instrType?: string }> = [];
+    let order = 0;
     for (const line of instructionsText.split("\n")) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      if (trimmed.startsWith("# ")) {
-        instructions.push({ text: trimmed.slice(2).trim(), isSection: true, step: 0 });
+      order++;
+      if (trimmed.startsWith("## ")) {
+        instructions.push({ text: trimmed.slice(3).trim(), isSection: true, step: order });
+      } else if (/^\d+\.\s/.test(trimmed)) {
+        instructions.push({ text: trimmed.replace(/^\d+\.\s+/, ""), isSection: false, step: order, instrType: "numbered" });
+      } else if (/^[-*]\s/.test(trimmed)) {
+        instructions.push({ text: trimmed.slice(2).trim(), isSection: false, step: order, instrType: "bullet" });
       } else {
-        stepNum++;
-        instructions.push({ text: trimmed, isSection: false, step: stepNum });
+        instructions.push({ text: trimmed, isSection: false, step: order, instrType: "plain" });
       }
     }
 
@@ -811,7 +638,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
   const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]";
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7">
+    <form onSubmit={handleSubmit} className={noWrapper ? "space-y-7" : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"}>
       {/* Name */}
       <div>
         <input
@@ -974,7 +801,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
         <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
           <span className="text-base">🍽️</span>
           <span className="text-sm">
-            Ingredientele de mai jos sunt pentru <strong>{servings} porții</strong> de gătit
+            1 batch = <strong>{servings} porții</strong>
           </span>
         </div>
       )}
@@ -982,7 +809,6 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
       {/* ── Ingredients ──────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">Ingredients</h2>
           <button
             type="button"
             onClick={addGroup}
@@ -1121,7 +947,6 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
 
       {/* ── Instructions ─────────────────────────────────────────── */}
       <div>
-        <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-2">Instructions</h2>
         <InstructionsEditor value={instructionsText} onChange={setInstructionsText} />
       </div>
 
@@ -1180,10 +1005,10 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
 
       {/* Grocery item create modal */}
       {createIngModal && (
-        <GroceryItemCreateModal
+        <GroceryItemModal
           initialName={createIngModal.initialName}
           onClose={() => setCreateIngModal(null)}
-          onCreated={(item) => {
+          onSaved={(item) => {
             handleItemSelect(createIngModal.groupId, createIngModal.ingId, item);
             setCreateIngModal(null);
           }}
