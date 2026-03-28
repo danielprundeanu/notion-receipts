@@ -437,6 +437,22 @@ export async function getGroceryList(
 
 // ─── Ingredients Page ─────────────────────────────────────────────────────────
 
+export async function createGroceryItem(data: {
+  name: string;
+  category?: string | null;
+  unit?: string | null;
+  unit2?: string | null;
+  conversion?: number | null;
+  kcal?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
+  protein?: number | null;
+}): Promise<{ id: string; name: string; unit: string | null; unit2: string | null }> {
+  const item = await prisma.groceryItem.create({ data });
+  revalidatePath("/ingredients");
+  return { id: item.id, name: item.name, unit: item.unit, unit2: item.unit2 };
+}
+
 export async function updateGroceryItem(
   id: string,
   data: {

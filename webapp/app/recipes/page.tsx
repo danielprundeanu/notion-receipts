@@ -67,68 +67,55 @@ export default async function RecipesPage({
         </div>
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <form className="relative flex-1 max-w-sm">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#787878]" />
-          <input
-            name="q"
-            defaultValue={q}
-            placeholder="Search recipes…"
-            className="w-full pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
-          />
-          {cat && <input type="hidden" name="cat" value={cat} />}
-        </form>
+      {/* Search */}
+      <form className="relative mb-3">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#787878]" />
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Search recipes…"
+          className="w-full max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
+        />
+        {cat && <input type="hidden" name="cat" value={cat} />}
+      </form>
 
-        <div className="flex items-center gap-1.5 flex-wrap">
+      {/* Filters + Sort — horizontal scroll on mobile */}
+      <div className="flex items-center gap-1.5 mb-6 overflow-x-auto pb-1 scrollbar-none">
+        <Link
+          href={q ? `?q=${q}` : "/recipes"}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            !cat && !favOnly ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
+          }`}
+        >All</Link>
+        <Link
+          href={`?${q ? `q=${q}&` : ""}fav=1`}
+          className={`shrink-0 flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            favOnly ? "bg-amber-400 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
+          }`}
+        >
+          <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+          Favorites
+        </Link>
+        {CATEGORIES.map((c) => (
           <Link
-            href={q ? `?q=${q}` : "/recipes"}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              !cat && !favOnly
-                ? "bg-orange-500 text-white"
-                : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+            key={c}
+            href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+              cat === c ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]"
             }`}
-          >
-            All
-          </Link>
-          <Link
-            href={`?${q ? `q=${q}&` : ""}fav=1`}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-              favOnly
-                ? "bg-amber-400 text-white"
-                : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
-            }`}
-          >
-            <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-            Favorites
-          </Link>
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c}
-              href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                cat === c
-                  ? "bg-orange-500 text-white"
-                  : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
-              }`}
-            >
-              {c}
-            </Link>
-          ))}
-        </div>
-      </div>
+          >{c}</Link>
+        ))}
 
-      {/* Sort */}
-      <div className="flex items-center gap-1.5 mb-4">
-        <span className="text-xs text-gray-400 dark:text-[#555] mr-1">Sort:</span>
-        <Link href={sortUrl("name_asc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${!sort || sort === "name_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
-          <ArrowDownAZ size={13} /> A–Z
+        <div className="shrink-0 w-px h-4 bg-gray-200 dark:bg-[#3a3a3a] mx-1" />
+
+        <Link href={sortUrl("name_asc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${!sort || sort === "name_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
+          <ArrowDownAZ size={12} /> A–Z
         </Link>
-        <Link href={sortUrl("date_desc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${sort === "date_desc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
-          <CalendarArrowDown size={13} /> Newest
+        <Link href={sortUrl("date_desc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${sort === "date_desc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
+          <CalendarArrowDown size={12} /> Newest
         </Link>
-        <Link href={sortUrl("date_asc")} className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${sort === "date_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"}`}>
-          <CalendarArrowUp size={13} /> Oldest
+        <Link href={sortUrl("date_asc")} className={`shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-semibold transition-colors ${sort === "date_asc" ? "bg-orange-500 text-white" : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"}`}>
+          <CalendarArrowUp size={12} /> Oldest
         </Link>
       </div>
 

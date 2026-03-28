@@ -10,6 +10,7 @@ import {
   searchGroceryItems,
   getGroceryItemDetails,
   updateGroceryItem,
+  createGroceryItem,
 } from "@/lib/actions";
 
 const CATEGORIES = [
@@ -72,10 +73,12 @@ function GroceryItemInput({
   value,
   onChange,
   onItemSelect,
+  onCreateRequest,
 }: {
   value: string;
   onChange: (name: string) => void;
   onItemSelect?: (item: GroceryItemOption) => void;
+  onCreateRequest?: (name: string) => void;
 }) {
   const [results, setResults] = useState<GroceryItemOption[]>([]);
   const [open, setOpen] = useState(false);
@@ -83,10 +86,10 @@ function GroceryItemInput({
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      if (value.length < 2) { setResults([]); return; }
+      if (value.length < 2) { setResults([]); setOpen(false); return; }
       const r = await searchGroceryItems(value);
       setResults(r as GroceryItemOption[]);
-      if (r.length > 0) setOpen(true);
+      setOpen(true);
     }, 250);
     return () => clearTimeout(t);
   }, [value]);
@@ -99,6 +102,8 @@ function GroceryItemInput({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  const showDropdown = open && value.length >= 2 && (results.length > 0 || onCreateRequest);
+
   return (
     <div ref={ref} className="relative flex-1 min-w-0">
       <input
@@ -107,7 +112,7 @@ function GroceryItemInput({
         placeholder="Ingredient name"
         className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
       />
-      {open && results.length > 0 && (
+      {showDropdown && (
         <div className="absolute z-30 top-full mt-0.5 left-0 right-0 bg-white dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] rounded-lg shadow-lg overflow-hidden">
           {results.map((r) => (
             <button
@@ -129,6 +134,19 @@ function GroceryItemInput({
               )}
             </button>
           ))}
+          {onCreateRequest && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => {
+                setOpen(false);
+                onCreateRequest(value);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a3a3a]"
+            >
+              <Plus size={13} /> Add &ldquo;{value}&rdquo; as new ingredient
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -277,6 +295,131 @@ function GroceryItemEditModal({
             className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
           >
             Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Grocery Item Create Modal ────────────────────────────────────────────────
+
+const GROCERY_CATEGORIES = [
+  "🍎 Fruits", "🥕 Vegetables", "🥩 Meat & Alt", "🐟 Fish & Seafood",
+  "🥚 Dairy & Eggs", "🌾 Grains & Legumes", "🥜 Nuts & Seeds",
+  "🫙 Oils & Fats", "🍯 Sweeteners", "🧂 Spices & Herbs",
+  "🥫 Canned & Preserved", "🧊 Frozen", "🥤 Drinks", "🍞 Bakery", "Other",
+];
+
+function GroceryItemCreateModal({
+  initialName,
+  onClose,
+  onCreated,
+}: {
+  initialName: string;
+  onClose: () => void;
+  onCreated: (item: GroceryItemOption) => void;
+}) {
+  const [name, setName] = useState(initialName);
+  const [category, setCategory] = useState("");
+  const [unit, setUnit] = useState("");
+  const [unit2, setUnit2] = useState("");
+  const [conversion, setConversion] = useState("");
+  const [kcal, setKcal] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
+  const [protein, setProtein] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleCreate() {
+    if (!name.trim() || !unit.trim()) return;
+    setSaving(true);
+    const item = await createGroceryItem({
+      name: name.trim(),
+      category: category || null,
+      unit: unit.trim(),
+      unit2: unit2.trim() || null,
+      conversion: conversion ? parseFloat(conversion) : null,
+      kcal: kcal ? parseFloat(kcal) : null,
+      carbs: carbs ? parseFloat(carbs) : null,
+      fat: fat ? parseFloat(fat) : null,
+      protein: protein ? parseFloat(protein) : null,
+    });
+    onCreated({ id: item.id, name: item.name, unit: item.unit, unit2: item.unit2 });
+    setSaving(false);
+    onClose();
+  }
+
+  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const labelCls = "text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5";
+
+  return (
+    <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">Ingredient nou</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 p-1"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className={labelCls}>Nume</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex: făină integrală" className={inputCls} />
+          </div>
+
+          <div>
+            <label className={labelCls}>Categorie</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+              <option value="">— selectează —</option>
+              {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Unitate principală *</label>
+              <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="g, ml, piece…" className={inputCls} />
+            </div>
+            <div>
+              <label className={labelCls}>Unitate secundară</label>
+              <input value={unit2} onChange={(e) => setUnit2(e.target.value)} placeholder="cup, tbsp…" className={inputCls} />
+            </div>
+          </div>
+
+          {unit2 && (
+            <div>
+              <label className={labelCls}>Conversie (1 {unit2} = ? {unit || "unit"})</label>
+              <input type="number" step="0.001" min="0" value={conversion} onChange={(e) => setConversion(e.target.value)} placeholder="ex: 240" className={inputCls} />
+            </div>
+          )}
+
+          <div>
+            <label className={labelCls}>Nutriție (per 100{unit === "ml" ? "ml" : "g"})</label>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "kcal", value: kcal, set: setKcal },
+                { label: "carbs g", value: carbs, set: setCarbs },
+                { label: "fat g", value: fat, set: setFat },
+                { label: "protein g", value: protein, set: setProtein },
+              ].map(({ label, value, set }) => (
+                <div key={label}>
+                  <span className="text-xs text-gray-400 dark:text-[#555555] block mb-1">{label}</span>
+                  <input type="number" step="0.1" min="0" value={value} onChange={(e) => set(e.target.value)}
+                    className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button type="button" onClick={handleCreate} disabled={saving || !name.trim() || !unit.trim()}
+            className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors">
+            {saving && <Loader2 size={14} className="animate-spin" />}
+            Creează ingredient
+          </button>
+          <button type="button" onClick={onClose} className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors">
+            Anulează
           </button>
         </div>
       </div>
@@ -477,6 +620,11 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
   // For the "Add unit" modal
   const [editingUnit, setEditingUnit] = useState<{
     groupId: string; ingId: string; groceryItemId: string;
+  } | null>(null);
+
+  // For the "Create new ingredient" modal
+  const [createIngModal, setCreateIngModal] = useState<{
+    groupId: string; ingId: string; initialName: string;
   } | null>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -820,6 +968,16 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
         </div>
       </div>
 
+      {/* ── Servings callout ─────────────────────────────────────── */}
+      {servings && parseInt(servings) > 1 && (
+        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
+          <span className="text-base">🍽️</span>
+          <span className="text-sm">
+            Ingredientele de mai jos sunt pentru <strong>{servings} porții</strong> de gătit
+          </span>
+        </div>
+      )}
+
       {/* ── Ingredients ──────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -895,6 +1053,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                           value={ing.groceryItemName}
                           onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
                           onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
+                          onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
                         />
                         <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
                           className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors shrink-0">
@@ -930,6 +1089,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                         value={ing.groceryItemName}
                         onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
                         onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
+                        onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
                       />
                       <input
                         value={ing.notes}
@@ -1013,6 +1173,18 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
               unit: unit2 ?? unit ?? "",
             });
             setEditingUnit(null);
+          }}
+        />
+      )}
+
+      {/* Grocery item create modal */}
+      {createIngModal && (
+        <GroceryItemCreateModal
+          initialName={createIngModal.initialName}
+          onClose={() => setCreateIngModal(null)}
+          onCreated={(item) => {
+            handleItemSelect(createIngModal.groupId, createIngModal.ingId, item);
+            setCreateIngModal(null);
           }}
         />
       )}

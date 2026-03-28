@@ -99,6 +99,23 @@ body {
   --color-star:           #fbbf24; /* amber-400  */
 }
 
+/* ─── Prevent iOS zoom on input focus (font-size must be ≥ 16px) ─── */
+input, textarea, select {
+  font-size: 16px !important;
+}
+@media (min-width: 768px) {
+  input, textarea, select {
+    font-size: inherit !important;
+  }
+}
+
+/* ─── Hide scrollbar (horizontal chip rows) ─── */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
 /* ─── Base styles ─── */
 body {
   background-color: var(--color-bg-base);

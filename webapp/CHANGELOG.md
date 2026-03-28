@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.6.0] - 2026-03-28
+
+### Added
+- Ingredient autocomplete: "+ Add as new ingredient" option in dropdown when typing a name not found in DB
+- `GroceryItemCreateModal`: create ingredient with all fields (name, category, unit, unit2, conversion, nutrition) directly from recipe form
+- Servings callout (orange banner) before the ingredients section when recipe has > 1 serving
+- Horizontal scroll for category/sort filter chips on mobile (no overflow clipping)
+- No iOS input zoom: `font-size: 16px` enforced on mobile inputs/selects
+
+### Improved
+- `next/image` replaces `<img>` on recipe cards (WebP, lazy load, responsive sizes)
+- Sort recipes by date (Newest / Oldest / A–Z) on the recipes list page
+- `createGroceryItem` server action added for creating ingredients from the recipe form
+
 ## [0.5.1] - 2026-03-28
 
 ### Added
