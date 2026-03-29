@@ -52,6 +52,7 @@ export type RecipeData = {
     step: number;
     text: string;
     isSection: boolean;
+    instrType?: string | null;
   }>;
 };
 
