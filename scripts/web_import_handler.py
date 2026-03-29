@@ -34,13 +34,12 @@ sys.path.insert(0, SCRIPT_DIR)
 def parse_urls(urls: list) -> list:
     """
     Scrape-uiește URL-urile și returnează lista de rețete parsate.
-    Folosește RecipeScraper → convert_to_txt_format → parse_scraped_file
-    pentru a reutiliza toată logica existentă.
+    Flux: RecipeScraper → convert_to_txt_format → parse_text
+    (aceleași funcții ca la importul din txt, cu excepția pasului de scraping).
     """
     buf = io.StringIO()
     with redirect_stdout(buf), redirect_stderr(buf):
         from scrape_recipes import RecipeScraper
-        from import_recipes import parse_scraped_file
 
     scraper = RecipeScraper()
     results = []
@@ -59,25 +58,18 @@ def parse_urls(urls: list) -> list:
                 results.append({"error": f"Nu s-a putut extrage rețeta de la {url}", "url": url})
                 continue
 
-            # Convertim la format txt, apoi parsăm structurat
+            # Convertim la format txt (=== / # grup / ## Steps)
             buf2 = io.StringIO()
             with redirect_stdout(buf2):
                 txt = scraper.convert_to_txt_format(recipe_raw)
 
-            buf3 = io.StringIO()
-            with redirect_stdout(buf3):
-                parsed_list = parse_scraped_file(txt)
+            # Parsăm prin același pipeline ca importul din txt
+            parsed_list = parse_text(txt)
             if not parsed_list:
                 results.append({"error": f"Nu s-a putut parsa rețeta de la {url}", "url": url})
                 continue
 
-            recipe = parsed_list[0]
-
-            # Adăugăm image_url din rețeta raw dacă nu a fost captat
-            if not recipe.get("image") and recipe_raw.get("image_url"):
-                recipe["image"] = recipe_raw["image_url"]
-
-            results.append(recipe)
+            results.extend(parsed_list)
 
         except Exception as e:
             results.append({"error": str(e), "url": url})

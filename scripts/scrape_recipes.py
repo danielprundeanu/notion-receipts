@@ -1308,9 +1308,9 @@ class RecipeScraper:
         sorted_groups = groups_without_name + groups_with_name
         
         for group in sorted_groups:
-            # Scrie numele grupului (fără brackets), sau "Ingredients" dacă nu are nume
+            # Scrie numele grupului cu prefix # pentru compatibilitate cu parse_txt_simple
             group_name = group.get('name') or "Ingredients"
-            lines.append(group_name)
+            lines.append(f"# {group_name}")
             
             # Scrie ingredientele din grup - convertește unități apoi normalizează la 1 porție
             for ingredient in group.get('items', []):
@@ -1336,7 +1336,7 @@ class RecipeScraper:
         
         # Dacă nu sunt grupuri, fallback la ingredients simplu (pentru JSON-LD)
         if not ingredient_groups and recipe.get('ingredients'):
-            lines.append("Ingredients")
+            lines.append("# Ingredients")
             for ingredient in recipe.get('ingredients', []):
                 # Normalizează cantitatea
                 normalized = self._normalize_quantity(ingredient, original_servings or 1)
@@ -1356,20 +1356,19 @@ class RecipeScraper:
         
         # Adaugă instrucțiunile - formatate cu secțiuni dacă există
         if recipe.get('instructions'):
-            lines.append("Steps:")
+            lines.append("## Steps:")
             step_number = 1
-            
+
             for step in recipe['instructions']:
                 # Elimină newlines din interior (pot fi adăugate de HTML parsing)
                 step = step.replace('\n', ' ').replace('\r', ' ')
                 step = re.sub(r'\s+', ' ', step).strip()  # Normalizează spațiile
                 # Elimină punct/spații reziduale de la parse (ex: ". Cover..." → "Cover...")
                 step = re.sub(r'^[\.\s]+', '', step).strip()
-                
+
                 # Verifică dacă e header de secțiune (începe cu ##)
                 if step.startswith('## '):
-                    # Adaugă header fără numerotare
-                    lines.append(step[3:])  # Elimină ##
+                    lines.append(step)  # Păstrează prefixul ## pentru parse_txt_simple
                 elif step.strip('.').strip():
                     # Adaugă pas normal cu numerotare (sare peste linii goale sau cu doar puncte)
                     lines.append(f"{step_number}. {step}")
@@ -1378,7 +1377,7 @@ class RecipeScraper:
         
         # Adaugă secțiunea Notes (dacă există) DUPĂ Steps
         if recipe.get('notes'):
-            lines.append("Notes:")
+            lines.append("## Notes:")
             for note in recipe['notes']:
                 # Elimină newlines și normalizează spațiile
                 note = note.replace('\n', ' ').replace('\r', ' ')
