@@ -177,14 +177,15 @@ async function matchIngredient(name: string, nameMappings: Record<string, Ingred
   }
 
   // Score candidates — ia maximul dintre similaritatea EN și RO
+  // Dacă scorul RO e mai bun, returnează nameRo ca display name (mai util pentru utilizator)
   const scored = candidates
-    .map((c) => ({
-      ...c,
-      score: Math.max(
-        similarity(nameLower, c.name.toLowerCase()),
-        c.nameRo ? similarity(nameLower, c.nameRo.toLowerCase()) : 0,
-      ),
-    }))
+    .map((c) => {
+      const scoreEn = similarity(nameLower, c.name.toLowerCase());
+      const scoreRo = c.nameRo ? similarity(nameLower, c.nameRo.toLowerCase()) : 0;
+      const score = Math.max(scoreEn, scoreRo);
+      const displayName = scoreRo > scoreEn && c.nameRo ? c.nameRo : c.name;
+      return { ...c, score, displayName };
+    })
     .sort((a, b) => b.score - a.score)
     .slice(0, 3);
 
@@ -195,17 +196,17 @@ async function matchIngredient(name: string, nameMappings: Record<string, Ingred
     return {
       status: "similar",
       groceryItemId: best.id,
-      groceryItemName: best.name,
+      groceryItemName: best.displayName,
       groceryItemUnit: best.unit,
       groceryItemUnit2: best.unit2,
-      candidates: scored,
+      candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit })),
     };
   }
 
   // Low confidence → return as new but with candidates
   return {
     status: "new",
-    candidates: scored,
+    candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit })),
   };
 }
 

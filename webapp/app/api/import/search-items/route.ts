@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     where: { name: { contains: q, mode: "insensitive" } },
     orderBy: { name: "asc" },
     take: 8,
-    select: { id: true, name: true, unit: true },
+    select: { id: true, name: true, unit: true, unit2: true },
   });
 
   return NextResponse.json(items);

@@ -1577,14 +1577,13 @@ class RecipeScraper:
         ingredient = ingredient.replace('¾', ' 3/4')
         ingredient = ingredient.strip()
         
-        # Pattern pentru cantități: fracție, număr mixt, sau număr întreg
-        # Acceptă: "500g", "500 g", "1/2 cup", "1 1/2 tbsp", "1/4 onion", "2 cloves"
-        # Ordinea e importantă: fracție cu număr mixt, apoi fracție simplă, apoi număr
-        # Unități cunoscute (opțional) - folosim word boundary pentru a evita match parțiale
-        # \b nu funcționează când unitatea e lipită de o literă mare (ex: tbspOlive)
-        # Folosim lookahead: unitatea trebuie urmată de spațiu, literă mare, cifră, EOF sau virgulă
-        units = r'(?:tablespoons?|teaspoons?|tbsps?\.?|cups?|tsps?\.?|ounces?|ozs?|pounds?|lbs?|grams?|kgs?|mls?|liters?|g|ml|l)(?=\s|[A-Z,]|$)'
-        pattern = rf'^(\d+\s+\d+/\d+|\d+/\d+|\d+(?:\.\d+)?)\s*({units})?\s*'
+        # Pattern pentru cantități: range (2-3), fracție cu număr mixt, fracție simplă, număr întreg/zecimal
+        # Acceptă: "500g", "500 g", "1/2 cup", "1 1/2 tbsp", "2-3 cloves", "400 of ml. broth"
+        # Lookahead (?=\s|,|$) fără IGNORECASE: unitatea trebuie urmată de spațiu/virgulă/EOF
+        # Previne matcharea 'g' din 'good', 'ml' din 'mloc' etc.
+        units = r'(?:tablespoons?|teaspoons?|tbsps?\.?|cups?|tsps?\.?|ounces?|ozs?|pounds?|lbs?|grams?|kgs?|ml\.?|liters?|g|l)(?=\s|,|$)'
+        # Range opțional: "2-3" → luăm media; "400 of ml." → capturăm "of <unit>" ca unitate
+        pattern = rf'^(\d+(?:\.\d+)?(?:-\d+(?:\.\d+)?)?|\d+\s+\d+/\d+|\d+/\d+)\s*(?:of\s+)?({units})?\s*(?:of\s+)?'
         match = re.match(pattern, ingredient.strip(), re.IGNORECASE)
         
         if not match:
@@ -1598,8 +1597,12 @@ class RecipeScraper:
         rest_of_ingredient = ingredient[match.end():].strip()
         
         try:
-            # Parsează cantitatea (suportă fracții și numere mixte)
-            if '/' in quantity_str:
+            # Parsează cantitatea (suportă range, fracții și numere mixte)
+            if '-' in quantity_str and not quantity_str.startswith('-'):
+                # Range: "2-3" → media
+                parts = quantity_str.split('-')
+                quantity = (float(parts[0]) + float(parts[1])) / 2
+            elif '/' in quantity_str:
                 # Fracție sau număr mixt (ex: "1 1/2" sau "1/2")
                 parts = quantity_str.split()
                 if len(parts) == 2:
@@ -1630,9 +1633,13 @@ class RecipeScraper:
             # Formatează cu 2 zecimale, apoi elimină zerourile finale și punctul dacă e număr întreg
             quantity_formatted = f"{normalized:.2f}".rstrip('0').rstrip('.')
             
-            # Curăță rest_of_ingredient - elimină " . " și " of " de la început
+            # Curăță rest_of_ingredient - elimină punct/spații și "of" de la început
             rest_of_ingredient = rest_of_ingredient.lstrip('. ')
             rest_of_ingredient = re.sub(r'^of\s+', '', rest_of_ingredient)
+            # Dacă unitatea e deja capturată dar a rămas un duplicat (ex: "ml. broth" când unit="ml")
+            if unit:
+                unit_clean = unit.rstrip('.')
+                rest_of_ingredient = re.sub(rf'^{re.escape(unit_clean)}\.?\s*', '', rest_of_ingredient, flags=re.IGNORECASE)
             
             # Reconstruiește ingredientul cu cantitate și unitate între []
             result = ''
@@ -1678,9 +1685,11 @@ class RecipeScraper:
             return ''
         
         # Verifică dacă are cantitate de INGREDIENT (cifră + unitate sau cifră la început)
-        # Pattern: începe cu cifră sau are cifră urmată de unitate
+        # Pattern: începe cu cifră, cu [qty] bracket, sau are cifră urmată de unitate
         has_ingredient_quantity = False
         if re.match(r'^\d', ingredient):  # Începe cu cifră
+            has_ingredient_quantity = True
+        elif re.match(r'^\[[\d./ ]+', ingredient):  # Format [qty] sau [qty unit]
             has_ingredient_quantity = True
         elif any(f'{num} {unit}' in ingredient.lower() or f'{num}{unit}' in ingredient.lower() 
                 for num in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']

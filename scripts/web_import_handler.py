@@ -132,7 +132,8 @@ def _parse_simple_ingredient(line: str):
         m_qu = re.match(r'^([¼½¾\d][¼½¾\d\s./,]*)\s+(.+)$', bracket)
         if m_qu:
             qty = _to_float(m_qu.group(1))
-            unit = m_qu.group(2).strip() or None
+            raw_unit = m_qu.group(2).strip() or None
+            unit = _ABBR_MAP.get(raw_unit.lower().rstrip('.'), raw_unit.rstrip('.')) if raw_unit else None
         else:
             qty = _to_float(bracket)
             unit = None
@@ -169,6 +170,10 @@ def _parse_simple_ingredient(line: str):
     name = re.sub(r'\s*\(.*?\)', '', name).strip()
     name = re.sub(r'\s+(?:OR|or|SAU|sau)\s+.*$', '', name).strip()
     name = name.split(',')[0].strip()
+
+    # Normalizează unitatea: strip punct + mapare abrevieri (ml. → ml, grame → g etc.)
+    if unit:
+        unit = _ABBR_MAP.get(unit.lower().rstrip('.'), unit.rstrip('.'))
 
     return qty, unit, name.lower()
 

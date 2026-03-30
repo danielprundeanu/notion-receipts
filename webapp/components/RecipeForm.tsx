@@ -862,7 +862,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     <div className="sm:hidden space-y-1.5">
                       <div className="flex gap-2 items-center">
                         <input
-                          type="number" min="0" step="0.1"
+                          type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Qty"
@@ -898,7 +898,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     {/* Desktop layout */}
                     <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 items-center">
                       <input
-                        type="number" min="0" step="0.1"
+                        type="number" min="0" step="0.001"
                         value={ing.quantity}
                         onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                         placeholder="Qty"
