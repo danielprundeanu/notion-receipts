@@ -1,0 +1,38 @@
+{
+  "smoked meat": {
+    "groceryItemId": "cmnawpn2i0019aayq4cq3k8fb",
+    "groceryItemName": "Smoked Ribs"
+  },
+  "good carrots": {
+    "groceryItemId": "cmmjq0le7007muvyqbj9ehyov",
+    "groceryItemName": "Carrot"
+  },
+  "celery as much as 1 small egg": {
+    "groceryItemId": "cmmjq0doe005guvyqyr5tni7a",
+    "groceryItemName": "Celery Root"
+  },
+  "cloves of garlic": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "pepper (optional)": {
+    "groceryItemId": "cmmjq0mz90082uvyqlcprx8qc",
+    "groceryItemName": " Red Bell Pepper"
+  },
+  "chopped green tarragon": {
+    "groceryItemId": "cmnbhiijk000d9ayqhfgubllq",
+    "groceryItemName": "Tarragon"
+  },
+  "salt and pepper": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  "optional: apple cider vinegar for inacrit": {
+    "groceryItemId": "cmmjq02m4002guvyqp8ptxdqi",
+    "groceryItemName": "Apple Cider Vinegar"
+  },
+  "bouquet of greens: 5 sprigs of tarragon and 5 sprigs of thyme": {
+    "groceryItemId": "cmnbhiijk000d9ayqhfgubllq",
+    "groceryItemName": "Tarragon"
+  }
+}

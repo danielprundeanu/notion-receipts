@@ -22,6 +22,13 @@ h1 {
   }
 }
 
+/* ─── iOS notch: safe-area top for sticky headers ─── */
+.sticky-safe-top {
+  position: sticky;
+  top: 0;
+  padding-top: env(safe-area-inset-top);
+}
+
 /* ════════════════════════════════════════════════
    DESIGN TOKENS — Light Theme
    ════════════════════════════════════════════════ */

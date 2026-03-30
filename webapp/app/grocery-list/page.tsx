@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getGroceryList } from "@/lib/actions";
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2 } from "lucide-react";
 
@@ -45,6 +45,8 @@ export default function GroceryListPage() {
   const [grouped, setGrouped] = useState<Record<string, GroceryEntry[]>>({});
   const [loading, setLoading] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [isStuck, setIsStuck] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,6 +67,14 @@ export default function GroceryListPage() {
 
   const allItems = Object.values(grouped).flat();
   const totalCount = allItems.length;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const obs = new IntersectionObserver(([e]) => setIsStuck(!e.isIntersecting), { threshold: 0 });
+    obs.observe(sentinel);
+    return () => obs.disconnect();
+  }, [loading, totalCount]);
   const checkedCount = allItems.filter((i) => checked.has(i.id)).length;
 
   const sortedCategories = Object.keys(grouped).sort((a, b) => {
@@ -103,38 +113,53 @@ export default function GroceryListPage() {
         </div>
       </div>
 
-      {/* Sticky: progress bar + chips */}
+      {/* Sticky: chips + progress bar */}
       {!loading && totalCount > 0 && (
-        <div className="sticky top-0 z-10 -mx-4 md:-mx-8 px-4 md:px-8 pt-2 pb-3 mb-4" style={{ backgroundColor: "var(--color-bg-base)" }}>
-          <div className="mb-3 h-1.5 bg-gray-100 dark:bg-[#2a2a2a] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-orange-500 transition-all duration-300"
-              style={{ width: `${(checkedCount / totalCount) * 100}%` }}
-            />
-          </div>
+        <>
+          {/* Sentinel — triggers isStuck when scrolled past */}
+          <div ref={sentinelRef} className="h-0" />
 
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-none -mx-4 md:-mx-8 px-4 md:px-8">
-          {sortedCategories.map((cat) => {
-            const icon = CATEGORY_ICONS[cat] ?? "📦";
-            const catName = cat.replace(/^[^\w\s]+\s*/, "");
-            const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
-            return (
-              <button
-                key={cat}
-                onClick={() => document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  allCatChecked
-                    ? "border-gray-100 dark:border-[#2e2e2e] text-gray-300 dark:text-[#444444]"
-                    : "border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#252525]"
-                }`}
-              >
-                <span>{icon}</span>
-                {catName}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+          <div className="sticky-safe-top z-10 -mx-4 md:-mx-8 mb-4" style={{ backgroundColor: "var(--color-bg-base)" }}>
+            {/* Progress bar — rounded above chips when not stuck */}
+            {!isStuck && (
+              <div className="mx-4 md:mx-8 mt-2 mb-2 h-1.5 bg-gray-100 dark:bg-[#2a2a2a] rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500 transition-all duration-300"
+                  style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
+              </div>
+            )}
+
+            {/* Chips row */}
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 md:px-8 pt-2 pb-2">
+              {sortedCategories.map((cat) => {
+                const icon = CATEGORY_ICONS[cat] ?? "📦";
+                const catName = cat.replace(/^[^\w\s]+\s*/, "");
+                const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                      allCatChecked
+                        ? "border-gray-100 dark:border-[#2e2e2e] text-gray-300 dark:text-[#444444]"
+                        : "border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#252525]"
+                    }`}
+                  >
+                    <span>{icon}</span>
+                    {catName}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Progress bar — thin full-width under chips when stuck */}
+            {isStuck && (
+              <div className="h-[3px] bg-gray-100 dark:bg-[#2a2a2a]">
+                <div className="h-full bg-orange-500 transition-all duration-300"
+                  style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       {loading ? (
