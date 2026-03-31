@@ -18,6 +18,7 @@ type GroceryItem = {
   fat: number | null;
   protein: number | null;
   unitWeight: number | null;
+  createdAt: Date;
 };
 
 type NumField = "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight";
@@ -292,13 +293,14 @@ export default function IngredientsPage() {
                 <SortTh label="Carbs g"    field="carbs"      align="right" {...sharedThProps} />
                 <SortTh label="Fat g"      field="fat"        align="right" {...sharedThProps} />
                 <SortTh label="Protein g"  field="protein"    align="right" {...sharedThProps} />
+                <SortTh label="Created"    field="createdAt"  {...sharedThProps} />
                 <th className="px-2 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-[#2e2e2e]">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={13} className="px-4 py-8 text-center text-gray-400">
                     No ingredients found
                   </td>
                 </tr>
@@ -337,6 +339,9 @@ export default function IngredientsPage() {
                     </td>
                     <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
                       <EditableCell value={item.protein != null ? fmt(item.protein) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "protein", v)} />
+                    </td>
+                    <td className="px-4 py-2 text-gray-400 dark:text-[#666666] whitespace-nowrap text-xs">
+                      {new Date(item.createdAt).toLocaleDateString("ro-RO", { day: "2-digit", month: "short", year: "numeric" })}
                     </td>
                     <td className="px-2 py-2">
                       <button
@@ -395,6 +400,7 @@ export default function IngredientsPage() {
               fat: null,
               protein: null,
               unitWeight: null,
+              createdAt: new Date(),
             }]);
             setCreatingNew(false);
           }}

@@ -499,6 +499,7 @@ export async function getGroceryItems() {
       fat: true,
       protein: true,
       unitWeight: true,
+      createdAt: true,
     },
   });
 }
