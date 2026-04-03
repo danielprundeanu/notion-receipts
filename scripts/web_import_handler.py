@@ -136,7 +136,7 @@ def _parse_simple_ingredient(line: str):
             unit = _ABBR_MAP.get(raw_unit.lower().rstrip('.'), raw_unit.rstrip('.')) if raw_unit else None
         else:
             qty = _to_float(bracket)
-            unit = None
+            unit = "piece" if _to_float(bracket) is not None else None
         name = name.split(',')[0].strip()
         return qty, unit, name.lower()
 
@@ -174,6 +174,9 @@ def _parse_simple_ingredient(line: str):
     # Normalizează unitatea: strip punct + mapare abrevieri (ml. → ml, grame → g etc.)
     if unit:
         unit = _ABBR_MAP.get(unit.lower().rstrip('.'), unit.rstrip('.'))
+    elif qty is not None:
+        # Cantitate fără unitate → ingredient numărabil (ceapă, morcovi etc.)
+        unit = "piece"
 
     return qty, unit, name.lower()
 

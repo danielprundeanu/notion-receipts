@@ -1,14 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, X } from "lucide-react";
-import { createGroceryItem, updateGroceryItem, getGroceryItemDetails } from "@/lib/actions";
+import { Loader2, Trash2, X } from "lucide-react";
+import { createGroceryItem, updateGroceryItem, deleteGroceryItem, getGroceryItemDetails } from "@/lib/actions";
 
 export type GroceryItemResult = {
   id: string;
   name: string;
+  nameRo: string | null;
+  category: string | null;
   unit: string | null;
   unit2: string | null;
+  conversion: number | null;
+  kcal: number | null;
+  carbs: number | null;
+  fat: number | null;
+  protein: number | null;
 };
 
 const GROCERY_CATEGORIES = [
@@ -26,15 +33,19 @@ export default function GroceryItemModal({
   initialName = "",
   onClose,
   onSaved,
+  onDeleted,
 }: {
   itemId?: string;
   initialName?: string;
   onClose: () => void;
   onSaved: (item: GroceryItemResult) => void;
+  onDeleted?: () => void;
 }) {
   const isEdit = !!itemId;
 
   const [loading, setLoading] = useState(isEdit);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [name, setName] = useState(initialName);
   const [nameRo, setNameRo] = useState("");
   const [category, setCategory] = useState("");
@@ -87,6 +98,15 @@ export default function GroceryItemModal({
     });
   }, [itemId]);
 
+  async function handleDelete() {
+    if (!itemId) return;
+    setDeleting(true);
+    await deleteGroceryItem(itemId);
+    setDeleting(false);
+    onClose();
+    onDeleted?.();
+  }
+
   async function handleSave() {
     if (!name.trim() || !unit.trim()) return;
     setSaving(true);
@@ -106,7 +126,19 @@ export default function GroceryItemModal({
 
     if (isEdit && itemId) {
       await updateGroceryItem(itemId, payload);
-      onSaved({ id: itemId, name: payload.name, unit: payload.unit, unit2: payload.unit2 ?? null });
+      onSaved({
+        id: itemId,
+        name: payload.name,
+        nameRo: payload.nameRo,
+        category: payload.category,
+        unit: payload.unit,
+        unit2: payload.unit2 ?? null,
+        conversion: payload.conversion,
+        kcal: payload.kcal,
+        carbs: payload.carbs,
+        fat: payload.fat,
+        protein: payload.protein,
+      });
     } else {
       const item = await createGroceryItem(payload);
       onSaved(item);
@@ -246,7 +278,33 @@ export default function GroceryItemModal({
           </div>
         )}
 
-        <div className="flex gap-3 mt-6">
+        {isEdit && confirmDelete && (
+          <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
+            <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+              Ștergi definitiv <strong>{name}</strong>? Ingredientul va fi eliminat din toate rețetele.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors"
+              >
+                {deleting && <Loader2 size={13} className="animate-spin" />}
+                Șterge definitiv
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-100 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+              >
+                Anulează
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-3 mt-4">
           <button
             type="button"
             onClick={handleSave}
@@ -256,6 +314,16 @@ export default function GroceryItemModal({
             {saving && <Loader2 size={14} className="animate-spin" />}
             {isEdit ? "Save" : "Creează ingredient"}
           </button>
+          {isEdit && !confirmDelete && (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="px-3 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+              title="Șterge ingredient"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

@@ -152,6 +152,7 @@ def export_grocery_items():
             'carbs': props.get('Carbs / 100g', {}).get('number'),
             'fat': props.get('Fat / 100g', {}).get('number'),
             'protein': props.get('Protein / 100g', {}).get('number'),
+            'createdAt': page.get('created_time'),
         }
 
     print(f"  ✓ {len(items)} grocery items")

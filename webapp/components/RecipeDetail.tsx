@@ -27,14 +27,12 @@ export type RecipeData = {
   category: string | null;
   favorite: boolean;
   link: string | null;
-  notes: string | null;
   imageUrl: string | null;
   createdAt: Date;
   ingredients: Array<{
     id: string;
     quantity: number | null;
     unit: string | null;
-    notes: string | null;
     groupOrder: number;
     groupName: string | null;
     groceryItem: {
@@ -357,6 +355,18 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   }
   const sortedGroups = [...groupMap.entries()].sort((a, b) => a[0] - b[0]);
 
+  // If groups have no names (null), replace "Part N" fallback with meaningful section headers from instructions.
+  // Only use headers that start with "For" (e.g. "For the Pancakes") — skip generic ones like "Steps", "Ingredients".
+  const sectionHeaders = recipe.instructions
+    .filter((i) => i.isSection && i.text.trim().toLowerCase().startsWith("for"))
+    .map((i) => i.text);
+  const unnamedGroups = sortedGroups.filter(([, g]) => g.name === null);
+  if (unnamedGroups.length > 0 && sectionHeaders.length >= unnamedGroups.length) {
+    unnamedGroups.forEach(([key], idx) => {
+      groupMap.get(key)!.name = sectionHeaders[idx];
+    });
+  }
+
   let totalKcal = 0, totalCarbs = 0, totalFat = 0, totalProtein = 0;
   let hasNutrition = false;
   for (const ing of recipe.ingredients) {
@@ -458,12 +468,6 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           )}
         </div>
 
-        {recipe.notes && (
-          <p className="mt-4 text-gray-700 dark:text-[#b8b8b8] text-sm bg-amber-50 dark:bg-amber-950/30 border border-amber-100 dark:border-amber-900/50 rounded-lg px-4 py-3">
-            {recipe.notes}
-          </p>
-        )}
-
       </div>
 
       {/* Servings control */}
@@ -561,9 +565,6 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                             <span className={checked ? "" : "text-gray-800 dark:text-[#d4d4d4]"}>
                               {ing.groceryItem?.name ?? "—"}
                             </span>
-                            {ing.notes && (
-                              <span className={checked ? "" : "text-gray-500 dark:text-[#787878]"}> · {ing.notes}</span>
-                            )}
                           </span>
                         </li>
                       );
@@ -613,6 +614,8 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                 return recipe.instructions.map((inst, i) => {
                   if (inst.isSection) {
                     numCounter = 0;
+                    // Skip section headers already used as ingredient group names
+                    if (sectionHeaders.includes(inst.text)) return null;
                     return (
                       <h3 key={i} className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] pt-2">
                         {inst.text}

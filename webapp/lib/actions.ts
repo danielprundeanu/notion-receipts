@@ -13,13 +13,11 @@ export type RecipeFormInput = {
   difficulty: string | null;
   favorite: boolean;
   link: string | null;
-  notes: string | null;
   imageUrl: string | null;
   ingredients: Array<{
     groceryItemName: string;
     quantity: number | null;
     unit: string | null;
-    notes: string | null;
     groupOrder: number;
     groupName: string | null;
     order: number;
@@ -83,7 +81,6 @@ async function buildIngredientsAndInstructions(
         groceryItemId: groceryItem.id,
         quantity: ing.quantity,
         unit: ing.unit ?? groceryItem.unit,
-        notes: ing.notes,
         groupOrder: ing.groupOrder,
         groupName: ing.groupName ?? null,
         order: ing.order,
@@ -117,7 +114,6 @@ export async function createRecipe(data: RecipeFormInput): Promise<string> {
       difficulty: data.difficulty,
       favorite: data.favorite,
       link: data.link,
-      notes: data.notes,
       imageUrl: data.imageUrl ?? null,
     },
   });
@@ -140,7 +136,6 @@ export async function updateRecipe(
       difficulty: data.difficulty,
       favorite: data.favorite,
       link: data.link,
-      notes: data.notes,
       imageUrl: data.imageUrl ?? null,
     },
   });
@@ -153,6 +148,11 @@ export async function updateRecipe(
 
 export async function deleteRecipe(id: string): Promise<void> {
   await prisma.recipe.delete({ where: { id } });
+  revalidatePath("/recipes");
+}
+
+export async function deleteRecipes(ids: string[]): Promise<void> {
+  await prisma.recipe.deleteMany({ where: { id: { in: ids } } });
   revalidatePath("/recipes");
 }
 
@@ -458,10 +458,10 @@ export async function createGroceryItem(data: {
   carbs?: number | null;
   fat?: number | null;
   protein?: number | null;
-}): Promise<{ id: string; name: string; unit: string | null; unit2: string | null }> {
+}): Promise<{ id: string; name: string; nameRo: string | null; category: string | null; unit: string | null; unit2: string | null; conversion: number | null; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null }> {
   const item = await prisma.groceryItem.create({ data });
   revalidatePath("/ingredients");
-  return { id: item.id, name: item.name, unit: item.unit, unit2: item.unit2 };
+  return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein };
 }
 
 export async function updateGroceryItem(
@@ -481,6 +481,12 @@ export async function updateGroceryItem(
   }
 ): Promise<void> {
   await prisma.groceryItem.update({ where: { id }, data });
+}
+
+export async function deleteGroceryItem(id: string): Promise<void> {
+  await prisma.groceryItem.delete({ where: { id } });
+  revalidatePath("/ingredients");
+  revalidatePath("/recipes");
 }
 
 export async function getGroceryItems() {

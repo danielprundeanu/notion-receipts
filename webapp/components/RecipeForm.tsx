@@ -27,7 +27,6 @@ type IngredientRow = {
   quantity: string;
   unit: string;
   groceryItemName: string;
-  notes: string;
   groceryItemId: string | null;
   availableUnits: string[] | null; // null = show all ALL_UNITS
 };
@@ -47,7 +46,6 @@ export type InitialRecipeData = {
   difficulty: string;
   favorite: boolean;
   link: string;
-  notes: string;
   imageUrl: string;
   groups: IngredientGroup[];
   instructionsText: string;
@@ -58,7 +56,7 @@ function uid() {
 }
 
 function emptyIngredient(): IngredientRow {
-  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", notes: "", groceryItemId: null, availableUnits: null };
+  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null };
 }
 
 function defaultGroup(name = "Ingredients"): IngredientGroup {
@@ -432,7 +430,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? "");
   const [favorite, setFavorite] = useState(initial?.favorite ?? false);
   const [link, setLink] = useState(initial?.link ?? "");
-  const [notes, setNotes] = useState(initial?.notes ?? "");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
   const [imageUploading, setImageUploading] = useState(false);
 
@@ -572,7 +569,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           groceryItemName: ing.groceryItemName.trim(),
           quantity: ing.quantity ? parseFloat(ing.quantity) : null,
           unit: ing.unit || null,
-          notes: ing.notes.trim() || null,
           groupOrder: groupIdx + 1,
           groupName: group.name.trim() || null,
           order,
@@ -604,7 +600,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       difficulty: difficulty || null,
       favorite,
       link: link.trim() || null,
-      notes: notes.trim() || null,
       imageUrl: imageUrl || null,
       ingredients,
       instructions,
@@ -785,15 +780,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             className={inputCls}
           />
         </div>
-        <div>
-          <Label>Notes</Label>
-          <input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional notes…"
-            className={inputCls}
-          />
-        </div>
       </div>
 
       {/* ── Servings callout ─────────────────────────────────────── */}
@@ -850,8 +836,8 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               {/* Ingredient rows */}
               <div className="p-3 space-y-3">
                 {/* Column headers — desktop only */}
-                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 mb-1 px-0.5">
-                  {["Qty", "Unit", "Ingredient", "Notes", ""].map((h) => (
+                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_28px] gap-2 mb-1 px-0.5">
+                  {["Qty", "Unit", "Ingredient", ""].map((h) => (
                     <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
                   ))}
                 </div>
@@ -887,16 +873,10 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           <Trash2 size={15} />
                         </button>
                       </div>
-                      <input
-                        value={ing.notes}
-                        onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                        placeholder="Notes (optional)"
-                        className="w-full px-2 py-1.5 text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525]"
-                      />
                     </div>
 
                     {/* Desktop layout */}
-                    <div className="hidden sm:grid grid-cols-[64px_80px_1fr_88px_28px] gap-2 items-center">
+                    <div className="hidden sm:grid grid-cols-[64px_80px_1fr_28px] gap-2 items-center">
                       <input
                         type="number" min="0" step="0.001"
                         value={ing.quantity}
@@ -917,12 +897,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                         onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
                         onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
                         onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
-                      />
-                      <input
-                        value={ing.notes}
-                        onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                        placeholder="Notes"
-                        className="px-2 py-1.5 text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 text-gray-700 dark:text-[#b8b8b8] bg-white dark:bg-[#252525]"
                       />
                       <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
                         className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">

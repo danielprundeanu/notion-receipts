@@ -34,5 +34,725 @@
   "bouquet of greens: 5 sprigs of tarragon and 5 sprigs of thyme": {
     "groceryItemId": "cmnbhiijk000d9ayqhfgubllq",
     "groceryItemName": "Tarragon"
+  },
+  "beans": {
+    "groceryItemId": "cmncvbdf4000w9ayq7ocdaacd",
+    "groceryItemName": "Dried Beans"
+  },
+  "onions": {
+    "groceryItemId": "cmmjpzyvd001duvyqz1fchpyr",
+    "groceryItemName": " Yellow Onion"
+  },
+  "broth": {
+    "groceryItemId": "cmnj8wto7000arjyq0n0n8wj9",
+    "groceryItemName": "Borsh"
+  },
+  "sunflower oil": {
+    "groceryItemId": "cmmjpzzqe001muvyq8svyjm0y",
+    "groceryItemName": "Avocado Oil"
+  },
+  "oregano": {
+    "groceryItemId": "cmmjq02f7002euvyqx8jep2qu",
+    "groceryItemName": "Dried Oregano"
+  },
+  "paprika": {
+    "groceryItemId": "cmmjpzvoq000guvyqm6blyw2v",
+    "groceryItemName": "Paprika Powder"
+  },
+  "wrap": {
+    "groceryItemId": "cmmjq0cs40057uvyqp8a9vaze",
+    "groceryItemName": "Wholemeal wrap"
+  },
+  "corn tortillas": {
+    "groceryItemId": "cmmjpzzts001nuvyqsgcbs8my",
+    "groceryItemName": "Tortilla"
+  },
+  "corn tortilla": {
+    "groceryItemId": "cmmjpzzts001nuvyqsgcbs8my",
+    "groceryItemName": "Tortilla"
+  },
+  "chilli": {
+    "groceryItemId": "cmmjq05vp003euvyqwwwogqq0",
+    "groceryItemName": "Chilli Powder"
+  },
+  "clove": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "bunch coriander": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "coriander": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "milk": {
+    "groceryItemId": "cmmjq028b002cuvyqw5en50ss",
+    "groceryItemName": "Low-fat milk"
+  },
+  "cottage cheese": {
+    "groceryItemId": "cmmjq09bz004euvyqkyh6reai",
+    "groceryItemName": "Low-fat cottage cheese"
+  },
+  "rolled oat": {
+    "groceryItemId": "cmmjq0ksw007guvyqe9arum6i",
+    "groceryItemName": "Rolled Oats"
+  },
+  "rice": {
+    "groceryItemId": "cmmjq0hcf006huvyqz9kzp2rl",
+    "groceryItemName": "Brown Rice"
+  },
+  "cheddar": {
+    "groceryItemId": "cmmjq0g5j0065uvyqwt9lgpob",
+    "groceryItemName": "Cheddar cheese"
+  },
+  "smoked paprika": {
+    "groceryItemId": "cmmjpzuib0004uvyqopi3959d",
+    "groceryItemName": "Smoked Paprika Powder"
+  },
+  "of yellow bean": {
+    "groceryItemId": "cmmjpzzxc001ouvyq7ck5stjd",
+    "groceryItemName": "Yellow Beans"
+  },
+  "sweet paprika": {
+    "groceryItemId": "cmmjpzvoq000guvyqm6blyw2v",
+    "groceryItemName": "Paprika Powder"
+  },
+  "of oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "plain greek yogurt": {
+    "groceryItemId": "cmmjq09px004iuvyq6qcptc1b",
+    "groceryItemName": "Greek Yogurt 2%"
+  },
+  ". lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  ". finely dill": {
+    "groceryItemId": "cmmjq0dz2005juvyqd07e4lf0",
+    "groceryItemName": "Fresh Dill"
+  },
+  "lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "finely dill": {
+    "groceryItemId": "cmmjq0dz2005juvyqd07e4lf0",
+    "groceryItemName": "Fresh Dill"
+  },
+  "to 2 tbsp. extra-virgin olive oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "extra-virgin olive oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "globe eggplant cut into 1/2-inch cube": {
+    "groceryItemId": "cmmjq0fk5005zuvyqd73h7vlc",
+    "groceryItemName": "Eggplant"
+  },
+  "tamari": {
+    "groceryItemId": "cmmjq06xq003puvyq0racq35t",
+    "groceryItemName": "Tamari Sauce"
+  },
+  "halloumi": {
+    "groceryItemId": "cmmjq0cds0053uvyqriagrtby",
+    "groceryItemName": "Halloumi cheese"
+  },
+  "or 1/2 english cucumber": {
+    "groceryItemId": "cmmjq00vy001yuvyqtdpkj0jb",
+    "groceryItemName": "Cucumber"
+  },
+  "caper": {
+    "groceryItemId": "cmmjq0ae2004puvyqdi6f0xmh",
+    "groceryItemName": "Capers"
+  },
+  "grains of choice (farro": {
+    "groceryItemId": "cmmjq0mhd007xuvyqckmq5oil",
+    "groceryItemName": "Quinoa"
+  },
+  "yellow bean": {
+    "groceryItemId": "cmmjpzzxc001ouvyq7ck5stjd",
+    "groceryItemName": "Yellow Beans"
+  },
+  "bunch parsley": {
+    "groceryItemId": "cmmjq0drz005huvyqd6xn1x7k",
+    "groceryItemName": "Fresh Parsley"
+  },
+  "oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "cashew": {
+    "groceryItemId": "cmmjq0gy5006duvyqj1022fhl",
+    "groceryItemName": "Cashew Nuts"
+  },
+  "curry powder": {
+    "groceryItemId": "cmmjq0hn3006kuvyqikk59ahi",
+    "groceryItemName": "Yellow Curry Powder"
+  },
+  "celery": {
+    "groceryItemId": "cmmjpzxig000zuvyqx6v8j133",
+    "groceryItemName": "Celery Rib"
+  },
+  "ground turmeric": {
+    "groceryItemId": "cmmjq04tk0033uvyq5kkvh3xd",
+    "groceryItemName": "Turmeric Powder"
+  },
+  "ground cinnamon": {
+    "groceryItemId": "cmmjq0kzz007iuvyqeu7rnzg6",
+    "groceryItemName": "Cinnamon"
+  },
+  "sriracha optional": {
+    "groceryItemId": "cmmjq00em001tuvyqdbem9ol7",
+    "groceryItemName": "Sriracha"
+  },
+  "red lentils rinsed": {
+    "groceryItemId": "cmmjq0cky0055uvyqpkh1r40t",
+    "groceryItemName": "Red Lentils"
+  },
+  "cilantro": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "low sodium vegetable broth": {
+    "groceryItemId": "cmmjpzxm10010uvyqqzjjxkpw",
+    "groceryItemName": "Vegetable Broth"
+  },
+  "coconut milk optional": {
+    "groceryItemId": "cmmjq0lsh007quvyqxqdvjg7o",
+    "groceryItemName": "Plant Milk Coconut"
+  },
+  "-4 tablespoons lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "granulated sugar, honey, or maple syrup": {
+    "groceryItemId": "cmmjq0fgl005yuvyq19lck98d",
+    "groceryItemName": "Maple syrup"
+  },
+  "kosher salt": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  "dry (uncooked) quinoa": {
+    "groceryItemId": "cmmjq0mhd007xuvyqckmq5oil",
+    "groceryItemName": "Quinoa"
+  },
+  "(15-oz.) can chickpea": {
+    "groceryItemId": "cmmjq0p94008puvyqe9hrr7bf",
+    "groceryItemName": "Chickpeas Tinned"
+  },
+  "bbq sauce": {
+    "groceryItemId": "cmmjq007o001ruvyq6ethsn92",
+    "groceryItemName": "BBQ Sauce"
+  },
+  "fire-roasted corn": {
+    "groceryItemId": "cmmjq06jy003luvyq49qi7rym",
+    "groceryItemName": "Tinned Corn Kernels"
+  },
+  "sharp white cheddar cheese": {
+    "groceryItemId": "cmmjq0g5j0065uvyqwt9lgpob",
+    "groceryItemName": "Cheddar cheese"
+  },
+  "2% plain greek yogurt": {
+    "groceryItemId": "cmmjq09px004iuvyq6qcptc1b",
+    "groceryItemName": "Greek Yogurt 2%"
+  },
+  "finely chive": {
+    "groceryItemId": "cmmjq041w002vuvyqw73im74m",
+    "groceryItemName": "Chives"
+  },
+  "or 2 tsp. fresh": {
+    "groceryItemId": "cmmjq0dz2005juvyqd07e4lf0",
+    "groceryItemName": "Fresh Dill"
+  },
+  "each kosher salt and black pepper": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  "plus 1 tbsp. extra-virgin olive oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "finely parsley": {
+    "groceryItemId": "cmmjq0drz005huvyqd6xn1x7k",
+    "groceryItemName": "Fresh Parsley"
+  },
+  "cloves garlic": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "and deveined shrimp": {
+    "groceryItemId": "cmmjq00sh001xuvyqef589y97",
+    "groceryItemName": "Shrimps"
+  },
+  "bell peppers (i use red and orange)": {
+    "groceryItemId": "cmnj9lus20017rjyqtarskbrj",
+    "groceryItemName": "Red Bell Pepper"
+  },
+  "sub farro or quinoa": {
+    "groceryItemId": "cmmjq0mhd007xuvyqckmq5oil",
+    "groceryItemName": "Quinoa"
+  },
+  "peache": {
+    "groceryItemId": "cmmjq00lk001vuvyqusvv4w7k",
+    "groceryItemName": "Peaches"
+  },
+  "to 2 jalapeño": {
+    "groceryItemId": "cmmjq0047001quvyqtnypcs7v",
+    "groceryItemName": "Jalapeno"
+  },
+  "from 1 lime": {
+    "groceryItemId": "cmmjq0oye008muvyqqa7g3xgj",
+    "groceryItemName": "Lime"
+  },
+  "packed cilantro leaves and stem": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "plain 2% fat greek yogurt": {
+    "groceryItemId": "cmmjq09px004iuvyq6qcptc1b",
+    "groceryItemName": "Greek Yogurt 2%"
+  },
+  "such as avocado, grapeseed, or canola oil – i prefer using avocado oil": {
+    "groceryItemId": "cmmjpzzqe001muvyq8svyjm0y",
+    "groceryItemName": "Avocado Oil"
+  },
+  "lime juice": {
+    "groceryItemId": "cmmjq0oye008muvyqqa7g3xgj",
+    "groceryItemName": "Lime"
+  },
+  "to 3 tbsp. water": {
+    "groceryItemId": "cmmjq0jf50072uvyqgixxnu4d",
+    "groceryItemName": "Water"
+  },
+  "(6-ounce) skin-on": {
+    "groceryItemId": "cmnaxjndq000n2wyqcvcd1ecy",
+    "groceryItemName": "salmon"
+  },
+  "salmon": {
+    "groceryItemId": "cmmjq06qt003nuvyq54t2auap",
+    "groceryItemName": "Salmon fillet"
+  },
+  "or brown sugar": {
+    "groceryItemId": "cmmjpzupd0006uvyq6qpx0nxp",
+    "groceryItemName": "Sugar"
+  },
+  "chili powder": {
+    "groceryItemId": "cmmjq05vp003euvyqwwwogqq0",
+    "groceryItemName": "Chilli Powder"
+  },
+  "english cucumber": {
+    "groceryItemId": "cmmjq00vy001yuvyqtdpkj0jb",
+    "groceryItemName": "Cucumber"
+  },
+  "basil": {
+    "groceryItemId": "cmmjq0e69005luvyqex703fxf",
+    "groceryItemName": "Fresh Basil"
+  },
+  "to 2 tbsp. lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "ground chicken": {
+    "groceryItemId": "cmmjq000q001puvyq2rg6y9wc",
+    "groceryItemName": "Ground Chicken"
+  },
+  "no need to press out excess moisture": {
+    "groceryItemId": "cmmjq0gga0068uvyqyn0xvyvl",
+    "groceryItemName": "Zucchini"
+  },
+  "crumbled feta cheese": {
+    "groceryItemId": "cmmjq0k410079uvyqhteb9nhg",
+    "groceryItemName": "Feta cheese"
+  },
+  "or shallots": {
+    "groceryItemId": "cmmjq0kpc007fuvyqbatwljsz",
+    "groceryItemName": "Shallot"
+  },
+  "or parsley": {
+    "groceryItemId": "cmmjq0drz005huvyqd6xn1x7k",
+    "groceryItemName": "Fresh Parsley"
+  },
+  "jalapeño": {
+    "groceryItemId": "cmmjq0047001quvyqtnypcs7v",
+    "groceryItemName": "Jalapeno"
+  },
+  "lemon zest": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "(15.5-oz.) can chickpea": {
+    "groceryItemId": "cmmjq0p94008puvyqe9hrr7bf",
+    "groceryItemName": "Chickpeas Tinned"
+  },
+  "roughly red onion": {
+    "groceryItemId": "cmmjq0716003quvyq16zgwn4a",
+    "groceryItemName": "Red onion"
+  },
+  "packed parsley": {
+    "groceryItemId": "cmmjq0drz005huvyqd6xn1x7k",
+    "groceryItemName": "Fresh Parsley"
+  },
+  "sesame seed paste": {
+    "groceryItemId": "cmmjq08gu0045uvyqb9n15y3y",
+    "groceryItemName": "Tahini"
+  },
+  "halved cherry tomatoe": {
+    "groceryItemId": "cmmjq0che0054uvyqjz33j0zf",
+    "groceryItemName": "Cherry tomatoes"
+  },
+  "finely red onion": {
+    "groceryItemId": "cmmjq0716003quvyq16zgwn4a",
+    "groceryItemName": "Red onion"
+  },
+  "argula": {
+    "groceryItemId": "cmmjq0box004wuvyqlbnn0reb",
+    "groceryItemName": "Rocket leaves"
+  },
+  "jalapeño seeds and ribs removed": {
+    "groceryItemId": "cmmjq0047001quvyqtnypcs7v",
+    "groceryItemName": "Jalapeno"
+  },
+  "packed cilantro leave": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "dill": {
+    "groceryItemId": "cmmjq0dz2005juvyqd07e4lf0",
+    "groceryItemName": "Fresh Dill"
+  },
+  "granulated garlic": {
+    "groceryItemId": "cmmjq01y00029uvyqyil8g8uk",
+    "groceryItemName": "Garlic Powder"
+  },
+  "kosher salt + 1/4 tsp. black pepper": {
+    "groceryItemId": "cmmjq09fk004fuvyqvnx00dwj",
+    "groceryItemName": "Black Pepper"
+  },
+  "head cauliflower cut into floret": {
+    "groceryItemId": "cmmjq0j0x006yuvyqyi6juagl",
+    "groceryItemName": "Cauliflower"
+  },
+  "extra-virgin olive oil divided": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "taco seasoning homemade or store-bought": {
+    "groceryItemId": "cmmjq00i0001uuvyqfegikgd6",
+    "groceryItemName": "Taco Seasoning"
+  },
+  "from a can of chipotle peppers) (or 1 tsp. chili powder": {
+    "groceryItemId": "cmmjq05vp003euvyqwwwogqq0",
+    "groceryItemName": "Chilli Powder"
+  },
+  "(15.5-oz.) can black bean": {
+    "groceryItemId": "cmmjq05lc003buvyqus22rvow",
+    "groceryItemName": "Tinned Black Beans"
+  },
+  "plum tomatoe": {
+    "groceryItemId": "cmmjq0che0054uvyqjz33j0zf",
+    "groceryItemName": "Cherry tomatoes"
+  },
+  "vegetable oil": {
+    "groceryItemId": "cmmjpzzqe001muvyq8svyjm0y",
+    "groceryItemName": "Avocado Oil"
+  },
+  "garlic cloves finely": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "ginger": {
+    "groceryItemId": "cmmjpzwqv000ruvyqaj2xdszw",
+    "groceryItemName": "Fresh ginger"
+  },
+  "green curry paste such as thai kitchen": {
+    "groceryItemId": "cmmjpzw2h000kuvyq25ggqixn",
+    "groceryItemName": "Green Curry Paste"
+  },
+  "zucchini cut into 1/4-inch-thick slice": {
+    "groceryItemId": "cmmjq0gga0068uvyqyn0xvyvl",
+    "groceryItemName": "Zucchini"
+  },
+  "yellow squash cut into 1/4-inch-thick slice": {
+    "groceryItemId": "cmmjq0hfz006iuvyqp0yp5ui5",
+    "groceryItemName": "Yellow Squash"
+  },
+  "carrots at a diagonal into 1-inch piece": {
+    "groceryItemId": "cmmjq0le7007muvyqbj9ehyov",
+    "groceryItemName": "Carrot"
+  },
+  "red bell pepper thin": {
+    "groceryItemId": "cmnj9lus20017rjyqtarskbrj",
+    "groceryItemName": "Red Bell Pepper"
+  },
+  "each salt and black pepper": {
+    "groceryItemId": "cmmjq09fk004fuvyqvnx00dwj",
+    "groceryItemName": "Black Pepper"
+  },
+  "13.5 oz. can full-fat coconut milk": {
+    "groceryItemId": "cmmjpzyrt001cuvyqdvgb3f7b",
+    "groceryItemName": "Coconut Milk (full fat) 6%"
+  },
+  "peanut or almond butter": {
+    "groceryItemId": "cmmjpzv6z000buvyqwvb63eix",
+    "groceryItemName": "Peanut butter"
+  },
+  "or corn": {
+    "groceryItemId": "cmmjq06jy003luvyq49qi7rym",
+    "groceryItemName": "Tinned Corn Kernels"
+  },
+  "mint leave": {
+    "groceryItemId": "cmmjq03yf002uuvyqhb6wx5eu",
+    "groceryItemName": "Mint leaves"
+  },
+  "peanut": {
+    "groceryItemId": "cmmjq0n9x0085uvyqeifuzuyc",
+    "groceryItemName": "Peanuts"
+  },
+  "cumin": {
+    "groceryItemId": "cmmjq04j80030uvyqjle89zp8",
+    "groceryItemName": "Ground Cumin"
+  },
+  "lentil": {
+    "groceryItemId": "cmmjq0cky0055uvyqpkh1r40t",
+    "groceryItemName": "Red Lentils"
+  },
+  "red lentil": {
+    "groceryItemId": "cmmjq0cky0055uvyqpkh1r40t",
+    "groceryItemName": "Red Lentils"
+  },
+  "-4 tablespoons fresh lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "sprigs of dill": {
+    "groceryItemId": "cmmjq0dz2005juvyqd07e4lf0",
+    "groceryItemName": "Fresh Dill"
+  },
+  "gr yellow pod": {
+    "groceryItemId": "cmmjpzzxc001ouvyq7ck5stjd",
+    "groceryItemName": "Yellow Beans"
+  },
+  "-4 tbsp fresh lemon juice": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "cherry tomatoe": {
+    "groceryItemId": "cmmjq0che0054uvyqjz33j0zf",
+    "groceryItemName": "Cherry tomatoes"
+  },
+  "yogurt": {
+    "groceryItemId": "cmmjq09px004iuvyq6qcptc1b",
+    "groceryItemName": "Greek Yogurt 2%"
+  },
+  "garlic": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "to 2 tbsp. olive oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "yellow pod": {
+    "groceryItemId": "cmmjpzzxc001ouvyq7ck5stjd",
+    "groceryItemName": "Yellow Beans"
+  },
+  "parsley": {
+    "groceryItemId": "cmmjq0drz005huvyqd6xn1x7k",
+    "groceryItemName": "Fresh Parsley"
+  },
+  "lb. butternut squash": {
+    "groceryItemId": "cmmjq0p1y008nuvyq8mqtp3ns",
+    "groceryItemName": "Butternut Squash"
+  },
+  "bean": {
+    "groceryItemId": "cmmjq03kr002quvyqyanvp8ov",
+    "groceryItemName": "Tinned cannellini beans"
+  },
+  "corn": {
+    "groceryItemId": "cmmjq06jy003luvyq49qi7rym",
+    "groceryItemName": "Tinned Corn Kernels"
+  },
+  "bell pepper": {
+    "groceryItemId": "cmnj9lus20017rjyqtarskbrj",
+    "groceryItemName": "Red Bell Pepper"
+  },
+  "shallo": {
+    "groceryItemId": "cmmjq0kpc007fuvyqbatwljsz",
+    "groceryItemName": "Shallot"
+  },
+  "-6 sun-dried tomatoe": {
+    "groceryItemId": "cmmjq02br002duvyqcejt5xxe",
+    "groceryItemName": "Sundried Tomatoes"
+  },
+  "salt &amp; pepper": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  "vegetable stock": {
+    "groceryItemId": "cmmjq0c6q0051uvyq8mmsb97m",
+    "groceryItemName": "Salt-reduced vegetable stock"
+  },
+  "hard cheese": {
+    "groceryItemId": "cmmjq0g5j0065uvyqwt9lgpob",
+    "groceryItemName": "Cheddar cheese"
+  },
+  "tin butter bean": {
+    "groceryItemId": "cmmjq0o28008duvyqb8mwf5k3",
+    "groceryItemName": "Tinned butter beans"
+  },
+  "handful of fresh basil": {
+    "groceryItemId": "cmmjq0e69005luvyqex703fxf",
+    "groceryItemName": "Fresh Basil"
+  },
+  "spinach": {
+    "groceryItemId": "cmmjq057l0037uvyqrqaa5sl3",
+    "groceryItemName": "Baby spinach"
+  },
+  "mushroom": {
+    "groceryItemId": "cmmjpzubb0002uvyqja2rma8n",
+    "groceryItemName": "Mushrooms"
+  },
+  "bag spinach": {
+    "groceryItemId": "cmmjq057l0037uvyqrqaa5sl3",
+    "groceryItemName": "Baby spinach"
+  },
+  "to 2 tbsp. lemon": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "chickpea": {
+    "groceryItemId": "cmmjq0p94008puvyqe9hrr7bf",
+    "groceryItemName": "Chickpeas Tinned"
+  },
+  "handful": {
+    "groceryItemId": "cmmjq0box004wuvyqlbnn0reb",
+    "groceryItemName": "Rocket leaves"
+  },
+  "-3 pickled chillies": {
+    "groceryItemId": "cmmjq01k60025uvyqqpwqgil4",
+    "groceryItemName": "Red chilli"
+  },
+  "almonds": {
+    "groceryItemId": "cmmjq05ot003cuvyqhpw6k21a",
+    "groceryItemName": "Almond"
+  },
+  "arlic clove": {
+    "groceryItemId": "cmmjq07ls003wuvyql0oq0o75",
+    "groceryItemName": "Garlic clove"
+  },
+  "carrots": {
+    "groceryItemId": "cmmjq0le7007muvyqbj9ehyov",
+    "groceryItemName": "Carrot"
+  },
+  "apples": {
+    "groceryItemId": "cmmjq0q8l008zuvyq6qs9t7q8",
+    "groceryItemName": "Apple"
+  },
+  "arlic": {
+    "groceryItemId": "cmmjq01y00029uvyqyil8g8uk",
+    "groceryItemName": "Garlic Powder"
+  },
+  "chickpeas": {
+    "groceryItemId": "cmmjq0p94008puvyqe9hrr7bf",
+    "groceryItemName": "Chickpeas Tinned"
+  },
+  "green jalapenos": {
+    "groceryItemId": "cmmjq0047001quvyqtnypcs7v",
+    "groceryItemName": "Jalapeno"
+  },
+  "lentils": {
+    "groceryItemId": "cmmjq0ij3006tuvyqj2ie0d4g",
+    "groceryItemName": "Tinned lentils"
+  },
+  "red split lenses": {
+    "groceryItemId": "cmmjq0cky0055uvyqpkh1r40t",
+    "groceryItemName": "Red Lentils"
+  },
+  "s of coriander": {
+    "groceryItemId": "cmmjq09mh004huvyqboipiorj",
+    "groceryItemName": "Fresh coriander"
+  },
+  "of salt": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  "raspberries": {
+    "groceryItemId": "cmmjq0ouv008luvyqxz05hf0c",
+    "groceryItemName": "Raspberry"
+  },
+  "ettuce": {
+    "groceryItemId": "cmmjq0kib007duvyqz3c6d5od",
+    "groceryItemName": "Lettuce leaves"
+  },
+  "pasta": {
+    "groceryItemId": "cmmjq0llf007ouvyqbd0lbj2e",
+    "groceryItemName": "Chipotle Dressing"
+  },
+  "pepper": {
+    "groceryItemId": "cmnj9lus20017rjyqtarskbrj",
+    "groceryItemName": "Red Bell Pepper"
+  },
+  "peppers": {
+    "groceryItemId": "cmnj9lus20017rjyqtarskbrj",
+    "groceryItemName": "Red Bell Pepper"
+  },
+  "pecan": {
+    "groceryItemId": "cmmjq0ddm005duvyqzuh99hw7",
+    "groceryItemName": "Pecans"
+  },
+  "ime": {
+    "groceryItemId": "cmmjq0oye008muvyqqa7g3xgj",
+    "groceryItemName": "Lime"
+  },
+  "courgettes": {
+    "groceryItemId": "cmmjq0gga0068uvyqyn0xvyvl",
+    "groceryItemName": "Zucchini"
+  },
+  "chicken": {
+    "groceryItemId": "cmmjq0no00089uvyq0g7uafdt",
+    "groceryItemName": "Chicken Thigh"
+  },
+  "emons": {
+    "groceryItemId": "cmmjq08np0047uvyqehv9m9b8",
+    "groceryItemName": "Lemon"
+  },
+  "wholegrain mustard": {
+    "groceryItemId": "cmmjq0itv006wuvyqinpqc50p",
+    "groceryItemName": "Dijon Mustard"
+  },
+  "creme fraiche": {
+    "groceryItemId": "cmmjq0lzo007suvyqmew37rys",
+    "groceryItemName": "Vegan Sour Cream"
+  },
+  "s of cheddar cheese": {
+    "groceryItemId": "cmmjq0g5j0065uvyqwt9lgpob",
+    "groceryItemName": "Cheddar cheese"
+  },
+  "sea jump": {
+    "groceryItemId": "cmmjq0a3o004muvyqrk33xzb9",
+    "groceryItemName": "Salt"
+  },
+  ". fresh basil": {
+    "groceryItemId": "cmmjq0e69005luvyqex703fxf",
+    "groceryItemName": "Fresh Basil"
+  },
+  ". olive oil": {
+    "groceryItemId": "cmmjq0e2p005kuvyqyxrh8j8p",
+    "groceryItemName": "Olive Oil"
+  },
+  "b. ground chicken": {
+    "groceryItemId": "cmmjq000q001puvyq2rg6y9wc",
+    "groceryItemName": "Ground Chicken"
+  },
+  "panko breadcrumbs": {
+    "groceryItemId": "cmmjq00p1001wuvyqxxbthany",
+    "groceryItemName": "Panko breadcrumb"
   }
 }

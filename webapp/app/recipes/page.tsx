@@ -1,26 +1,14 @@
 import Link from "next/link";
-import Image from "next/image";
 import { getRecipes } from "@/lib/actions";
 import { Star, Search, Plus, Download } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import SortSelect from "@/components/SortSelect";
+import RecipesGrid from "@/components/RecipesGrid";
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
   "Smoothie", "Smoothie Bowl", "Soup", "High Protein",
 ];
-
-// Dark bg values = color-mix(in srgb, tag-color 20%, #1c1c1c 80%)
-const CATEGORY_COLORS: Record<string, string> = {
-  Breakfast:       "bg-yellow-100 text-yellow-700 dark:bg-[#3f3217] dark:text-yellow-300",
-  Lunch:           "bg-green-100  text-green-700  dark:bg-[#1b3725] dark:text-green-300",
-  Dinner:          "bg-blue-100   text-blue-700   dark:bg-[#1e2a45] dark:text-blue-300",
-  Snack:           "bg-purple-100 text-purple-700 dark:bg-[#342045] dark:text-purple-300",
-  Smoothie:        "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  "Smoothie Bowl": "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  Soup:            "bg-orange-100 text-orange-700 dark:bg-[#452819] dark:text-orange-300",
-  "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
-};
 
 export default async function RecipesPage({
   searchParams,
@@ -73,7 +61,6 @@ export default async function RecipesPage({
 
       {/* Filters row + Sort dropdown */}
       <div className="flex items-center gap-2 mb-6">
-        {/* Scrollable filter chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none flex-1 min-w-0">
           <Link
             href={q ? `?q=${q}` : "/recipes"}
@@ -100,12 +87,10 @@ export default async function RecipesPage({
             >{c}</Link>
           ))}
         </div>
-
-        {/* Sort dropdown — always visible */}
         <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
       </div>
 
-      {/* Grid */}
+      {/* Content */}
       {recipes.length === 0 ? (
         <div className="text-center py-20 text-gray-500 dark:text-[#787878]">
           <p className="text-lg font-semibold">No recipes found</p>
@@ -114,61 +99,7 @@ export default async function RecipesPage({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {recipes.map((recipe) => {
-            const cats = (recipe.category ?? "")
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean)
-              .slice(0, 3);
-
-            return (
-              <Link
-                key={recipe.id}
-                href={`/recipes/${recipe.id}`}
-                className="bg-white dark:bg-[#252525] rounded-xl border border-gray-100 dark:border-[#2e2e2e] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a3a3a] transition-all group overflow-hidden"
-              >
-                <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] flex items-center justify-center overflow-hidden">
-                  {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                    <Image
-                      src={recipe.imageUrl}
-                      alt={recipe.name}
-                      fill
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                      className="object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <span className="text-4xl opacity-20">🍽️</span>
-                  )}
-                  {cats.length > 0 && (
-                    <div className="absolute top-2 right-2 flex flex-row items-center gap-1">
-                      {cats.map((c) => {
-                        const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
-                        return (
-                          <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
-                            {c}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3] text-sm leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
-                      {recipe.name}
-                    </h3>
-                    {recipe.favorite && (
-                      <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />
-                    )}
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        <RecipesGrid recipes={recipes} />
       )}
     </div>
   );

@@ -1561,8 +1561,8 @@ class RecipeScraper:
                 return f"{ingredient} ({observations})"
             return ingredient
     
-    def _normalize_quantity(self, ingredient: str, servings: int) -> str:
-        """Calculează cantitatea ingredientului per porție (împarte la servings) și formatează cu []"""
+    def _normalize_quantity(self, ingredient: str, servings: int = 1) -> str:
+        """Extrage cantitatea ingredientului și formatează cu []. Nu împarte la servings — batch toggle din wizard decide."""
         # Extrage observațiile din paranteze (dacă există) pentru a le păstra
         observations = ''
         obs_match = re.search(r'\(([^)]+)\)\s*$', ingredient)
@@ -1617,11 +1617,7 @@ class RecipeScraper:
                 # Număr întreg sau zecimal
                 quantity = float(quantity_str)
             
-            # Împarte la numărul de porții doar dacă servings > 1
-            if servings and servings > 1:
-                normalized = quantity / servings
-            else:
-                normalized = quantity
+            normalized = quantity
             
             # Formatează rezultatul ca număr zecimal (nu fracții)
             # Rotunjește la 2 zecimale pentru precizie, elimină zerourile finale

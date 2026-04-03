@@ -374,10 +374,26 @@ export default function IngredientsPage() {
             setItems((prev) =>
               prev.map((item) =>
                 item.id === updated.id
-                  ? { ...item, name: updated.name, unit: updated.unit, unit2: updated.unit2 }
+                  ? {
+                      ...item,
+                      name: updated.name,
+                      nameRo: updated.nameRo,
+                      category: updated.category,
+                      unit: updated.unit,
+                      unit2: updated.unit2,
+                      conversion: updated.conversion,
+                      kcal: updated.kcal,
+                      carbs: updated.carbs,
+                      fat: updated.fat,
+                      protein: updated.protein,
+                    }
                   : item
               )
             );
+            setEditingId(null);
+          }}
+          onDeleted={() => {
+            setItems((prev) => prev.filter((item) => item.id !== editingId));
             setEditingId(null);
           }}
         />
@@ -390,15 +406,15 @@ export default function IngredientsPage() {
             setItems((prev) => [...prev, {
               id: created.id,
               name: created.name,
-              nameRo: null,
-              category: null,
+              nameRo: created.nameRo,
+              category: created.category,
               unit: created.unit,
               unit2: created.unit2,
-              conversion: null,
-              kcal: null,
-              carbs: null,
-              fat: null,
-              protein: null,
+              conversion: created.conversion,
+              kcal: created.kcal,
+              carbs: created.carbs,
+              fat: created.fat,
+              protein: created.protein,
               unitWeight: null,
               createdAt: new Date(),
             }]);

@@ -50,6 +50,7 @@ async function main() {
     carbs: item.carbs ?? null,
     fat: item.fat ?? null,
     protein: item.protein ?? null,
+    ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
   });
 
   for (const item of data.groceryItems) {

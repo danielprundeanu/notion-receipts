@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
       const isBatch = recipeData.batch !== false;  // default true
       const originalServings = recipeData.servings && recipeData.servings > 0 ? recipeData.servings : 1;
       const savedServings = isBatch ? originalServings : 1;
+      console.log(`[import] "${recipeData.name}" batch=${recipeData.batch} isBatch=${isBatch} servings=${recipeData.servings} originalServings=${originalServings} savedServings=${savedServings}`);
 
       // Create recipe
       const recipe = await prisma.recipe.create({
