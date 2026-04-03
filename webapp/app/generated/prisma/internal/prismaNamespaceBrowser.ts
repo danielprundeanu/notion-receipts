@@ -106,7 +106,8 @@ export const GroceryItemScalarFieldEnum = {
   fat: 'fat',
   protein: 'protein',
   unitWeight: 'unitWeight',
-  notionId: 'notionId'
+  notionId: 'notionId',
+  createdAt: 'createdAt'
 } as const
 
 export type GroceryItemScalarFieldEnum = (typeof GroceryItemScalarFieldEnum)[keyof typeof GroceryItemScalarFieldEnum]
