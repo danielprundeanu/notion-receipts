@@ -89,6 +89,7 @@ _KNOWN_UNITS = {
     'piece', 'pieces', 'buc', 'buc.',
     'slice', 'slices', 'handful', 'pinch', 'scoop',
     'can', 'bottle', 'clove', 'cloves', 'bunch', 'head', 'heads',
+    'cm', 'mm', 'inch',
     # română
     'linguriță', 'lingurițe', 'linguri', 'lingurite', 'lingura',
     'ceasca', 'ceașcă', 'cești', 'cana',
@@ -120,10 +121,12 @@ def _to_float(s: str):
 
 
 def _parse_simple_ingredient(line: str):
-    """Parsează 'qty [unit] name' sau '[qty unit] name' (format vechi)."""
+    """Parsează 'qty [unit] name[, obs]' sau '[qty unit] name' (format vechi).
+    Returns: (qty, unit, name, obs)
+    """
     line = line.strip()
     if not line:
-        return None, None, None
+        return None, None, None, None
 
     # Format vechi cu brackets: [qty unit] name
     m_bracket = re.match(r'^\[([^\]]+)\]\s*(.+)$', line)
@@ -137,8 +140,10 @@ def _parse_simple_ingredient(line: str):
         else:
             qty = _to_float(bracket)
             unit = "piece" if _to_float(bracket) is not None else None
-        name = name.split(',')[0].strip()
-        return qty, unit, name.lower()
+        name_parts = name.split(',', 1)
+        obs = name_parts[1].strip() or None if len(name_parts) > 1 else None
+        name = name_parts[0].strip()
+        return qty, unit, name.lower(), obs
 
     # Format nou: qty [unit] name
     m_qty = _QTY_RE.match(line)
@@ -151,7 +156,7 @@ def _parse_simple_ingredient(line: str):
             name = m_compact.group(3).strip()
         else:
             # Fără cantitate (ex: "pătrunjel verde")
-            return None, None, line.lower()
+            return None, None, line.lower(), None
     else:
         qty = _to_float(m_qty.group(1))
         rest = m_qty.group(2).strip()
@@ -166,10 +171,24 @@ def _parse_simple_ingredient(line: str):
             unit = None
             name = rest
 
-    # Curăță observații în paranteză, variante OR
-    name = re.sub(r'\s*\(.*?\)', '', name).strip()
+    # Split obs FIRST (everything after first comma), then clean name
+    name_parts = name.split(',', 1)
+    obs = name_parts[1].strip() if len(name_parts) > 1 else None
+    name = name_parts[0].strip()
+
+    # Strip parenthetical content from name; if obs is still empty, put it there
+    paren_matches = re.findall(r'\(.*?\)', name)
+    if paren_matches:
+        extra = '; '.join(m.strip('() ') for m in paren_matches if m.strip('() '))
+        if extra:
+            obs = extra + (f'; {obs}' if obs else '')
+        name = re.sub(r'\s*\(.*?\)', '', name).strip()
+
+    # OR variants in name
     name = re.sub(r'\s+(?:OR|or|SAU|sau)\s+.*$', '', name).strip()
-    name = name.split(',')[0].strip()
+    # Normalize empty obs to None
+    if obs is not None and not obs:
+        obs = None
 
     # Normalizează unitatea: strip punct + mapare abrevieri (ml. → ml, grame → g etc.)
     if unit:
@@ -178,7 +197,7 @@ def _parse_simple_ingredient(line: str):
         # Cantitate fără unitate → ingredient numărabil (ceapă, morcovi etc.)
         unit = "piece"
 
-    return qty, unit, name.lower()
+    return qty, unit, name.lower(), obs
 
 
 def parse_txt_simple(text: str) -> list:
@@ -299,12 +318,13 @@ def parse_txt_simple(text: str) -> list:
 
         # ── Ingredient (sub # grup) ────────────────────────────
         if state == 'ingr':
-            qty, unit, name = _parse_simple_ingredient(line)
+            qty, unit, name, obs = _parse_simple_ingredient(line)
             if name:
                 r['ingredients'].append({
                     'name':       name,
                     'qty':        qty,
                     'unit':       unit,
+                    'obs':        obs,
                     'groupName':  group_name,
                     'groupOrder': group_order,
                 })

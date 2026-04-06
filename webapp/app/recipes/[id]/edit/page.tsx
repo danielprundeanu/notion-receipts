@@ -14,7 +14,7 @@ export default async function EditRecipePage({
   if (!recipe) notFound();
 
   // Convert flat ingredients list to named groups
-  type GroupData = { name: string; ingredients: Array<{ id: string; quantity: string; unit: string; groceryItemName: string; groceryItemId: string | null; availableUnits: string[] | null }> };
+  type GroupData = { name: string; ingredients: Array<{ id: string; quantity: string; unit: string; groceryItemName: string; groceryItemId: string | null; availableUnits: string[] | null; notes: string }> };
   const groupMap = new Map<number, GroupData>();
   for (const ing of recipe.ingredients) {
     const order = ing.groupOrder ?? 1;
@@ -31,6 +31,7 @@ export default async function EditRecipePage({
       groceryItemName: ing.groceryItem?.name ?? "",
       groceryItemId: ing.groceryItemId ?? null,
       availableUnits: (() => { const u = [ing.groceryItem?.unit, ing.groceryItem?.unit2].filter(Boolean) as string[]; return u.length ? u : null; })(),
+      notes: ing.notes ?? "",
     });
   }
   const groups = [...groupMap.entries()]

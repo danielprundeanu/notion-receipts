@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import { createGroceryItem, updateGroceryItem, deleteGroceryItem, getGroceryItemDetails } from "@/lib/actions";
+import { GROCERY_CATEGORIES } from "@/lib/constants";
 
 export type GroceryItemResult = {
   id: string;
@@ -18,12 +19,6 @@ export type GroceryItemResult = {
   protein: number | null;
 };
 
-const GROCERY_CATEGORIES = [
-  "🍎 Fruits", "🥕 Vegetables", "🥩 Meat & Alt", "🐟 Fish & Seafood",
-  "🥚 Dairy & Eggs", "🌾 Grains & Legumes", "🥜 Nuts & Seeds",
-  "🫙 Oils & Fats", "🍯 Sweeteners", "🧂 Spices & Herbs",
-  "🥫 Canned & Preserved", "🧊 Frozen", "🥤 Drinks", "🍞 Bakery", "Other",
-];
 
 // ─── GroceryItemModal ─────────────────────────────────────────────────────────
 // Pass `itemId` to edit an existing item, or `initialName` to create a new one.

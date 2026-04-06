@@ -29,6 +29,7 @@ type IngredientRow = {
   groceryItemName: string;
   groceryItemId: string | null;
   availableUnits: string[] | null; // null = show all ALL_UNITS
+  notes: string;
 };
 
 type IngredientGroup = {
@@ -56,7 +57,7 @@ function uid() {
 }
 
 function emptyIngredient(): IngredientRow {
-  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null };
+  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null, notes: "" };
 }
 
 function defaultGroup(name = "Ingredients"): IngredientGroup {
@@ -569,6 +570,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           groceryItemName: ing.groceryItemName.trim(),
           quantity: ing.quantity ? parseFloat(ing.quantity) : null,
           unit: ing.unit || null,
+          notes: ing.notes.trim() || null,
           groupOrder: groupIdx + 1,
           groupName: group.name.trim() || null,
           order,
@@ -873,35 +875,55 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           <Trash2 size={15} />
                         </button>
                       </div>
+                      <input
+                        type="text"
+                        value={ing.notes}
+                        onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
+                        placeholder="obs. (ex: roughly chopped)"
+                        className="w-full px-2 py-1 text-xs bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] placeholder:text-gray-300 dark:placeholder:text-[#444] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
+                      />
                     </div>
 
                     {/* Desktop layout */}
-                    <div className="hidden sm:grid grid-cols-[64px_80px_1fr_28px] gap-2 items-center">
-                      <input
-                        type="number" min="0" step="0.001"
-                        value={ing.quantity}
-                        onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                        placeholder="Qty"
-                        className="px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                      />
-                      <UnitSelect
-                        value={ing.unit}
-                        availableUnits={ing.availableUnits}
-                        groceryItemId={ing.groceryItemId}
-                        onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
-                        onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                        className={unitSelectCls}
-                      />
-                      <GroceryItemInput
-                        value={ing.groceryItemName}
-                        onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
-                        onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
-                        onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
-                      />
-                      <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                        className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
-                        <Trash2 size={14} />
-                      </button>
+                    <div className="hidden sm:block space-y-1">
+                      <div className="grid grid-cols-[64px_80px_1fr_28px] gap-2 items-center">
+                        <input
+                          type="number" min="0" step="0.001"
+                          value={ing.quantity}
+                          onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
+                          placeholder="Qty"
+                          className="px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                        />
+                        <UnitSelect
+                          value={ing.unit}
+                          availableUnits={ing.availableUnits}
+                          groceryItemId={ing.groceryItemId}
+                          onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
+                          onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
+                          className={unitSelectCls}
+                        />
+                        <GroceryItemInput
+                          value={ing.groceryItemName}
+                          onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
+                          onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
+                          onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
+                        />
+                        <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
+                          className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-[64px_80px_1fr_28px] gap-2">
+                        <div className="col-span-2" />
+                        <input
+                          type="text"
+                          value={ing.notes}
+                          onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
+                          placeholder="obs. (ex: roughly chopped)"
+                          className="px-2 py-1 text-xs bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] placeholder:text-gray-300 dark:placeholder:text-[#444] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
+                        />
+                        <div />
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -18,6 +18,7 @@ export type RecipeFormInput = {
     groceryItemName: string;
     quantity: number | null;
     unit: string | null;
+    notes?: string | null;
     groupOrder: number;
     groupName: string | null;
     order: number;
@@ -81,6 +82,7 @@ async function buildIngredientsAndInstructions(
         groceryItemId: groceryItem.id,
         quantity: ing.quantity,
         unit: ing.unit ?? groceryItem.unit,
+        notes: ing.notes ?? null,
         groupOrder: ing.groupOrder,
         groupName: ing.groupName ?? null,
         order: ing.order,
@@ -487,6 +489,15 @@ export async function deleteGroceryItem(id: string): Promise<void> {
   await prisma.groceryItem.delete({ where: { id } });
   revalidatePath("/ingredients");
   revalidatePath("/recipes");
+}
+
+export async function getGroceryCategories(): Promise<string[]> {
+  const items = await prisma.groceryItem.findMany({
+    select: { category: true },
+    distinct: ["category"],
+    orderBy: { category: "asc" },
+  });
+  return items.map((i) => i.category).filter((c): c is string => c != null);
 }
 
 export async function getGroceryItems() {

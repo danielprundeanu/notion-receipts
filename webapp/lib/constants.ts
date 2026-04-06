@@ -1,0 +1,17 @@
+export const GROCERY_CATEGORIES = [
+  "🍞 Bakery",
+  "🥫 Canned & Preserved",
+  "🥚 Dairy & Eggs",
+  "🥤 Drinks",
+  "🐟 Fish & Seafood",
+  "🧊 Frozen",
+  "🍎 Fruits",
+  "🌾 Grains & Legumes",
+  "🥩 Meat & Alt",
+  "🥜 Nuts & Seeds",
+  "🫙 Oils & Fats",
+  "Other",
+  "🧂 Spices & Herbs",
+  "🍯 Sweeteners",
+  "🥕 Vegetables",
+];

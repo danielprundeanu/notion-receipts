@@ -55,6 +55,7 @@ export type ParsedIngredient = {
   name: string;
   qty: number | null;
   unit: string | null;
+  obs: string | null;
   groupName: string | null;
   groupOrder: number;
   order: number;
@@ -267,6 +268,7 @@ export async function POST(req: NextRequest) {
             name: ing.name,
             qty: ing.qty,
             unit: ing.unit,
+            obs: (ing as { obs?: string | null }).obs ?? null,
             groupName: ing.groupName,
             groupOrder: ing.groupOrder,
             order: idx,

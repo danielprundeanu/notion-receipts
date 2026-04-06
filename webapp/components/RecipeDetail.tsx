@@ -33,6 +33,7 @@ export type RecipeData = {
     id: string;
     quantity: number | null;
     unit: string | null;
+    notes: string | null;
     groupOrder: number;
     groupName: string | null;
     groceryItem: {
@@ -565,6 +566,9 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                             <span className={checked ? "" : "text-gray-800 dark:text-[#d4d4d4]"}>
                               {ing.groceryItem?.name ?? "—"}
                             </span>
+                            {ing.notes && (
+                              <span className="text-gray-400 dark:text-[#555]">, {ing.notes}</span>
+                            )}
                           </span>
                         </li>
                       );

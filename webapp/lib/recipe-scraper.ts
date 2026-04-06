@@ -15,6 +15,7 @@ export type RawIngredient = {
   name: string;
   qty: number | null;
   unit: string | null;
+  obs?: string | null;
   groupName: string | null;
   groupOrder: number;
 };

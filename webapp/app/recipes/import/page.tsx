@@ -8,16 +8,12 @@ import {
   ChevronDown, ChevronUp, X, Check, Search,
 } from "lucide-react";
 import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
+import { getGroceryCategories } from "@/lib/actions";
+import { GROCERY_CATEGORIES } from "@/lib/constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const UNITS = ["g", "kg", "ml", "l", "cup", "tbsp", "tsp", "oz", "lb", "piece", "handful", "pinch", "slice", "can", "bunch"];
-const CATEGORIES = [
-  "🍎 Fruits", "🥕 Vegetables", "🥩 Meat & Alt", "🐟 Fish & Seafood",
-  "🥚 Dairy & Eggs", "🌾 Grains & Legumes", "🥜 Nuts & Seeds",
-  "🫙 Oils & Fats", "🍯 Sweeteners", "🧂 Spices & Herbs",
-  "🥫 Canned & Preserved", "🧊 Frozen", "🥤 Drinks", "🍞 Bakery", "Other",
-];
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
@@ -249,7 +245,7 @@ function RecipeReviewCard({
 
 // ─── Unified review row (ingredient conflict + unit conflict) ─────────────────
 
-type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; newItem?: { name: string; unit: string | null; category: string | null } };
+type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; newItem?: { name: string; unit: string | null; category: string | null } };
 
 function ReviewRow({
   recipeIndex,
@@ -258,7 +254,10 @@ function ReviewRow({
   recipes,
   onUpdate,
   onSkip,
+  onCollapse,
   focused,
+  categories,
+  sameNameCount = 0,
 }: {
   recipeIndex: number;
   ingIndex: number;
@@ -266,7 +265,10 @@ function ReviewRow({
   recipes: ParsedRecipe[];
   onUpdate: (ri: number, ii: number, updated: ReviewIngredient) => void;
   onSkip: (ri: number, ii: number) => void;
+  onCollapse: () => void;
   focused?: boolean;
+  categories: string[];
+  sameNameCount?: number;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -287,7 +289,28 @@ function ReviewRow({
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; unit: string | null; unit2?: string | null }>>([]);
   const [searching, setSearching] = useState(false);
   const [targetUnit, setTargetUnit] = useState(conflict?.targetUnit ?? conflict?.allowedUnits[0] ?? ing.unit ?? "g");
-  const [factor, setFactor] = useState(conflict?.factor?.toString() ?? "");
+  const [obs, setObs] = useState(ing.obs ?? "");
+  const [conflictEditMode, setConflictEditMode] = useState(!conflict?.autoResolved);
+
+  function getAutoFactor(foreignUnit: string, targetUnit: string): string {
+    const key = `${foreignUnit}→${targetUnit}`;
+    const map: Record<string, number> = {
+      "tsp→tbsp": 1 / 3, "tbsp→tsp": 3,
+      "cup→ml": 240, "ml→cup": 1 / 240,
+      "cup→l": 0.24, "l→cup": 1 / 0.24,
+      "oz→g": 28.35, "g→oz": 1 / 28.35,
+      "lb→g": 453.6, "g→lb": 1 / 453.6,
+      "lb→kg": 0.4536, "kg→lb": 1 / 0.4536,
+    };
+    const val = map[key];
+    if (val == null) return "";
+    return val.toFixed(6).replace(/\.?0+$/, "");
+  }
+
+  const [factor, setFactor] = useState(
+    conflict?.factor?.toString() ??
+    (conflict ? getAutoFactor(conflict.foreignUnit, conflict.allowedUnits[0] ?? "") : "")
+  );
 
   useEffect(() => {
     if (searchQuery.length < 2) { setSearchResults([]); return; }
@@ -358,17 +381,30 @@ function ReviewRow({
   const mappingResolved = mapMode === "new" || (mapMode === "map" && !!selectedId);
   const unitResolved = !conflict || conflict.autoResolved || (factor !== "" && !isNaN(parseFloat(factor)) && parseFloat(factor) > 0);
 
+  const isReviewed = !!ing.reviewed;
+
   return (
-    <div ref={rowRef} className={`border rounded-xl bg-white dark:bg-[#1f1f1f] overflow-hidden transition-shadow ${focused ? "border-orange-400 ring-2 ring-orange-300 dark:ring-orange-800" : "border-yellow-200 dark:border-yellow-900/50"}`}>
-      {/* Header */}
-      <div className="px-4 py-3 bg-yellow-50/60 dark:bg-yellow-950/10 flex items-start justify-between gap-2">
-        <div>
+    <div ref={rowRef} className={`border rounded-xl bg-white dark:bg-[#1f1f1f] overflow-hidden transition-shadow ${
+      focused ? "border-orange-400 ring-2 ring-orange-300 dark:ring-orange-800"
+      : isReviewed ? "border-green-200 dark:border-green-900/50"
+      : "border-yellow-200 dark:border-yellow-900/50"
+    }`}>
+      {/* Header — click to collapse */}
+      <div
+        className={`px-4 py-3 flex items-start justify-between gap-2 cursor-pointer select-none ${
+          isReviewed ? "bg-green-50/40 dark:bg-green-950/10" : "bg-yellow-50/60 dark:bg-yellow-950/10"
+        }`}
+        onClick={onCollapse}
+      >
+        <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">
             &ldquo;{ing.name}&rdquo;
           </p>
           <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">
             {recipes[recipeIndex]?.name}
-            {" · "}{ing.qty != null ? `${ing.qty} ` : ""}{ing.unit ?? ""}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">
+            {ing.qty != null ? `${ing.qty} ` : ""}{ing.unit ?? ""}
             {conflict && (
               <span className="ml-1 text-amber-600 dark:text-amber-400">
                 · unitate incompatibilă: <strong>{conflict.foreignUnit}</strong> → permise: <strong>{conflict.allowedUnits.join(", ")}</strong>
@@ -376,9 +412,37 @@ function ReviewRow({
             )}
           </p>
         </div>
-        <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-400 font-medium shrink-0">
-          <AlertCircle size={10} /> needs review
-        </span>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <div className="flex items-center gap-1.5">
+            {isReviewed ? (
+              <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 font-medium">
+                <Check size={10} /> rezolvat
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-400 font-medium">
+                <AlertCircle size={10} /> needs review
+              </span>
+            )}
+            <ChevronUp size={13} className="text-gray-400 dark:text-[#555]" />
+          </div>
+          {sameNameCount > 0 && (
+            <span className="text-[10px] text-blue-500 dark:text-blue-400 font-medium">
+              → se aplică și la alte {sameNameCount}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Obs field — outside the clickable header */}
+      <div className="px-4 pt-2 pb-0" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="text"
+          value={obs}
+          onChange={(e) => setObs(e.target.value)}
+          onBlur={() => onUpdate(recipeIndex, ingIndex, { ...ing, obs: obs.trim() || null } as ReviewIngredient)}
+          placeholder="Observații (ex: roughly chopped)"
+          className="w-full text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c0c0c0] placeholder-gray-300 dark:placeholder-[#444] focus:outline-none focus:ring-1 focus:ring-orange-400"
+        />
       </div>
 
       <div className="px-4 py-3 space-y-4">
@@ -405,7 +469,12 @@ function ReviewRow({
                 {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
               </div>
               {(() => {
-                const list = searchQuery.length >= 2 ? searchResults : (ing.match.candidates ?? []);
+                const baseList = searchQuery.length >= 2 ? searchResults : (ing.match.candidates ?? []);
+                // Prepend the auto-matched item if it's not already in the list
+                const autoMatch = ing.match.groceryItemId && !baseList.some((c) => c.id === ing.match.groceryItemId)
+                  ? [{ id: ing.match.groceryItemId, name: ing.match.groceryItemName ?? ing.match.groceryItemId, unit: ing.match.groceryItemUnit ?? null, isAutoMatched: true }]
+                  : [];
+                const list = [...autoMatch, ...baseList];
                 if (list.length === 0) return (
                   <p className="text-xs text-gray-400 dark:text-[#555]">
                     {searchQuery.length >= 2 ? `Niciun rezultat pentru "${searchQuery}".` : "Nu s-au găsit candidați. Caută sau alege Creează nou."}
@@ -414,11 +483,18 @@ function ReviewRow({
                 return (
                   <div className="space-y-1 max-h-40 overflow-y-auto">
                     {list.map((c) => (
-                      <label key={c.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#2a2a2a] cursor-pointer">
+                      <label key={c.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${
+                        (c as { isAutoMatched?: boolean }).isAutoMatched
+                          ? "bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30 border border-green-200 dark:border-green-900/50"
+                          : "hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                      }`}>
                         <input type="radio" name={`map-${recipeIndex}-${ingIndex}`} value={c.id}
                           checked={selectedId === c.id} onChange={() => setSelectedId(c.id)} className="text-orange-500" />
                         <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
                         {c.unit && <span className="text-xs text-gray-400 dark:text-[#555]">({c.unit})</span>}
+                        {(c as { isAutoMatched?: boolean }).isAutoMatched && (
+                          <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">auto-matched</span>
+                        )}
                       </label>
                     ))}
                   </div>
@@ -447,7 +523,7 @@ function ReviewRow({
                   <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
                     className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
                     <option value="">— selectează —</option>
-                    {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -456,15 +532,22 @@ function ReviewRow({
 
           <button onClick={applyMapping} disabled={!mappingResolved}
             className="w-full text-sm font-medium py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            {mapMode === "map" ? "Aplică mapare" : "Configurează ingredient nou"}
+            {mapMode === "map" ? (isReviewed ? "Actualizează mapare" : "Aplică mapare") : (isReviewed ? "Actualizează ingredient" : "Configurează ingredient nou")}
           </button>
         </div>
 
         {/* ── Section 2: Unit conversion (only if conflict exists) ── */}
         {conflict && (
           <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2e2e] pt-3">
-            <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Conversie unități</p>
-            {conflict.autoResolved ? (
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Conversie unități</p>
+              {conflict.autoResolved && !conflictEditMode && (
+                <button onClick={() => setConflictEditMode(true)} className="text-xs text-orange-500 hover:text-orange-600 transition-colors">
+                  Modifică
+                </button>
+              )}
+            </div>
+            {conflict.autoResolved && !conflictEditMode ? (
               <div className="flex items-center justify-between">
                 <p className="text-xs text-green-700 dark:text-green-400">
                   1 {conflict.foreignUnit} = {conflict.factor} {conflict.targetUnit}
@@ -473,34 +556,58 @@ function ReviewRow({
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ auto</span>
               </div>
             ) : (
-              <div className="flex items-end gap-2">
-                <div className="flex-1">
-                  <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">1 {conflict.foreignUnit} =</label>
-                  <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
-                    placeholder="ex: 240"
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <div className="space-y-2">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">1 {conflict.foreignUnit} =</label>
+                    <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
+                      placeholder="ex: 240"
+                      className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  </div>
+                  <div className="w-28">
+                    <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">unitate țintă</label>
+                    <select value={targetUnit} onChange={(e) => {
+                      setTargetUnit(e.target.value);
+                      const auto = getAutoFactor(conflict.foreignUnit, e.target.value);
+                      if (auto) setFactor(auto);
+                    }}
+                      className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
+                      {conflict.allowedUnits.map((u) => <option key={u} value={u}>{u}</option>)}
+                    </select>
+                  </div>
+                  <button onClick={applyUnitConversion} disabled={!unitResolved}
+                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40">
+                    Aplică
+                  </button>
                 </div>
-                <div className="w-28">
-                  <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">unitate țintă</label>
-                  <select value={targetUnit} onChange={(e) => setTargetUnit(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
-                    {conflict.allowedUnits.map((u) => <option key={u} value={u}>{u}</option>)}
-                  </select>
-                </div>
-                <button onClick={applyUnitConversion} disabled={!unitResolved}
-                  className="px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40">
-                  Aplică
-                </button>
+                {conflict.allowedUnits.length === 1 && (
+                  <button
+                    onClick={() => {
+                      const updated: IngredientExt = {
+                        ...ing,
+                        reviewed: true,
+                        addUnit2: true,
+                        unitConflict: { ...conflict, autoResolved: true, targetUnit: conflict.foreignUnit, factor: 1 },
+                      };
+                      onUpdate(recipeIndex, ingIndex, updated);
+                    }}
+                    className="w-full text-xs py-1.5 rounded-lg border border-dashed border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
+                  >
+                    Adaugă &ldquo;{conflict.foreignUnit}&rdquo; ca unit2 pe ingredientul existent
+                  </button>
+                )}
               </div>
             )}
           </div>
         )}
 
-        {/* Skip */}
-        <button onClick={() => onSkip(recipeIndex, ingIndex)}
-          className="w-full text-xs py-1 rounded-lg text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors">
-          Sare peste acest ingredient
-        </button>
+        {/* Skip — only for unreviewed */}
+        {!isReviewed && (
+          <button onClick={() => onSkip(recipeIndex, ingIndex)}
+            className="w-full text-xs py-1 rounded-lg text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors">
+            Sare peste acest ingredient
+          </button>
+        )}
       </div>
     </div>
   );
@@ -519,6 +626,11 @@ export default function ImportPage() {
   const [textContent, setTextContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [groceryCategories, setGroceryCategories] = useState<string[]>(GROCERY_CATEGORIES);
+
+  useEffect(() => {
+    getGroceryCategories().then(setGroceryCategories).catch(() => {});
+  }, []);
   const [recipes, setRecipes] = useState<ParsedRecipe[]>([]);
   const [importResult, setImportResult] = useState<{
     recipesCreated: number;
@@ -581,20 +693,82 @@ export default function ImportPage() {
     );
   }
 
-  // ── Update ingredient resolution ───────────────────────────────────────────
+  // ── Update ingredient resolution (with cross-recipe propagation) ─────────────
 
   function updateIngredient(ri: number, ii: number, updated: ReviewIngredient) {
+    const ext = updated as IngredientExt;
+    const isReviewed = !!ext.reviewed;
+
     setRecipes((prev) =>
-      prev.map((r, rIdx) =>
-        rIdx !== ri
-          ? r
-          : {
-              ...r,
-              ingredients: r.ingredients.map((ing, iIdx) =>
-                iIdx === ii ? updated : ing
-              ),
+      prev.map((r, rIdx) => ({
+        ...r,
+        ingredients: r.ingredients.map((ing, iIdx) => {
+          // Always apply the exact update to the target ingredient
+          if (rIdx === ri && iIdx === ii) return updated;
+
+          // Skip already-reviewed or skipped ingredients
+          const ingExt = ing as IngredientExt;
+          if (ingExt.reviewed || ingExt.skipped) return ing;
+
+          // Only propagate if the update is a reviewed resolution
+          if (!isReviewed) return ing;
+
+          // Same ingredient name (case-insensitive)
+          if (ing.name.toLowerCase() !== updated.name.toLowerCase()) return ing;
+
+          // ── Propagate unit conversion ──────────────────────────────────────
+          if (
+            updated.unitConflict?.autoResolved &&
+            updated.unitConflict.factor != null &&
+            updated.unitConflict.targetUnit != null &&
+            ing.unitConflict &&
+            !ing.unitConflict.autoResolved &&
+            ing.unitConflict.foreignUnit === updated.unitConflict.foreignUnit &&
+            ing.unit === updated.unit
+          ) {
+            return {
+              ...ing,
+              reviewed: true,
+              unitConflict: {
+                ...ing.unitConflict,
+                autoResolved: true,
+                targetUnit: updated.unitConflict.targetUnit,
+                factor: updated.unitConflict.factor,
+              },
+            } as ReviewIngredient;
+          }
+
+          // ── Propagate ingredient mapping ───────────────────────────────────
+          if (
+            ext.newItem == null && // not a "create new" resolution
+            updated.match.groceryItemId &&
+            (ing.match.status === "similar" || ing.match.status === "new")
+          ) {
+            // If the target ingredient also has a unit conflict for the same foreignUnit,
+            // propagate just the match but keep the unit conflict unresolved
+            if (ing.unitConflict && !ing.unitConflict.autoResolved) {
+              return {
+                ...ing,
+                match: {
+                  ...updated.match,
+                  manuallyMapped: true,
+                },
+              } as ReviewIngredient;
             }
-      )
+            // No unit conflict — fully resolve
+            return {
+              ...ing,
+              reviewed: true,
+              match: {
+                ...updated.match,
+                manuallyMapped: true,
+              },
+            } as ReviewIngredient;
+          }
+
+          return ing;
+        }),
+      }))
     );
   }
 
@@ -651,19 +825,20 @@ export default function ImportPage() {
       const payload = recipes.filter((r) => !(r as { error?: string }).error).map((r) => ({
         ...r,
         ingredients: r.ingredients.filter((ing) => !(ing as IngredientExt).skipped).map((ing) => {
-          const ext = ing as ReviewIngredient & {
-            newItem?: { name: string; unit: string | null; category: string | null };
-          };
+          const ext = ing as IngredientExt;
 
           // Apply unit conversion if needed
           let qty = ing.qty;
           let unit = ing.unit;
           const uc = ing.unitConflict;
           if (uc?.targetUnit && uc.factor != null) {
-            qty = qty != null ? +(qty * uc.factor).toFixed(6) : null;
-            unit = uc.targetUnit;
-            // Collect new rules (not previously auto-resolved from file)
-            if (!uc.autoResolved) {
+            // If addUnit2, keep original unit (foreignUnit becomes unit2 on the item)
+            if (!ext.addUnit2) {
+              qty = qty != null ? +(qty * uc.factor).toFixed(6) : null;
+              unit = uc.targetUnit;
+            }
+            // Collect new rules (not previously auto-resolved from file, not unit2 additions)
+            if (!uc.autoResolved && !ext.addUnit2) {
               newUnitRules.push({ name: ing.name, foreignUnit: uc.foreignUnit, targetUnit: uc.targetUnit, factor: uc.factor });
             }
           }
@@ -673,6 +848,7 @@ export default function ImportPage() {
             name: ing.name,
             qty,
             unit,
+            obs: ing.obs ?? null,
             groupName: ing.groupName,
             groupOrder: ing.groupOrder,
             order: ing.order,
@@ -681,6 +857,7 @@ export default function ImportPage() {
               : null,
             groceryItemName: manuallyMapped ? ing.match.groceryItemName : undefined,
             saveMapping: manuallyMapped || undefined,
+            addUnit2: ext.addUnit2 || undefined,
             newItem: ing.match.status === "new" ? ext.newItem ?? undefined : undefined,
           };
         }),
@@ -931,10 +1108,10 @@ export default function ImportPage() {
                 return (
                   <div
                     key={key}
-                    onClick={() => setFocusIngredientKey(key)}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-[#2a2a2a] bg-white dark:bg-[#1f1f1f] cursor-pointer hover:border-orange-300 dark:hover:border-orange-800 transition-colors"
+                    onClick={() => setFocusIngredientKey(focusIngredientKey === key ? null : key)}
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-[#2a2a2a] bg-white dark:bg-[#1f1f1f] cursor-pointer hover:border-orange-300 dark:hover:border-orange-800 transition-colors select-none"
                   >
-                    <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">
+                    <span className="text-sm text-gray-700 dark:text-[#c0c0c0] min-w-0 truncate">
                       {dispQty != null && `${dispQty} `}{dispUnit && `${dispUnit} `}{dispName}
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
@@ -942,12 +1119,21 @@ export default function ImportPage() {
                         ? <span className="text-xs text-gray-400 dark:text-[#555] line-through">skipped</span>
                         : <MatchBadge status={ing.match.status} reviewed={ext.reviewed} hasUnitConflict={!!uc && !uc.autoResolved} />
                       }
+                      <ChevronDown size={13} className="text-gray-300 dark:text-[#444]" />
                     </div>
                   </div>
                 );
               }
 
               // Needs review or focused → full editor
+              // Count how many OTHER unresolved ingredients share the same name
+              const sameNameCount = allIngredients.filter(({ ri: ri2, ii: ii2, ing: other }) => {
+                if (ri2 === ri && ii2 === ii) return false;
+                const otherExt = other as IngredientExt;
+                if (otherExt.reviewed || otherExt.skipped) return false;
+                return other.name.toLowerCase() === ing.name.toLowerCase();
+              }).length;
+
               return (
                 <ReviewRow
                   key={key}
@@ -963,7 +1149,10 @@ export default function ImportPage() {
                     handleSkipIngredient(ri2, ii2);
                     setFocusIngredientKey(null);
                   }}
+                  onCollapse={() => setFocusIngredientKey(null)}
                   focused={focusIngredientKey === key}
+                  categories={groceryCategories}
+                  sameNameCount={sameNameCount}
                 />
               );
             })}
