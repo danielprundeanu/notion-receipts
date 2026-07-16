@@ -2,9 +2,9 @@
 Servings: 2
 Batch: True
 Time: 25
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/morning_lentil_crepes.jpeg
 
@@ -18,11 +18,6 @@ Image: data/local/img/morning_lentil_crepes.jpeg
 5 tsp olive oil
 1 pinch salt and pepper
 
-## Description
-I grew up eating a Nutella crepe for breakfast every morning – probably the biggest breakfast glucose spike you can imagine! So I've been on a quest to make super-good-for-me crepes every since. Here's my new creation.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 
 ## Steps:
 1. Cover the lentils with water and soak for at least 4 hours or overnight. When ready, drain, transfer to a blender with the garam masala, a pinch of salt and pepper and 200mL water. Blitz until completely smooth.
@@ -34,9 +29,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 1
 Batch: True
 Time: 30
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/breakfast_crumble.jpeg
 
@@ -48,12 +43,6 @@ Image: data/local/img/breakfast_crumble.jpeg
 100 g raspberries
 3 tbsp greek or coconut yoghurt
 
-## Description
-I get so many requests from you guys to make "sweet" breakfasts that don't lead to a glucose spike. This is almost like dessert for breakfast, but keeps us balanced as it's packed with protein, fiber, and fat. A delish.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. Preheat the oven to 200°C/180°C fan/350°F/Gas 4. Put the sunflower seeds, almond butter and vanilla extract in a food processor and blitz until crumbly and starting to clump together. Stir the flaked almonds into the mixture.
 2. Put the raspberries into an ovenproof ramekin dish (roughly 12 cm round and 4 cm deep) and mash lightly with a fork. Top with the crumble and bake in the oven for 15-20 minutes, until the crumble is golden. Serve topped with yoghurt.
@@ -62,9 +51,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 15
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/black_bean_bowl.jpeg
 
@@ -78,12 +67,6 @@ Image: data/local/img/black_bean_bowl.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-I love black beans, and they're full of protein - so perfect for a savoury breakfast. So here's a spicy burrito-like twist, so full of umami.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a plant-based halloumi.
-
 ## Steps:
 1. Use a stick blender to blitz the tofu and harissa together until smooth and season with salt and pepper. Stir into the black beans and set aside.
 2. Place a frying pan on a medium heat with 1 tablespoon of olive oil and fry the halloumi for about 2 minutes on each side, until golden. Set aside and keep warm.
@@ -93,9 +76,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a pl
 Servings: 1
 Batch: True
 Time: 25
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/chipotle_tofu_falafels.jpeg
 
@@ -109,12 +92,6 @@ Image: data/local/img/chipotle_tofu_falafels.jpeg
 4 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-The combination of chickpeas, tofu, yoghurt and hummus isn't just about flavor… it's about combining 4 sources of protein into one breakfast. The more the merrier!
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN: Use plant-based yoghurt.
-
 ## Steps:
 1. Preheat the oven to 180°C/160°C fan/360°F/gas 4 and line a baking tray with baking parchment.
 2. Put the chickpeas, tofu, 2 teaspoons of chipotle paste, olive oil, and a generous pinch of salt and pepper into a food processor and blitz until the mixture starts to clump together. Roll into 8 equal balls, lay out onto the tray, and press down to flatten slightly. Bake for 15 minutes, until golden.
@@ -125,9 +102,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN: Use plant-based yoghur
 Servings: 2
 Batch: True
 Time: 20
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/breakfast_pizza.jpeg
 
@@ -140,12 +117,6 @@ Image: data/local/img/breakfast_pizza.jpeg
 4 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Pizza for breakfast? You're welcome! Chickpea flour is a good source of plant-based protein, and the earthy mushrooms with a little taleggio (or any other cheese!) on top make it DELISH.
-
-## Notes
-This recipe is GLUTEN-FREE. To make VEGAN: Use a vegan melting cheese. To make DAIRY-FREE: Omit the cheese.
-
 ## Steps:
 1. Measure the chickpea flour into a bowl with 125ml (1/2 cup) of cold water and 1 tablespoon olive oil. Season with salt and pepper and whisk until smooth.
 2. Place a small frying pan over a medium heat with 1 tablespoon of olive oil and saute the mushrooms for 3-4 minutes, until soft.
@@ -156,9 +127,9 @@ This recipe is GLUTEN-FREE. To make VEGAN: Use a vegan melting cheese. To make D
 Servings: 2
 Batch: True
 Time: 45
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/pretty_peperonata.jpeg
 
@@ -170,12 +141,6 @@ Image: data/local/img/pretty_peperonata.jpeg
 4 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-The habit of veggie starters are found in cultures around the world, like in Italy. I think it's so cool that science and traditions come together. Here is a very famous Italian veggie starter dish, one of my favorites.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. Place a large frying pan over a medium heat and add the olive oil, peppers, onions, garlic and tomatoes. Season with salt and pepper, cover with a lid and cook over a medium heat for 30-35 minutes, stirring often.
 2. When the peppers are soft and silky smooth, the peperonata is ready. Season once more and serve either hot or cold.
@@ -184,9 +149,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 25
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/roasted_chicory.jpeg
 
@@ -200,12 +165,6 @@ Image: data/local/img/roasted_chicory.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Chicory is one of those vegetables I wasn't able to get right for the longest time. Turns out it was all about setting my oven to the right temperature, and boom – perfection!
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. Preheat the oven to 180°C/160°C fan/320°F/Gas 4 and line a baking tray with baking parchment. Lay the chicory in a single layer on the baking tray, drizzle with 2 tablespoons of olive oil, sprinkle with salt and pepper and roast in the oven for 15 minutes, or until softened and slightly charred.
 2. Mix the tahini, lemon juice and 4 tablespoons of cold water in a bowl until smooth and season with salt and pepper. Add the pomegranate seeds, pecan nuts and coriander, mix to combine and season.
@@ -215,9 +174,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 35
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/parmesan_cauliflower.jpeg
 
@@ -230,12 +189,6 @@ Image: data/local/img/parmesan_cauliflower.jpeg
 3 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Hi, it's me with cauliflower and parmesan! Obsessed with this recipe. It's comfort and steady glucose levels all rolled into one gorgeous easy to share dish.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a vegan parmesan cheese.
-
 ## Steps:
 1. Preheat the oven to 200°C/180°C fan/350°F/Gas 6 and line a baking tray with baking parchment. Lay the cauliflower on the tray and drizzle 2 tablespoons of olive oil all over. Season with salt and pepper and roast in the oven for 15 minutes.
 2. Remove from the oven and scatter the parmesan all over the cauliflower and drizzle the remaining olive oil on top. Return to the oven for 10 minutes, or until the cheese is golden and crisp.
@@ -245,9 +198,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a ve
 Servings: 2
 Batch: True
 Time: 15
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/turmeric_tahini_broccoli.jpeg
 
@@ -261,12 +214,6 @@ Image: data/local/img/turmeric_tahini_broccoli.jpeg
 1.5 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Broccoli doesn't have to be boring, especially when it's paired with turmeric and ginger. This veggie starter is warm, flavorful, and a little bit different! Try it out.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. Put the turmeric, tahini, avocado, ginger, lime juice, 1 tablespoon of olive oil, and 2 tablespoons of water in a blender and blitz until smooth. Season with salt and pepper.
 2. Bring a medium saucepan of salted water to a boil and blanch the vegetables for 2 minutes. Drain and divide between two plates, along with the turmeric sauce, and drizzle with the remaining olive oil.
@@ -275,9 +222,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 28
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/chili_roasted_carrots.jpeg
 
@@ -289,12 +236,6 @@ Image: data/local/img/chili_roasted_carrots.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Roasted carrots are rich in beta-carotene, great for your skin, and when you add a little spice and cool yoghurt, you get one of my favorite balances of flavours.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a plant-based yoghurt.
-
 ## Steps:
 1. Preheat the oven to 200°C/180°C fan/390°F/gas 6 and line a baking tray with baking parchment.
 2. Lay the carrots on the tray and toss with the chili flakes and olive oil until coated. Season with salt and pepper and roast for 20 minutes, until tender and slightly charred.
@@ -304,9 +245,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a pl
 Servings: 2
 Batch: True
 Time: 50
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/baked_cod.jpeg
 
@@ -320,9 +261,6 @@ Image: data/local/img/baked_cod.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Notes
-This recipe is DAIRY-FREE and GLUTEN-FREE. To make VEGAN or VEGETARIAN: Replace the fish with a large bulb of fennel cut into 6 wedges through the core so that it remains intact. Add it to the dish in step two, laying it on top of the lentils, tomatoes, mushrooms. Drizzle with 1 tablespoon of olive oil before placing in the oven. Cook the dish for the remaining time and top with the dill and walnut crumb as above.
-
 ## Steps:
 1. Preheat the oven to 200°C/180°C fan/350°F/Gas 6. In a medium casserole dish, saute the mushrooms in 1 tablespoon of olive oil over a medium heat for 5 minutes, until beginning to soften and brown.
 2. Add the tomatoes, puy lentils and 450ml water. Season well with salt and pepper, place a tight fitting lid on top and transfer to the oven for 25 minutes.
@@ -334,9 +272,9 @@ This recipe is DAIRY-FREE and GLUTEN-FREE. To make VEGAN or VEGETARIAN: Replace 
 Servings: 1
 Batch: True
 Time: 27
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/courgette_scarpaccia.jpeg
 
@@ -350,12 +288,6 @@ Image: data/local/img/courgette_scarpaccia.jpeg
 5 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Warning: SO delicious! Inspired by the many Mediterranean chickpea pizza-like recipes.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. In a bowl toss the courgettes and onion with 1 teaspoon of salt and set aside for 10 minutes. When ready, use your hands to remove the salt and squeeze as much liquid from the courgettes as possible. They will reduce in size by about half. Transfer to a bowl and add the mint, chickpea flour, 3 tablespoons olive oil and 4 tablespoons of water. Season with salt and pepper and mix until you have a thick batter.
 2. Blitz the tofu, garlic and 2 tablespoons of olive oil until completely smooth. Season with salt and pepper and set aside.
@@ -366,9 +298,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 45
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/beetroot_bunless_burgers.jpeg
 
@@ -382,12 +314,6 @@ Image: data/local/img/beetroot_bunless_burgers.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-My new bunless burgers mean business. I feel amazing for hours after having these.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a plant-based yoghurt.
-
 ## Steps:
 1. Preheat the oven to 180°C/160°C fan/320°F/Gas 4. Put the chickpeas and garlic cloves on a baking tray lined with baking parchment and toss with 1 teaspoon of za'atar and 1 tablespoon of olive oil. Roast in the oven for 20 minutes, until the chickpeas are golden.
 2. When ready, transfer 3/4 of the chickpeas to a food processor with the beetroot. Peel a clove of roasted garlic and add this with the remaining za'atar and a pinch of salt and pepper. Pulse until the mixture starts to clump together and is roughly chopped. If you over blitz it, the mixture will become too wet. Shape into 4 burgers and lay on the same baking tray used for the chickpeas. Brush with a little olive oil and bake for 15 minutes.
@@ -398,9 +324,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a pl
 Servings: 2
 Batch: True
 Time: 50
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/roast_dill_chicken.jpeg
 
@@ -414,9 +340,6 @@ Image: data/local/img/roast_dill_chicken.jpeg
 3 tbsp olive oil
 1 pinch salt and pepper
 
-## Notes
-This recipe is GLUTEN-FREE. To make VEGAN or VEGETARIAN: Instead of chicken, drain and rinse 1 tin of chickpeas. Pat dry, toss with olive oil, salt and pepper and lay onto a baking tray. Roast for 20 minutes, or until golden and crisp. Serve on top of plant-based yoghurt with steamed greens. To make DAIRY-FREE: Use a plant-based yoghurt.
-
 ## Steps:
 1. Preheat the oven to 180°C/160°C fan/320°F/gas 4. Line a baking tray with baking parchment and lay the chicken on top. Drizzle with olive oil, season with salt and pepper, and place in the oven for 35-40 minutes, or until the skin is golden and crisp.
 2. Put the courgette in a colander and sprinkle with 1/2 teaspoon of salt. Toss to coat and set over a bowl for about 10 minutes.
@@ -428,9 +351,9 @@ This recipe is GLUTEN-FREE. To make VEGAN or VEGETARIAN: Instead of chicken, dra
 Servings: 2
 Batch: True
 Time: 22
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/mushroom_stroganoff.jpeg
 
@@ -444,12 +367,6 @@ Image: data/local/img/mushroom_stroganoff.jpeg
 3 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-Mushrooms are packed with antioxidants and vitamin D, making them a great addition for immune support. And I love all the fun textures in this dish.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a plant-based cream.
-
 ## Steps:
 1. Heat the oil in a medium heavy-based frying pan and saute the onion and garlic with the lid on for 3-4 minutes until soft and translucent.
 2. Add the mushrooms and saute for 5 minutes, with the lid on, stirring from time to time. When the mushrooms have softened, add the mustard, tarragon, creme fraiche and a pinch of salt and pepper. Add 4 tablespoons of water to loosen the sauce and stir until hot.
@@ -459,9 +376,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a pl
 Servings: 2
 Batch: True
 Time: 5
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/cheddar_pecan_bites.jpeg
 
@@ -472,12 +389,6 @@ Image: data/local/img/cheddar_pecan_bites.jpeg
 1 tbsp green jalapenos
 2 tbsp sauerkraut
 
-## Description
-If you're looking for a zero-glucose-spike snack that looks awesome and tastes incredible, look no further.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a vegan cheddar cheese.
-
 ## Steps:
 Press a pecan nut into each slice of cheese and serve with pickles on the side.
 
@@ -485,9 +396,9 @@ Press a pecan nut into each slice of cheese and serve with pickles on the side.
 Servings: 4
 Batch: True
 Time: 8
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/cumin_chili_chickpeas.jpeg
 
@@ -501,12 +412,6 @@ Image: data/local/img/cumin_chili_chickpeas.jpeg
 2 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-I started making this recipe when I went vegan in my late teens. The veganism did not stick with me, but my love of chickpeas did. Ta-da!
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 1. Spread the chickpeas out on some kitchen roll and pat dry. Set aside.
 2. Heat the olive oil in a large frying pan over a medium heat and fry the cumin seeds, chili flakes and curry leaves for about 45 seconds, until the seeds begin to pop and become fragrant.
@@ -517,9 +422,9 @@ This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
 Servings: 2
 Batch: True
 Time: 10
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/nutty_apple_sandwiches.jpeg
 
@@ -532,12 +437,6 @@ Image: data/local/img/nutty_apple_sandwiches.jpeg
 2 apples, sliced into 0.5cm thick rounds
 1 pinch sea salt
 
-## Description
-This snack makes me so happy. First, it's the perfect example of clothes (the nuts and seeds) on carbs (the apple). Second, it is so delightful to eat that it will leave you smiling.
-
-## Notes
-This recipe is VEGAN, VEGETARIAN, DAIRY-FREE and GLUTEN-FREE
-
 ## Steps:
 Place the nuts, almond butter and cocoa powder in a bowl and mix to combine. Place a tablespoon onto a slice of apple and top with another slice, to make a sandwich. You may have more of the nut mixture than you need, but it keeps in the fridge for weeks.
 
@@ -545,9 +444,9 @@ Place the nuts, almond butter and cocoa powder in a bowl and mix to combine. Pla
 Servings: 8
 Batch: True
 Time: 25
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/chewy_cheesy_biscuits.jpeg
 
@@ -559,12 +458,6 @@ Image: data/local/img/chewy_cheesy_biscuits.jpeg
 3 tbsp olive oil
 1 pinch salt and pepper
 
-## Description
-These cheesy, nutty bites are the ultimate savory snack. They're packed with protein and healthy fats from pumpkin seeds and pistachios, making them both craveworthy and energy-boosting. Good luck keeping these around for long!
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a vegan cheddar cheese alternative.
-
 ## Steps:
 1. Preheat the oven to 200°C/180°C fan/390°F/gas 6 and line a baking tray with baking parchment. Put the ground almonds, cheddar cheese, pumpkin seeds, pistachios and olive oil into a medium bowl with a pinch of salt and pepper. Mix until thoroughly combined. The mixture will be crumbly.
 2. Scoop up a small amount of the mixture in your hands (roughly 2 tablespoons) and squeeze it very tightly together to create a firm ball (roughly the size of a golf ball). Press down to flatten slightly and transfer to the prepared baking tray. Repeat with the remaining mixture and bake in the oven for 10-15 minutes, until the biscuits are golden and crisp.
@@ -574,9 +467,9 @@ This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Use a ve
 Servings: 20
 Batch: True
 Time: 70
-Difficulty: 
+Difficulty:
 Favorite: No
-Categories: 
+Categories:
 Link: PDF: 20 Gluten-Free Recipes - GlucoseGoddess
 Image: data/local/img/nutty_chocolate_squares.jpeg
 
@@ -585,12 +478,6 @@ Image: data/local/img/nutty_chocolate_squares.jpeg
 250 g mixed nuts, roughly chopped (hazelnuts, walnuts and pistachios)
 30 g desiccated coconut
 0.25 tsp sea salt flakes
-
-## Description
-Do you remember my Chocolate Nut Brittle recipe from my second book, The Glucose Goddess Method? These squares are that recipe's little sister. Did I eat these all by myself? I sure did. I hope you love them as much as I do.
-
-## Notes
-This recipe is VEGETARIAN and GLUTEN-FREE. To make VEGAN or DAIRY-FREE: Make sure to use vegan dark chocolate.
 
 ## Steps:
 1. Line a 7-inch square cake tin with baking parchment. Break the dark chocolate into small pieces and place in a heatproof bowl over a saucepan of simmering water (bain marie style). Stir until melted.
