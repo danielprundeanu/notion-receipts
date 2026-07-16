@@ -5,10 +5,10 @@ import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, Upload, Link2, FileText,
   CheckCircle, AlertCircle, Loader2,
-  ChevronDown, ChevronUp, X, Check, Search,
+  ChevronDown, ChevronUp, X, Check, Search, Plus,
 } from "lucide-react";
 import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
-import { getGroceryCategories } from "@/lib/actions";
+import { getGroceryCategories, getGroceryItemDetails } from "@/lib/actions";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -245,7 +245,24 @@ function RecipeReviewCard({
 
 // ─── Unified review row (ingredient conflict + unit conflict) ─────────────────
 
-type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; newItem?: { name: string; unit: string | null; category: string | null } };
+type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; unit2Conversion?: number | null; newItem?: { name: string; unit: string | null; category: string | null } };
+
+function getAutoFactor(fu: string, tu: string): string {
+  const map: Record<string, number> = {
+    "tsp→tbsp": 1 / 3, "tbsp→tsp": 3,
+    "cup→ml": 240, "ml→cup": 1 / 240,
+    "cup→l": 0.24, "l→cup": 1 / 0.24,
+    "oz→g": 28.35, "g→oz": 1 / 28.35,
+    "lb→g": 453.6, "g→lb": 1 / 453.6,
+    "lb→kg": 0.4536, "kg→lb": 1 / 0.4536,
+    "kg→g": 1000, "g→kg": 1 / 1000,
+    "l→ml": 1000, "ml→l": 1 / 1000,
+  };
+  const v = map[`${fu}→${tu}`];
+  return v == null ? "" : (+v.toFixed(6)).toString();
+}
+
+const fmtNum = (n: number | null) => (n == null || isNaN(n) ? "–" : (+n.toFixed(4)).toString());
 
 function ReviewRow({
   recipeIndex,
@@ -277,43 +294,34 @@ function ReviewRow({
     }
   }, [focused]);
 
-  const conflict = ing.unitConflict;
-  const [mapMode, setMapMode] = useState<"map" | "new">(
-    ing.match.status === "similar" || ing.match.groceryItemId ? "map" : "new"
-  );
-  const [newName, setNewName] = useState(ing.name);
-  const [newUnit, setNewUnit] = useState(ing.unit ?? "g");
-  const [newCategory, setNewCategory] = useState("");
-  const [selectedId, setSelectedId] = useState(ing.match.groceryItemId ?? "");
+  const foreign = ing.unit;   // unit detected in the recipe file
+  const qty = ing.qty;
+
+  // ── Ingredient selection: an existing grocery item id, or "new" ──
+  const [selectedId, setSelectedId] = useState<string>(ing.match.groceryItemId ?? "new");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; unit: string | null; unit2?: string | null }>>([]);
   const [searching, setSearching] = useState(false);
-  const [targetUnit, setTargetUnit] = useState(conflict?.targetUnit ?? conflict?.allowedUnits[0] ?? ing.unit ?? "g");
+
+  // ── Create-new fields ──
+  const [newName, setNewName] = useState(ing.name);
+  const [newUnit, setNewUnit] = useState(foreign ?? "g");
+  const [newCategory, setNewCategory] = useState("");
+
   const [obs, setObs] = useState(ing.obs ?? "");
-  const [conflictEditMode, setConflictEditMode] = useState(!conflict?.autoResolved);
 
-  function getAutoFactor(foreignUnit: string, targetUnit: string): string {
-    const key = `${foreignUnit}→${targetUnit}`;
-    const map: Record<string, number> = {
-      "tsp→tbsp": 1 / 3, "tbsp→tsp": 3,
-      "cup→ml": 240, "ml→cup": 1 / 240,
-      "cup→l": 0.24, "l→cup": 1 / 0.24,
-      "oz→g": 28.35, "g→oz": 1 / 28.35,
-      "lb→g": 453.6, "g→lb": 1 / 453.6,
-      "lb→kg": 0.4536, "kg→lb": 1 / 0.4536,
-    };
-    const val = map[key];
-    if (val == null) return "";
-    return val.toFixed(6).replace(/\.?0+$/, "");
-  }
+  // ── Selected item details (unit / unit2 / conversion) loaded from DB ──
+  const [sel, setSel] = useState<{ name: string; unit: string | null; unit2: string | null; conversion: number | null } | null>(null);
+  const [selLoading, setSelLoading] = useState(false);
 
-  const [factor, setFactor] = useState(
-    conflict?.factor?.toString() ??
-    (conflict ? getAutoFactor(conflict.foreignUnit, conflict.allowedUnits[0] ?? "") : "")
-  );
+  // ── Conversion state ──
+  const [target, setTarget] = useState<string>("");
+  const [factor, setFactor] = useState<string>("");   // 1 foreign = factor × target  (direction A)
+  const [addU2, setAddU2] = useState(false);
 
+  // Debounced DB search
   useEffect(() => {
-    if (searchQuery.length < 2) { setSearchResults([]); return; }
+    if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
     const timer = setTimeout(async () => {
       setSearching(true);
       try {
@@ -324,64 +332,144 @@ function ReviewRow({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Effective ingredient display after conversion
-  const effQty = conflict?.factor != null && ing.qty != null ? +(ing.qty * conflict.factor).toFixed(4) : ing.qty;
-  const effUnit = conflict?.targetUnit ?? ing.unit;
+  // Load details for the selected grocery item (units + conversion)
+  useEffect(() => {
+    if (selectedId === "new" || !selectedId) { setSel(null); setAddU2(false); return; }
+    let cancelled = false;
+    setSelLoading(true);
+    getGroceryItemDetails(selectedId)
+      .then((d) => {
+        if (cancelled) return;
+        setSelLoading(false);
+        setAddU2(false);
+        if (!d) { setSel(null); return; }
+        setSel({ name: d.name, unit: d.unit, unit2: d.unit2, conversion: d.conversion });
+        const us = [d.unit, d.unit2].filter((u): u is string => !!u);
+        if (foreign && us.length >= 1 && !us.includes(foreign)) {
+          const t = us[0];
+          setTarget(t);
+          setFactor(getAutoFactor(foreign, t));
+        } else {
+          setTarget("");
+          setFactor("");
+        }
+      })
+      .catch(() => { if (!cancelled) setSelLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
 
-  function applyMapping() {
-    if (mapMode === "map" && selectedId) {
-      const candidate = ing.match.candidates?.find((c) => c.id === selectedId)
-        ?? searchResults.find((c) => c.id === selectedId);
-      const allowedUnits = [candidate?.unit, (candidate as { unit2?: string | null } | undefined)?.unit2]
-        .filter((u): u is string => !!u);
+  // ── Derived scenario ──
+  const isNew = selectedId === "new";
+  const units = sel ? [sel.unit, sel.unit2].filter((u): u is string => !!u) : [];
+  const matches = !!foreign && units.includes(foreign);
+  const singleUnit = units.length === 1;
+  const needsConversion = !!foreign && units.length >= 1 && !matches;
 
-      // Check unit compatibility
-      let newUnitConflict = undefined;
-      if (ing.unit && allowedUnits.length > 0 && !allowedUnits.includes(ing.unit)) {
-        newUnitConflict = { foreignUnit: ing.unit, allowedUnits, autoResolved: false };
-      }
+  const factorNum = parseFloat(factor);
+  const factorValid = factor !== "" && !isNaN(factorNum) && factorNum > 0;
 
-      const updated: IngredientExt = {
+  const canSave = isNew
+    ? newName.trim().length > 0
+    : !sel ? false
+    : !needsConversion ? true
+    : (singleUnit && addU2) ? true
+    : factorValid;
+
+  // ── Display helpers ──
+  const outTarget = needsConversion && !(singleUnit && addU2) && factorValid && qty != null
+    ? +(qty * factorNum).toFixed(4)
+    : null;
+
+  // Scenario 2: the "other" unit computed from the DB conversion (1 unit2 = conversion × unit1)
+  const matchOther = (() => {
+    if (!sel || !matches) return null;
+    const o = units.find((u) => u !== foreign);
+    if (!o) return null;
+    let v: number | null = null;
+    if (qty != null && sel.conversion) {
+      if (foreign === sel.unit && sel.unit2) v = qty / sel.conversion;
+      else if (foreign === sel.unit2 && sel.unit) v = qty * sel.conversion;
+    }
+    return { unit: o, val: v };
+  })();
+
+  // Scenario 1: the non-target unit derived from the DB conversion
+  const s1Other = (() => {
+    if (!sel || singleUnit || !needsConversion) return null;
+    const o = units.find((u) => u !== target);
+    if (!o) return null;
+    let v: number | null = null;
+    if (outTarget != null && sel.conversion) {
+      v = target === sel.unit ? outTarget / sel.conversion : outTarget * sel.conversion;
+    }
+    return { unit: o, val: v };
+  })();
+
+  function handleSave() {
+    if (!canSave) return;
+    let updated: IngredientExt;
+
+    if (isNew) {
+      updated = {
         ...ing,
         reviewed: true,
-        unitConflict: newUnitConflict,
+        obs: obs.trim() || null,
+        unitConflict: undefined,
+        addUnit2: undefined,
+        unit2Conversion: undefined,
+        match: { ...ing.match, status: "new", groceryItemId: undefined, manuallyMapped: true } as ReviewIngredient["match"] & { manuallyMapped?: boolean },
+        newItem: { name: newName.trim() || ing.name, unit: newUnit, category: newCategory || null },
+      };
+    } else {
+      let unitConflict: ReviewIngredient["unitConflict"] = undefined;
+      let addUnit2Flag: boolean | undefined = undefined;
+      let unit2Conversion: number | null | undefined = undefined;
+
+      if (!needsConversion) {
+        unitConflict = undefined;                        // scenario 2 / clean match
+      } else if (singleUnit && addU2) {
+        addUnit2Flag = true;                             // scenario 3 → add foreign as unit2
+        unit2Conversion = factorValid ? factorNum : null;
+        unitConflict = { foreignUnit: foreign!, allowedUnits: units, autoResolved: true, targetUnit: foreign!, factor: 1 };
+      } else {
+        unitConflict = { foreignUnit: foreign!, allowedUnits: units, autoResolved: true, targetUnit: target, factor: factorNum };
+      }
+
+      updated = {
+        ...ing,
+        reviewed: true,
+        obs: obs.trim() || null,
+        newItem: undefined,
+        addUnit2: addUnit2Flag,
+        unit2Conversion,
+        unitConflict,
         match: {
-          status: newUnitConflict ? "similar" : "matched",
+          status: "matched",
           groceryItemId: selectedId,
-          groceryItemName: candidate?.name ?? selectedId,
-          groceryItemUnit: candidate?.unit ?? null,
-          groceryItemUnit2: (candidate as { unit2?: string | null } | undefined)?.unit2 ?? null,
+          groceryItemName: sel!.name,
+          groceryItemUnit: sel!.unit,
+          groceryItemUnit2: sel!.unit2,
           manuallyMapped: true,
         } as ReviewIngredient["match"] & { manuallyMapped?: boolean },
       };
-      onUpdate(recipeIndex, ingIndex, updated);
-    } else if (mapMode === "new") {
-      const updated: IngredientExt = {
-        ...ing,
-        reviewed: true,
-        unitConflict: undefined,
-        match: { ...ing.match, status: "new" },
-        newItem: { name: newName.trim() || ing.name, unit: newUnit, category: newCategory || null },
-      };
-      onUpdate(recipeIndex, ingIndex, updated);
     }
-  }
 
-  function applyUnitConversion() {
-    const f = parseFloat(factor);
-    if (isNaN(f) || f <= 0) return;
-    const updated: IngredientExt = {
-      ...ing,
-      reviewed: true,
-      unitConflict: { ...conflict!, autoResolved: true, targetUnit, factor: f },
-    };
-    onUpdate(recipeIndex, ingIndex, updated);
+    onUpdate(recipeIndex, ingIndex, updated as ReviewIngredient);
   }
-
-  const mappingResolved = mapMode === "new" || (mapMode === "map" && !!selectedId);
-  const unitResolved = !conflict || conflict.autoResolved || (factor !== "" && !isNaN(parseFloat(factor)) && parseFloat(factor) > 0);
 
   const isReviewed = !!ing.reviewed;
+
+  // ── Ingredient candidate list ──
+  const baseList = searchQuery.trim().length >= 2 ? searchResults : (ing.match.candidates ?? []);
+  const autoId = ing.match.groceryItemId;
+  const autoMatch = autoId && !baseList.some((c) => c.id === autoId)
+    ? [{ id: autoId, name: ing.match.groceryItemName ?? autoId, unit: ing.match.groceryItemUnit ?? null, unit2: ing.match.groceryItemUnit2 ?? null, isAuto: true }]
+    : [];
+  const list = [...autoMatch, ...baseList];
+
+  const inputCls = "w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const labelCls = "block text-xs text-gray-500 dark:text-[#787878] mb-1";
 
   return (
     <div ref={rowRef} className={`border rounded-xl bg-white dark:bg-[#1f1f1f] overflow-hidden transition-shadow ${
@@ -397,19 +485,10 @@ function ReviewRow({
         onClick={onCollapse}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">
-            &ldquo;{ing.name}&rdquo;
-          </p>
-          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">
-            {recipes[recipeIndex]?.name}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">
-            {ing.qty != null ? `${ing.qty} ` : ""}{ing.unit ?? ""}
-            {conflict && (
-              <span className="ml-1 text-amber-600 dark:text-amber-400">
-                · unitate incompatibilă: <strong>{conflict.foreignUnit}</strong> → permise: <strong>{conflict.allowedUnits.join(", ")}</strong>
-              </span>
-            )}
+          <p className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">&ldquo;{ing.name}&rdquo;</p>
+          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">{recipes[recipeIndex]?.name}</p>
+          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5 tabular-nums">
+            {qty != null ? `${qty} ` : ""}{foreign ?? ""}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1 shrink-0">
@@ -433,95 +512,71 @@ function ReviewRow({
         </div>
       </div>
 
-      {/* Obs field — outside the clickable header */}
-      <div className="px-4 pt-2 pb-0" onClick={(e) => e.stopPropagation()}>
-        <input
-          type="text"
-          value={obs}
-          onChange={(e) => setObs(e.target.value)}
-          onBlur={() => onUpdate(recipeIndex, ingIndex, { ...ing, obs: obs.trim() || null } as ReviewIngredient)}
-          placeholder="Observații (ex: roughly chopped)"
-          className="w-full text-xs border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c0c0c0] placeholder-gray-300 dark:placeholder-[#444] focus:outline-none focus:ring-1 focus:ring-orange-400"
-        />
-      </div>
-
       <div className="px-4 py-3 space-y-4">
-        {/* ── Section 1: Ingredient mapping ── */}
+        {/* ── Ingredient — search + pick + create new ── */}
         <div className="space-y-2">
           <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Ingredient</p>
-          <div className="flex gap-2">
-            <button onClick={() => setMapMode("map")} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${mapMode === "map" ? "bg-orange-500 text-white" : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#9a9a9a]"}`}>
-              Mapează la existent
-            </button>
-            <button onClick={() => setMapMode("new")} className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${mapMode === "new" ? "bg-orange-500 text-white" : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#9a9a9a]"}`}>
-              Creează nou
-            </button>
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555]" />
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Caută în baza de date..."
+              className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
           </div>
 
-          {mapMode === "map" && (
-            <div className="space-y-2">
-              <div className="relative">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555]" />
-                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Caută în baza de date..."
-                  className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
-                {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
-              </div>
-              {(() => {
-                const baseList = searchQuery.length >= 2 ? searchResults : (ing.match.candidates ?? []);
-                // Prepend the auto-matched item if it's not already in the list
-                const autoMatch = ing.match.groceryItemId && !baseList.some((c) => c.id === ing.match.groceryItemId)
-                  ? [{ id: ing.match.groceryItemId, name: ing.match.groceryItemName ?? ing.match.groceryItemId, unit: ing.match.groceryItemUnit ?? null, isAutoMatched: true }]
-                  : [];
-                const list = [...autoMatch, ...baseList];
-                if (list.length === 0) return (
-                  <p className="text-xs text-gray-400 dark:text-[#555]">
-                    {searchQuery.length >= 2 ? `Niciun rezultat pentru "${searchQuery}".` : "Nu s-au găsit candidați. Caută sau alege Creează nou."}
-                  </p>
-                );
-                return (
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {list.map((c) => (
-                      <label key={c.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${
-                        (c as { isAutoMatched?: boolean }).isAutoMatched
-                          ? "bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30 border border-green-200 dark:border-green-900/50"
-                          : "hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
-                      }`}>
-                        <input type="radio" name={`map-${recipeIndex}-${ingIndex}`} value={c.id}
-                          checked={selectedId === c.id} onChange={() => setSelectedId(c.id)} className="text-orange-500" />
-                        <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
-                        {c.unit && <span className="text-xs text-gray-400 dark:text-[#555]">({c.unit})</span>}
-                        {(c as { isAutoMatched?: boolean }).isAutoMatched && (
-                          <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">auto-matched</span>
-                        )}
-                      </label>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
+          <div className="space-y-1 max-h-56 overflow-y-auto">
+            {list.length === 0 && searchQuery.trim().length >= 2 && (
+              <p className="text-xs text-gray-400 dark:text-[#555]">Niciun rezultat pentru &ldquo;{searchQuery}&rdquo;.</p>
+            )}
+            {list.map((c) => {
+              const isAuto = (c as { isAuto?: boolean }).isAuto;
+              const u2 = (c as { unit2?: string | null }).unit2;
+              const uStr = [c.unit, u2].filter(Boolean).join(" / ");
+              const selectedThis = selectedId === c.id;
+              return (
+                <label key={c.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
+                  selectedThis ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20"
+                  : isAuto ? "border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30"
+                  : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                }`}>
+                  <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={selectedThis}
+                    onChange={() => setSelectedId(c.id)} className="accent-orange-500" />
+                  <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
+                  {uStr && <span className="text-xs text-gray-400 dark:text-[#555] tabular-nums">{uStr}</span>}
+                  {isAuto && <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">auto-matched</span>}
+                </label>
+              );
+            })}
 
-          {mapMode === "new" && (
-            <div className="space-y-2">
+            {/* Always-present: create new */}
+            <label className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
+              isNew ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+            }`}>
+              <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={isNew}
+                onChange={() => setSelectedId("new")} className="accent-orange-500" />
+              <Plus size={13} className="text-orange-500" />
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Crează ingredient nou &ldquo;{ing.name}&rdquo;</span>
+            </label>
+          </div>
+
+          {/* Create-new fields */}
+          {isNew && (
+            <div className="mt-1 p-3 rounded-lg border border-dashed border-orange-300 dark:border-orange-800 bg-orange-50/40 dark:bg-orange-950/10 space-y-2">
               <div>
-                <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Nume ingredient</label>
-                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
-                  className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                <label className={labelCls}>Nume ingredient</label>
+                <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className={inputCls} />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Unitate</label>
-                  <select value={newUnit} onChange={(e) => setNewUnit(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
+                  <label className={labelCls}>Unitate</label>
+                  <select value={newUnit ?? "g"} onChange={(e) => setNewUnit(e.target.value)} className={inputCls}>
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">Categorie</label>
-                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
+                  <label className={labelCls}>Categorie</label>
+                  <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className={inputCls}>
                     <option value="">— selectează —</option>
                     {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -529,89 +584,130 @@ function ReviewRow({
               </div>
             </div>
           )}
-
-          <button onClick={applyMapping} disabled={!mappingResolved}
-            className="w-full text-sm font-medium py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            {mapMode === "map" ? (isReviewed ? "Actualizează mapare" : "Aplică mapare") : (isReviewed ? "Actualizează ingredient" : "Configurează ingredient nou")}
-          </button>
         </div>
 
-        {/* ── Section 2: Unit conversion (only if conflict exists) ── */}
-        {conflict && (
+        {/* ── Conversion (only for a real item with a foreign unit) ── */}
+        {!isNew && foreign && (
           <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2e2e] pt-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Conversie unități</p>
-              {conflict.autoResolved && !conflictEditMode && (
-                <button onClick={() => setConflictEditMode(true)} className="text-xs text-orange-500 hover:text-orange-600 transition-colors">
-                  Modifică
-                </button>
-              )}
-            </div>
-            {conflict.autoResolved && !conflictEditMode ? (
-              <div className="flex items-center justify-between">
-                <p className="text-xs text-green-700 dark:text-green-400">
-                  1 {conflict.foreignUnit} = {conflict.factor} {conflict.targetUnit}
-                  {" · "}rezultat: <strong>{effQty} {effUnit}</strong>
-                </p>
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ auto</span>
+            <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Conversie unități</p>
+
+            {selLoading || !sel ? (
+              <p className="text-xs text-gray-400 dark:text-[#555] flex items-center gap-1.5">
+                <Loader2 size={12} className="animate-spin" /> se încarcă unitățile…
+              </p>
+            ) : units.length === 0 ? (
+              <p className="text-xs text-gray-500 dark:text-[#787878]">
+                Ingredientul nu are unitate setată — se stochează ca <strong>{qty} {foreign}</strong>.
+              </p>
+            ) : matches ? (
+              /* Scenario 2 — foreign matches one of the item's units */
+              <div className="space-y-1.5">
+                <p className="text-xs text-gray-500 dark:text-[#787878]">Unitatea din fișier se potrivește:</p>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-green-400 dark:border-green-700 bg-green-50 dark:bg-green-950/20 tabular-nums">
+                  <span className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">{qty ?? ""} {foreign}</span>
+                  <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">potrivit cu fișierul</span>
+                </div>
+                {matchOther && (
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#3a3a3a] bg-gray-50 dark:bg-[#262626] tabular-nums">
+                    <span className="text-sm text-gray-500 dark:text-[#9a9a9a]">{fmtNum(matchOther.val)} {matchOther.unit}</span>
+                    <span className="ml-auto text-xs text-gray-400 dark:text-[#555]">calculat din DB</span>
+                  </div>
+                )}
+              </div>
+            ) : singleUnit ? (
+              /* Scenario 3 — item has a single unit; foreign differs */
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 tabular-nums">
+                  <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">1 {foreign} =</span>
+                  <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
+                    placeholder="ex: 240"
+                    className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">{units[0]}</span>
+                </div>
+                <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 cursor-pointer">
+                  <input type="checkbox" checked={addU2} onChange={(e) => setAddU2(e.target.checked)} className="accent-blue-500" />
+                  <span className="text-xs text-blue-600 dark:text-blue-400">
+                    Adaugă &ldquo;{foreign}&rdquo; ca a 2-a unitate (unit2) pe &ldquo;{sel.name}&rdquo;
+                  </span>
+                </label>
               </div>
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">1 {conflict.foreignUnit} =</label>
-                    <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
-                      placeholder="ex: 240"
-                      className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                  </div>
-                  <div className="w-28">
-                    <label className="block text-xs text-gray-500 dark:text-[#787878] mb-1">unitate țintă</label>
-                    <select value={targetUnit} onChange={(e) => {
-                      setTargetUnit(e.target.value);
-                      const auto = getAutoFactor(conflict.foreignUnit, e.target.value);
-                      if (auto) setFactor(auto);
-                    }}
-                      className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]">
-                      {conflict.allowedUnits.map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </div>
-                  <button onClick={applyUnitConversion} disabled={!unitResolved}
-                    className="px-3 py-1.5 text-sm font-medium rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40">
-                    Aplică
-                  </button>
-                </div>
-                {conflict.allowedUnits.length === 1 && (
-                  <button
-                    onClick={() => {
-                      const updated: IngredientExt = {
-                        ...ing,
-                        reviewed: true,
-                        addUnit2: true,
-                        unitConflict: { ...conflict, autoResolved: true, targetUnit: conflict.foreignUnit, factor: 1 },
-                      };
-                      onUpdate(recipeIndex, ingIndex, updated);
-                    }}
-                    className="w-full text-xs py-1.5 rounded-lg border border-dashed border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/20 transition-colors"
-                  >
-                    Adaugă &ldquo;{conflict.foreignUnit}&rdquo; ca unit2 pe ingredientul existent
-                  </button>
-                )}
+              /* Scenario 1 — item has two units; foreign matches neither */
+              <div className="space-y-1.5">
+                <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">1 {foreign} =</span>
+                {units.map((u) => {
+                  const isTarget = target === u;
+                  const derived = s1Other && s1Other.unit === u ? s1Other.val : null;
+                  return (
+                    <label key={u} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer tabular-nums ${
+                      isTarget ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-gray-200 dark:border-[#3a3a3a] bg-gray-50 dark:bg-[#262626]"
+                    }`}>
+                      <input type="radio" name={`target-${recipeIndex}-${ingIndex}`} checked={isTarget}
+                        onChange={() => { setTarget(u); const a = getAutoFactor(foreign, u); if (a) setFactor(a); }}
+                        className="accent-orange-500" />
+                      {isTarget ? (
+                        <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
+                          placeholder="ex: 240"
+                          className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                      ) : (
+                        <span className="w-24 text-right text-sm text-gray-400 dark:text-[#666]">{fmtNum(derived)}</span>
+                      )}
+                      <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">{u}</span>
+                      <span className="ml-auto text-xs font-medium">{isTarget ? <span className="text-orange-600 dark:text-orange-400">țintă</span> : <span className="text-gray-400 dark:text-[#555]">derivat din DB</span>}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Result preview */}
+            {sel && units.length > 0 && (
+              <div className={`text-xs px-3 py-1.5 rounded-lg tabular-nums ${
+                canSave ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/50"
+                : "bg-gray-50 dark:bg-[#262626] text-gray-500 dark:text-[#787878] border border-gray-200 dark:border-[#3a3a3a]"
+              }`}>
+                {matches
+                  ? <>✓ se stochează ca <strong>{qty} {foreign}</strong></>
+                  : singleUnit && addU2
+                    ? <>✓ &ldquo;{foreign}&rdquo; devine unit2 pe &ldquo;{sel.name}&rdquo;{factorValid ? <> · 1 {foreign} = {factorNum} {units[0]}</> : <> (fără conversie)</>}</>
+                    : factorValid
+                      ? <>✓ <strong>{qty} {foreign}</strong> → <strong>{outTarget} {target}</strong></>
+                      : <>Introdu factorul de conversie pentru a continua</>}
               </div>
             )}
           </div>
         )}
 
-        {/* Skip — only for unreviewed */}
-        {!isReviewed && (
-          <button onClick={() => onSkip(recipeIndex, ingIndex)}
-            className="w-full text-xs py-1 rounded-lg text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors">
-            Sare peste acest ingredient
+        {/* ── Observații (last in hierarchy) ── */}
+        <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2e2e] pt-3">
+          <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Observații</p>
+          <input
+            type="text"
+            value={obs}
+            onChange={(e) => setObs(e.target.value)}
+            placeholder="ex: roughly chopped, la temperatura camerei"
+            className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c0c0c0] placeholder-gray-300 dark:placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+        </div>
+
+        {/* Footer — single Save + skip */}
+        <div className="flex items-center gap-3 pt-1">
+          {!isReviewed && (
+            <button onClick={() => onSkip(recipeIndex, ingIndex)}
+              className="text-xs text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] transition-colors">
+              Sare peste
+            </button>
+          )}
+          <button onClick={handleSave} disabled={!canSave}
+            className="ml-auto text-sm font-semibold py-2 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            {isReviewed ? "Actualizează" : "Salvează"}
           </button>
-        )}
+        </div>
       </div>
     </div>
   );
 }
+
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -858,6 +954,7 @@ export default function ImportPage() {
             groceryItemName: manuallyMapped ? ing.match.groceryItemName : undefined,
             saveMapping: manuallyMapped || undefined,
             addUnit2: ext.addUnit2 || undefined,
+            unit2Conversion: ext.addUnit2 ? (ext.unit2Conversion ?? undefined) : undefined,
             newItem: ing.match.status === "new" ? ext.newItem ?? undefined : undefined,
           };
         }),

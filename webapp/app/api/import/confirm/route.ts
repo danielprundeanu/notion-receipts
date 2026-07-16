@@ -72,6 +72,7 @@ type ConfirmedIngredient = {
   groceryItemName?: string | null; // name of matched item (for saving mapping)
   saveMapping?: boolean;           // true = user manually resolved, save to file
   addUnit2?: boolean;              // true = set foreignUnit as unit2 on the grocery item
+  unit2Conversion?: number | null; // when addUnit2: 1 unit2 = unit2Conversion × unit1 (stored on the item)
   newItem?: {                       // new item to create
     name: string;
     unit: string | null;
@@ -169,11 +170,14 @@ export async function POST(req: NextRequest) {
       for (const ing of sortedIngredients) {
         let groceryItemId: string | null = ing.groceryItemId ?? null;
 
-        // Set unit2 on existing grocery item if requested
+        // Set unit2 (and optionally the conversion) on existing grocery item if requested
         if (groceryItemId && ing.addUnit2 && ing.unit) {
           await prisma.groceryItem.update({
             where: { id: groceryItemId },
-            data: { unit2: ing.unit },
+            data: {
+              unit2: ing.unit,
+              ...(ing.unit2Conversion != null ? { conversion: ing.unit2Conversion } : {}),
+            },
           });
         }
 
