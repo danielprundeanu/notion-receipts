@@ -1,53 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { spawn } from "child_process";
-import path from "path";
-import fs from "fs";
 import { prisma } from "@/lib/db";
-import type { RawRecipe } from "@/lib/recipe-scraper";
-
-const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
-const INGREDIENT_MAPPINGS_PATH = path.resolve(process.cwd(), "../data/ingredient_name_mappings.json");
+import { parseUrls, parseText, type RawRecipe } from "@/lib/recipe-scraper";
 
 type UnitChoice = { action: string; unit: string; rate: number; from_unit?: string | null };
 type IngredientNameMapping = { groceryItemId: string; groceryItemName: string };
-
-function loadUnitChoices(): Record<string, UnitChoice> {
-  try {
-    return JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function loadIngredientNameMappings(): Record<string, IngredientNameMapping> {
-  try {
-    return JSON.parse(fs.readFileSync(INGREDIENT_MAPPINGS_PATH, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-const PYTHON = path.resolve(process.cwd(), "../.venv/bin/python3");
-const HANDLER = path.resolve(process.cwd(), "../scripts/web_import_handler.py");
-
-async function callPython(mode: "parse-urls" | "parse-text", payload: object): Promise<RawRecipe[]> {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(PYTHON, [HANDLER, "--mode", mode], { timeout: 60000 });
-    let stdout = "";
-    let stderr = "";
-    proc.stdout.on("data", (d: Buffer) => { stdout += d.toString(); });
-    proc.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
-    proc.on("close", (code) => {
-      if (stderr) console.warn("[python]", stderr.slice(0, 500));
-      if (code !== 0) return reject(new Error(`Python exited ${code}: ${stderr.slice(0, 300)}`));
-      try { resolve(JSON.parse(stdout)); }
-      catch { reject(new Error(`JSON parse error: ${stdout.slice(0, 200)}`)); }
-    });
-    proc.on("error", reject);
-    proc.stdin.write(JSON.stringify(payload));
-    proc.stdin.end();
-  });
-}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -233,9 +189,9 @@ export async function POST(req: NextRequest) {
 
     let rawRecipes: RawRecipe[];
     if (type === "urls") {
-      rawRecipes = await callPython("parse-urls", { urls: body.urls ?? [] });
+      rawRecipes = await parseUrls(body.urls ?? []);
     } else if (type === "text") {
-      rawRecipes = await callPython("parse-text", { text: body.content ?? "" });
+      rawRecipes = parseText(body.content ?? "");
     } else {
       return NextResponse.json({ error: "type trebuie să fie 'urls' sau 'text'" }, { status: 400 });
     }
@@ -249,8 +205,8 @@ export async function POST(req: NextRequest) {
         continue;
       }
 
-      const unitChoices = loadUnitChoices();
-      const nameMappings = loadIngredientNameMappings();
+      const unitChoices: Record<string, UnitChoice> = {};
+      const nameMappings: Record<string, IngredientNameMapping> = {};
       const matchedIngredients: ReviewIngredient[] = await Promise.all(
         r.ingredients.map(async (ing, idx) => {
           const match = ing.name ? await matchIngredient(ing.name, nameMappings) : { status: "new" as const };
