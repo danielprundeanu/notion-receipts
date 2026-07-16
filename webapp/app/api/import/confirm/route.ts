@@ -15,7 +15,12 @@ function saveIngredientMappings(mappings: Array<{ rawName: string; groceryItemId
   for (const m of mappings) {
     data[m.rawName.toLowerCase().trim()] = { groceryItemId: m.groceryItemId, groceryItemName: m.groceryItemName };
   }
-  fs.writeFileSync(INGREDIENT_MAPPINGS_PATH, JSON.stringify(data, null, 2), "utf-8");
+  try {
+    fs.writeFileSync(INGREDIENT_MAPPINGS_PATH, JSON.stringify(data, null, 2), "utf-8");
+  } catch (e) {
+    // Read-only filesystem (e.g. Vercel) — mappings are a local convenience only.
+    console.warn("[import/confirm] could not persist ingredient mappings:", e instanceof Error ? e.message : e);
+  }
 }
 
 function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>) {
@@ -26,7 +31,12 @@ function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; targetU
     const key = `${r.name.toLowerCase()}|${r.foreignUnit.toLowerCase()}`;
     choices[key] = { action: "use_unit", unit: r.targetUnit, rate: r.factor, from_unit: r.foreignUnit };
   }
-  fs.writeFileSync(UNIT_CHOICES_PATH, JSON.stringify(choices, null, 2), "utf-8");
+  try {
+    fs.writeFileSync(UNIT_CHOICES_PATH, JSON.stringify(choices, null, 2), "utf-8");
+  } catch (e) {
+    // Read-only filesystem (e.g. Vercel) — unit rules are a local convenience only.
+    console.warn("[import/confirm] could not persist unit rules:", e instanceof Error ? e.message : e);
+  }
 }
 
 function saveBase64Image(dataUrl: string): string {
@@ -37,8 +47,14 @@ function saveBase64Image(dataUrl: string): string {
   const hash = crypto.createHash("md5").update(buf).digest("hex");
   const filename = `${hash}.${ext}`;
   const dest = path.join(process.cwd(), "public", "images", "recipes", filename);
-  if (!fs.existsSync(dest)) fs.writeFileSync(dest, buf);
-  return `/images/recipes/${filename}`;
+  try {
+    if (!fs.existsSync(dest)) fs.writeFileSync(dest, buf);
+    return `/images/recipes/${filename}`;
+  } catch (e) {
+    // Read-only filesystem (e.g. Vercel) — keep the inline data URL so the image still renders.
+    console.warn("[import/confirm] could not save image to disk, keeping inline data URL:", e instanceof Error ? e.message : e);
+    return dataUrl;
+  }
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────

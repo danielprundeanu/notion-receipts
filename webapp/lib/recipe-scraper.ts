@@ -653,8 +653,9 @@ export function parseTextFormat(content: string): RawRecipe[] {
       }
     }
 
-    // Plain text after ingredients = new group header
-    if (state === "ingr") {
+    // Plain text before/after ingredients = a group header for the ingredients that follow.
+    // state is "meta" for the first group (before any bracket) and "ingr" for later groups.
+    if (state === "meta" || state === "ingr") {
       pendingGroup = line;
     }
   }
