@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
-import fs from "fs";
 import { prisma } from "@/lib/db";
 import { parseUrls, parseText, type RawRecipe } from "@/lib/recipe-scraper";
-
-const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
-const INGREDIENT_MAPPINGS_PATH = path.resolve(process.cwd(), "../data/ingredient_name_mappings.json");
 
 type UnitChoice = { action: string; unit: string; rate: number; from_unit?: string | null };
 type IngredientNameMapping = { groceryItemId: string; groceryItemName: string };
 
-function loadUnitChoices(): Record<string, UnitChoice> {
-  try {
-    return JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8"));
-  } catch {
-    return {};
-  }
+// Saved unit-conversion choices, keyed "ingredientname|foreignunit" (from the UnitRule table).
+async function loadUnitChoices(): Promise<Record<string, UnitChoice>> {
+  const rules = await prisma.unitRule.findMany();
+  const out: Record<string, UnitChoice> = {};
+  for (const r of rules) out[r.key] = { action: "use_unit", unit: r.targetUnit, rate: r.rate, from_unit: r.foreignUnit };
+  return out;
 }
 
-function loadIngredientNameMappings(): Record<string, IngredientNameMapping> {
-  try {
-    return JSON.parse(fs.readFileSync(INGREDIENT_MAPPINGS_PATH, "utf-8"));
-  } catch {
-    return {};
-  }
+// Saved manual "raw name → grocery item" mappings (from the IngredientNameMapping table).
+async function loadIngredientNameMappings(): Promise<Record<string, IngredientNameMapping>> {
+  const rows = await prisma.ingredientNameMapping.findMany();
+  const out: Record<string, IngredientNameMapping> = {};
+  for (const m of rows) out[m.rawName] = { groceryItemId: m.groceryItemId, groceryItemName: m.groceryItemName };
+  return out;
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -221,14 +216,16 @@ export async function POST(req: NextRequest) {
     // For each recipe, match ingredients against DB
     const reviewRecipes: ParsedRecipe[] = [];
 
+    // Load saved mappings + unit rules once (shared across all recipes in this request)
+    const unitChoices = await loadUnitChoices();
+    const nameMappings = await loadIngredientNameMappings();
+
     for (const r of rawRecipes) {
       if (r.error) {
         reviewRecipes.push({ ...(r as unknown as ParsedRecipe) });
         continue;
       }
 
-      const unitChoices = loadUnitChoices();
-      const nameMappings = loadIngredientNameMappings();
       const matchedIngredients: ReviewIngredient[] = await Promise.all(
         r.ingredients.map(async (ing, idx) => {
           const match = ing.name ? await matchIngredient(ing.name, nameMappings) : { status: "new" as const };

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0] — 2026-07-17
+
+### ✨ Features
+- **Comutator batch / porție la editarea rețetei** — control „Porții" cu Batch(N) ↔ 1 porție, stepper pentru orice număr de porții, și scalare proporțională a cantităților ingredientelor (×nou/vechi). Switch „Scalează cantitățile" pentru a schimba numărul de porții fără a atinge cantitățile.
+- **Mapările de import persistă în baza de date** — mapările manuale „nume brut → ingredient" și regulile de conversie a unităților se salvează acum în tabele Postgres (`IngredientNameMapping`, `UnitRule`) în loc de fișiere JSON locale. Funcționează și pe Vercel (înainte scrierile pe filesystem-ul read-only erau ignorate). Migrate 184 mapări + 9 reguli existente.
+- Secțiunea de conversie apare și după selectarea manuală a unui ingredient nematchuit în cardul de resolve (cele 3 scenarii de unități).
+
+### ⚙️ Internals
+- Schema: tabele noi `IngredientNameMapping` + `UnitRule` (aplicate pe Neon prin `db push`); script one-time `scripts/seed-import-mappings.ts`.
+- `api/import/parse` + `api/import/confirm` citesc/scriu mapările și regulile de unități din DB.
+- `CLAUDE.md` adăugat (ghid de dezvoltare). Cod mort eliminat (`api/import/normalize` — spawn Python). Docs învechite mutate în `docs/archive/`. `data/export.json` + `data/local/` scoase din git. `webapp/.env.example` adăugat.
+
 ## [0.9.2] — 2026-07-16
 
 ### 🎨 UI / UX

@@ -439,6 +439,17 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   );
   const [instructionsText, setInstructionsText] = useState(initial?.instructionsText ?? "");
 
+  // Batch / per-serving control
+  const [mode, setMode] = useState<"batch" | "single">(
+    () => (parseInt(initial?.servings ?? "") > 1 ? "batch" : "single")
+  );
+  const [scaleQty, setScaleQty] = useState(true);
+  const [lastBatch, setLastBatch] = useState<number>(() => {
+    const n = parseInt(initial?.servings ?? "");
+    return n > 1 ? n : 2;
+  });
+  const servingsAtFocus = useRef<number>(0);
+
   // For the "Add unit" modal
   const [editingUnit, setEditingUnit] = useState<{
     groupId: string; ingId: string; groceryItemId: string;
@@ -455,6 +466,49 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     setCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
+  }
+
+  // ── Servings scaler (batch ↔ per-serving) ──────────────────────────
+  function fmtQty(n: number): string {
+    return (Math.round(n * 1000) / 1000).toString();
+  }
+
+  // Multiply every numeric ingredient quantity by `factor` (proportional rescale).
+  function scaleQuantities(factor: number) {
+    if (!isFinite(factor) || factor <= 0 || factor === 1) return;
+    setGroups((prev) =>
+      prev.map((g) => ({
+        ...g,
+        ingredients: g.ingredients.map((ing) => {
+          const q = parseFloat(ing.quantity);
+          if (ing.quantity.trim() === "" || isNaN(q)) return ing;
+          return { ...ing, quantity: fmtQty(q * factor) };
+        }),
+      }))
+    );
+  }
+
+  // Set servings to newN, rescaling quantities from oldN when scaling is enabled.
+  function applyServings(newN: number, oldN: number) {
+    newN = Math.max(1, Math.round(newN || 1));
+    if (newN !== oldN && scaleQty) scaleQuantities(newN / oldN);
+    if (newN > 1) setLastBatch(newN);
+    setServings(String(newN));
+  }
+
+  const curServings = parseInt(servings) || 1;
+
+  function goBatch() {
+    setMode("batch");
+    applyServings(curServings > 1 ? curServings : lastBatch, curServings);
+  }
+  function goPerServing() {
+    setMode("single");
+    applyServings(1, curServings);
+  }
+  function commitServingsInput(raw: string) {
+    const oldN = servingsAtFocus.current || curServings;
+    applyServings(parseInt(raw) || 1, oldN);
   }
 
   // ── Image upload ──────────────────────────────────────────────────────────
@@ -700,17 +754,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       </div>
 
       {/* Meta */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div>
-          <Label>Servings</Label>
-          <input
-            type="number" min="1"
-            value={servings}
-            onChange={(e) => setServings(e.target.value)}
-            placeholder="1"
-            className={inputCls}
-          />
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div>
           <Label>Time (min)</Label>
           <input
@@ -784,15 +828,86 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         </div>
       </div>
 
-      {/* ── Servings callout ─────────────────────────────────────── */}
-      {servings && parseInt(servings) > 1 && (
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
-          <span className="text-base">🍽️</span>
-          <span className="text-sm">
-            1 batch = <strong>{servings} porții</strong>
-          </span>
+      {/* ── Porții / batch ──────────────────────────────────────────── */}
+      <div>
+        <Label>Porții</Label>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {/* mode toggle */}
+          <div className="inline-flex rounded-lg border border-gray-200 dark:border-[#3a3a3a] overflow-hidden text-sm">
+            <button
+              type="button"
+              onClick={goBatch}
+              className={`px-3 py-2 font-medium transition-colors ${
+                mode === "batch"
+                  ? "bg-orange-500 text-white"
+                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+              }`}
+            >
+              Batch{mode === "batch" ? ` — ${curServings} porții` : ""}
+            </button>
+            <button
+              type="button"
+              onClick={goPerServing}
+              className={`px-3 py-2 font-medium border-l border-gray-200 dark:border-[#3a3a3a] transition-colors ${
+                mode === "single"
+                  ? "bg-orange-500 text-white"
+                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+              }`}
+            >
+              1 porție
+            </button>
+          </div>
+
+          {/* servings stepper (batch mode only) */}
+          {mode === "batch" && (
+            <div className="inline-flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => applyServings(curServings - 1, curServings)}
+                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                aria-label="minus o porție"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min="1"
+                value={servings}
+                onFocus={() => { servingsAtFocus.current = curServings; }}
+                onChange={(e) => setServings(e.target.value)}
+                onBlur={(e) => commitServingsInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
+                className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+              />
+              <button
+                type="button"
+                onClick={() => applyServings(curServings + 1, curServings)}
+                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                aria-label="plus o porție"
+              >
+                +
+              </button>
+              <span className="text-sm text-gray-500 dark:text-[#787878] ml-1">porții</span>
+            </div>
+          )}
+
+          {/* scale switch */}
+          <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#787878] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={scaleQty}
+              onChange={(e) => setScaleQty(e.target.checked)}
+              className="accent-orange-500"
+            />
+            Scalează cantitățile la schimbare
+          </label>
         </div>
-      )}
+        <p className="mt-1.5 text-xs text-gray-400 dark:text-[#666]">
+          {mode === "batch"
+            ? `Cantitățile ingredientelor sunt pentru ${curServings} porții.`
+            : "Cantitățile ingredientelor sunt pentru 1 porție."}
+        </p>
+      </div>
 
       {/* ── Ingredients ──────────────────────────────────────────── */}
       <div>

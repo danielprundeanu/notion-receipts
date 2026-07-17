@@ -66,3 +66,13 @@ export type Instruction = Prisma.InstructionModel
  * 
  */
 export type WeekPlan = Prisma.WeekPlanModel
+/**
+ * Model IngredientNameMapping
+ * 
+ */
+export type IngredientNameMapping = Prisma.IngredientNameMappingModel
+/**
+ * Model UnitRule
+ * 
+ */
+export type UnitRule = Prisma.UnitRuleModel

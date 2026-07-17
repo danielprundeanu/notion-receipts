@@ -42,6 +42,7 @@ model GroceryItem {
   notionId    String?      @unique
   createdAt   DateTime     @default(now())
   ingredients Ingredient[]
+  nameMappings IngredientNameMapping[]
 }
 
 model Ingredient {
@@ -77,4 +78,28 @@ model WeekPlan {
   mealType  String
   servings  Int      @default(1)
   createdAt DateTime @default(now())
+}
+
+// Remembers a manual "raw ingredient name → grocery item" mapping made during import,
+// so the same raw name auto-resolves on future imports. (Replaces data/ingredient_name_mappings.json.)
+model IngredientNameMapping {
+  id              String      @id @default(cuid())
+  rawName         String      @unique // lowercased raw ingredient name from a recipe
+  groceryItemId   String
+  groceryItem     GroceryItem @relation(fields: [groceryItemId], references: [id], onDelete: Cascade)
+  groceryItemName String
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+// Remembers a unit-conversion choice for an ingredient's foreign unit made during import.
+// (Replaces data/unit_choices.json.) key = "ingredientname|foreignunit"; 1 foreignUnit = rate × targetUnit.
+model UnitRule {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  targetUnit  String
+  rate        Float
+  foreignUnit String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

@@ -388,7 +388,9 @@ export const ModelName = {
   GroceryItem: 'GroceryItem',
   Ingredient: 'Ingredient',
   Instruction: 'Instruction',
-  WeekPlan: 'WeekPlan'
+  WeekPlan: 'WeekPlan',
+  IngredientNameMapping: 'IngredientNameMapping',
+  UnitRule: 'UnitRule'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -404,7 +406,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "recipe" | "groceryItem" | "ingredient" | "instruction" | "weekPlan"
+    modelProps: "recipe" | "groceryItem" | "ingredient" | "instruction" | "weekPlan" | "ingredientNameMapping" | "unitRule"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -778,6 +780,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    IngredientNameMapping: {
+      payload: Prisma.$IngredientNameMappingPayload<ExtArgs>
+      fields: Prisma.IngredientNameMappingFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.IngredientNameMappingFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.IngredientNameMappingFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        findFirst: {
+          args: Prisma.IngredientNameMappingFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.IngredientNameMappingFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        findMany: {
+          args: Prisma.IngredientNameMappingFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>[]
+        }
+        create: {
+          args: Prisma.IngredientNameMappingCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        createMany: {
+          args: Prisma.IngredientNameMappingCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.IngredientNameMappingCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>[]
+        }
+        delete: {
+          args: Prisma.IngredientNameMappingDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        update: {
+          args: Prisma.IngredientNameMappingUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        deleteMany: {
+          args: Prisma.IngredientNameMappingDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.IngredientNameMappingUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.IngredientNameMappingUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>[]
+        }
+        upsert: {
+          args: Prisma.IngredientNameMappingUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$IngredientNameMappingPayload>
+        }
+        aggregate: {
+          args: Prisma.IngredientNameMappingAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateIngredientNameMapping>
+        }
+        groupBy: {
+          args: Prisma.IngredientNameMappingGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IngredientNameMappingGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.IngredientNameMappingCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.IngredientNameMappingCountAggregateOutputType> | number
+        }
+      }
+    }
+    UnitRule: {
+      payload: Prisma.$UnitRulePayload<ExtArgs>
+      fields: Prisma.UnitRuleFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UnitRuleFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UnitRuleFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        findFirst: {
+          args: Prisma.UnitRuleFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UnitRuleFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        findMany: {
+          args: Prisma.UnitRuleFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>[]
+        }
+        create: {
+          args: Prisma.UnitRuleCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        createMany: {
+          args: Prisma.UnitRuleCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UnitRuleCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>[]
+        }
+        delete: {
+          args: Prisma.UnitRuleDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        update: {
+          args: Prisma.UnitRuleUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        deleteMany: {
+          args: Prisma.UnitRuleDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UnitRuleUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UnitRuleUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>[]
+        }
+        upsert: {
+          args: Prisma.UnitRuleUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnitRulePayload>
+        }
+        aggregate: {
+          args: Prisma.UnitRuleAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUnitRule>
+        }
+        groupBy: {
+          args: Prisma.UnitRuleGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UnitRuleGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UnitRuleCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UnitRuleCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -894,6 +1044,31 @@ export const WeekPlanScalarFieldEnum = {
 } as const
 
 export type WeekPlanScalarFieldEnum = (typeof WeekPlanScalarFieldEnum)[keyof typeof WeekPlanScalarFieldEnum]
+
+
+export const IngredientNameMappingScalarFieldEnum = {
+  id: 'id',
+  rawName: 'rawName',
+  groceryItemId: 'groceryItemId',
+  groceryItemName: 'groceryItemName',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type IngredientNameMappingScalarFieldEnum = (typeof IngredientNameMappingScalarFieldEnum)[keyof typeof IngredientNameMappingScalarFieldEnum]
+
+
+export const UnitRuleScalarFieldEnum = {
+  id: 'id',
+  key: 'key',
+  targetUnit: 'targetUnit',
+  rate: 'rate',
+  foreignUnit: 'foreignUnit',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UnitRuleScalarFieldEnum = (typeof UnitRuleScalarFieldEnum)[keyof typeof UnitRuleScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -1088,6 +1263,8 @@ export type GlobalOmitConfig = {
   ingredient?: Prisma.IngredientOmit
   instruction?: Prisma.InstructionOmit
   weekPlan?: Prisma.WeekPlanOmit
+  ingredientNameMapping?: Prisma.IngredientNameMappingOmit
+  unitRule?: Prisma.UnitRuleOmit
 }
 
 /* Types for Logging */

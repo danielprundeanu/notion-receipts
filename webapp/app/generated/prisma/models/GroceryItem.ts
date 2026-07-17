@@ -309,6 +309,7 @@ export type GroceryItemWhereInput = {
   notionId?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   createdAt?: Prisma.DateTimeFilter<"GroceryItem"> | Date | string
   ingredients?: Prisma.IngredientListRelationFilter
+  nameMappings?: Prisma.IngredientNameMappingListRelationFilter
 }
 
 export type GroceryItemOrderByWithRelationInput = {
@@ -327,6 +328,7 @@ export type GroceryItemOrderByWithRelationInput = {
   notionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   ingredients?: Prisma.IngredientOrderByRelationAggregateInput
+  nameMappings?: Prisma.IngredientNameMappingOrderByRelationAggregateInput
 }
 
 export type GroceryItemWhereUniqueInput = Prisma.AtLeast<{
@@ -348,6 +350,7 @@ export type GroceryItemWhereUniqueInput = Prisma.AtLeast<{
   unitWeight?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
   createdAt?: Prisma.DateTimeFilter<"GroceryItem"> | Date | string
   ingredients?: Prisma.IngredientListRelationFilter
+  nameMappings?: Prisma.IngredientNameMappingListRelationFilter
 }, "id" | "name" | "notionId">
 
 export type GroceryItemOrderByWithAggregationInput = {
@@ -408,6 +411,7 @@ export type GroceryItemCreateInput = {
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientCreateNestedManyWithoutGroceryItemInput
+  nameMappings?: Prisma.IngredientNameMappingCreateNestedManyWithoutGroceryItemInput
 }
 
 export type GroceryItemUncheckedCreateInput = {
@@ -426,6 +430,7 @@ export type GroceryItemUncheckedCreateInput = {
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutGroceryItemInput
+  nameMappings?: Prisma.IngredientNameMappingUncheckedCreateNestedManyWithoutGroceryItemInput
 }
 
 export type GroceryItemUpdateInput = {
@@ -444,6 +449,7 @@ export type GroceryItemUpdateInput = {
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUpdateManyWithoutGroceryItemNestedInput
+  nameMappings?: Prisma.IngredientNameMappingUpdateManyWithoutGroceryItemNestedInput
 }
 
 export type GroceryItemUncheckedUpdateInput = {
@@ -462,6 +468,7 @@ export type GroceryItemUncheckedUpdateInput = {
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutGroceryItemNestedInput
+  nameMappings?: Prisma.IngredientNameMappingUncheckedUpdateManyWithoutGroceryItemNestedInput
 }
 
 export type GroceryItemCreateManyInput = {
@@ -589,6 +596,11 @@ export type GroceryItemNullableScalarRelationFilter = {
   isNot?: Prisma.GroceryItemWhereInput | null
 }
 
+export type GroceryItemScalarRelationFilter = {
+  is?: Prisma.GroceryItemWhereInput
+  isNot?: Prisma.GroceryItemWhereInput
+}
+
 export type NullableFloatFieldUpdateOperationsInput = {
   set?: number | null
   increment?: number
@@ -613,6 +625,20 @@ export type GroceryItemUpdateOneWithoutIngredientsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.GroceryItemUpdateToOneWithWhereWithoutIngredientsInput, Prisma.GroceryItemUpdateWithoutIngredientsInput>, Prisma.GroceryItemUncheckedUpdateWithoutIngredientsInput>
 }
 
+export type GroceryItemCreateNestedOneWithoutNameMappingsInput = {
+  create?: Prisma.XOR<Prisma.GroceryItemCreateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedCreateWithoutNameMappingsInput>
+  connectOrCreate?: Prisma.GroceryItemCreateOrConnectWithoutNameMappingsInput
+  connect?: Prisma.GroceryItemWhereUniqueInput
+}
+
+export type GroceryItemUpdateOneRequiredWithoutNameMappingsNestedInput = {
+  create?: Prisma.XOR<Prisma.GroceryItemCreateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedCreateWithoutNameMappingsInput>
+  connectOrCreate?: Prisma.GroceryItemCreateOrConnectWithoutNameMappingsInput
+  upsert?: Prisma.GroceryItemUpsertWithoutNameMappingsInput
+  connect?: Prisma.GroceryItemWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.GroceryItemUpdateToOneWithWhereWithoutNameMappingsInput, Prisma.GroceryItemUpdateWithoutNameMappingsInput>, Prisma.GroceryItemUncheckedUpdateWithoutNameMappingsInput>
+}
+
 export type GroceryItemCreateWithoutIngredientsInput = {
   id?: string
   name: string
@@ -628,6 +654,7 @@ export type GroceryItemCreateWithoutIngredientsInput = {
   unitWeight?: number | null
   notionId?: string | null
   createdAt?: Date | string
+  nameMappings?: Prisma.IngredientNameMappingCreateNestedManyWithoutGroceryItemInput
 }
 
 export type GroceryItemUncheckedCreateWithoutIngredientsInput = {
@@ -645,6 +672,7 @@ export type GroceryItemUncheckedCreateWithoutIngredientsInput = {
   unitWeight?: number | null
   notionId?: string | null
   createdAt?: Date | string
+  nameMappings?: Prisma.IngredientNameMappingUncheckedCreateNestedManyWithoutGroceryItemInput
 }
 
 export type GroceryItemCreateOrConnectWithoutIngredientsInput = {
@@ -678,6 +706,7 @@ export type GroceryItemUpdateWithoutIngredientsInput = {
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  nameMappings?: Prisma.IngredientNameMappingUpdateManyWithoutGroceryItemNestedInput
 }
 
 export type GroceryItemUncheckedUpdateWithoutIngredientsInput = {
@@ -695,6 +724,95 @@ export type GroceryItemUncheckedUpdateWithoutIngredientsInput = {
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  nameMappings?: Prisma.IngredientNameMappingUncheckedUpdateManyWithoutGroceryItemNestedInput
+}
+
+export type GroceryItemCreateWithoutNameMappingsInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  category?: string | null
+  unit?: string | null
+  unit2?: string | null
+  conversion?: number | null
+  kcal?: number | null
+  carbs?: number | null
+  fat?: number | null
+  protein?: number | null
+  unitWeight?: number | null
+  notionId?: string | null
+  createdAt?: Date | string
+  ingredients?: Prisma.IngredientCreateNestedManyWithoutGroceryItemInput
+}
+
+export type GroceryItemUncheckedCreateWithoutNameMappingsInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  category?: string | null
+  unit?: string | null
+  unit2?: string | null
+  conversion?: number | null
+  kcal?: number | null
+  carbs?: number | null
+  fat?: number | null
+  protein?: number | null
+  unitWeight?: number | null
+  notionId?: string | null
+  createdAt?: Date | string
+  ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutGroceryItemInput
+}
+
+export type GroceryItemCreateOrConnectWithoutNameMappingsInput = {
+  where: Prisma.GroceryItemWhereUniqueInput
+  create: Prisma.XOR<Prisma.GroceryItemCreateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedCreateWithoutNameMappingsInput>
+}
+
+export type GroceryItemUpsertWithoutNameMappingsInput = {
+  update: Prisma.XOR<Prisma.GroceryItemUpdateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedUpdateWithoutNameMappingsInput>
+  create: Prisma.XOR<Prisma.GroceryItemCreateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedCreateWithoutNameMappingsInput>
+  where?: Prisma.GroceryItemWhereInput
+}
+
+export type GroceryItemUpdateToOneWithWhereWithoutNameMappingsInput = {
+  where?: Prisma.GroceryItemWhereInput
+  data: Prisma.XOR<Prisma.GroceryItemUpdateWithoutNameMappingsInput, Prisma.GroceryItemUncheckedUpdateWithoutNameMappingsInput>
+}
+
+export type GroceryItemUpdateWithoutNameMappingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversion?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  kcal?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  carbs?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUpdateManyWithoutGroceryItemNestedInput
+}
+
+export type GroceryItemUncheckedUpdateWithoutNameMappingsInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  unit?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  unit2?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  conversion?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  kcal?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  carbs?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutGroceryItemNestedInput
 }
 
 
@@ -704,10 +822,12 @@ export type GroceryItemUncheckedUpdateWithoutIngredientsInput = {
 
 export type GroceryItemCountOutputType = {
   ingredients: number
+  nameMappings: number
 }
 
 export type GroceryItemCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | GroceryItemCountOutputTypeCountIngredientsArgs
+  nameMappings?: boolean | GroceryItemCountOutputTypeCountNameMappingsArgs
 }
 
 /**
@@ -727,6 +847,13 @@ export type GroceryItemCountOutputTypeCountIngredientsArgs<ExtArgs extends runti
   where?: Prisma.IngredientWhereInput
 }
 
+/**
+ * GroceryItemCountOutputType without action
+ */
+export type GroceryItemCountOutputTypeCountNameMappingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.IngredientNameMappingWhereInput
+}
+
 
 export type GroceryItemSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -744,6 +871,7 @@ export type GroceryItemSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   notionId?: boolean
   createdAt?: boolean
   ingredients?: boolean | Prisma.GroceryItem$ingredientsArgs<ExtArgs>
+  nameMappings?: boolean | Prisma.GroceryItem$nameMappingsArgs<ExtArgs>
   _count?: boolean | Prisma.GroceryItemCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["groceryItem"]>
 
@@ -801,6 +929,7 @@ export type GroceryItemSelectScalar = {
 export type GroceryItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameRo" | "category" | "unit" | "unit2" | "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight" | "notionId" | "createdAt", ExtArgs["result"]["groceryItem"]>
 export type GroceryItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | Prisma.GroceryItem$ingredientsArgs<ExtArgs>
+  nameMappings?: boolean | Prisma.GroceryItem$nameMappingsArgs<ExtArgs>
   _count?: boolean | Prisma.GroceryItemCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type GroceryItemIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -810,6 +939,7 @@ export type $GroceryItemPayload<ExtArgs extends runtime.Types.Extensions.Interna
   name: "GroceryItem"
   objects: {
     ingredients: Prisma.$IngredientPayload<ExtArgs>[]
+    nameMappings: Prisma.$IngredientNameMappingPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1221,6 +1351,7 @@ readonly fields: GroceryItemFieldRefs;
 export interface Prisma__GroceryItemClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   ingredients<T extends Prisma.GroceryItem$ingredientsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GroceryItem$ingredientsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IngredientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  nameMappings<T extends Prisma.GroceryItem$nameMappingsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.GroceryItem$nameMappingsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IngredientNameMappingPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1673,6 +1804,30 @@ export type GroceryItem$ingredientsArgs<ExtArgs extends runtime.Types.Extensions
   take?: number
   skip?: number
   distinct?: Prisma.IngredientScalarFieldEnum | Prisma.IngredientScalarFieldEnum[]
+}
+
+/**
+ * GroceryItem.nameMappings
+ */
+export type GroceryItem$nameMappingsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the IngredientNameMapping
+   */
+  select?: Prisma.IngredientNameMappingSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the IngredientNameMapping
+   */
+  omit?: Prisma.IngredientNameMappingOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.IngredientNameMappingInclude<ExtArgs> | null
+  where?: Prisma.IngredientNameMappingWhereInput
+  orderBy?: Prisma.IngredientNameMappingOrderByWithRelationInput | Prisma.IngredientNameMappingOrderByWithRelationInput[]
+  cursor?: Prisma.IngredientNameMappingWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.IngredientNameMappingScalarFieldEnum | Prisma.IngredientNameMappingScalarFieldEnum[]
 }
 
 /**

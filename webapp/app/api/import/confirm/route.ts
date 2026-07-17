@@ -5,37 +5,37 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-const UNIT_CHOICES_PATH = path.resolve(process.cwd(), "../data/unit_choices.json");
-const INGREDIENT_MAPPINGS_PATH = path.resolve(process.cwd(), "../data/ingredient_name_mappings.json");
-
-function saveIngredientMappings(mappings: Array<{ rawName: string; groceryItemId: string; groceryItemName: string }>) {
-  if (mappings.length === 0) return;
-  let data: Record<string, { groceryItemId: string; groceryItemName: string }> = {};
-  try { data = JSON.parse(fs.readFileSync(INGREDIENT_MAPPINGS_PATH, "utf-8")); } catch { /* new file */ }
+// Persist manual "raw name → grocery item" mappings so they auto-resolve on future imports.
+// Non-fatal: a failure here must never block the actual recipe import.
+async function saveIngredientMappings(mappings: Array<{ rawName: string; groceryItemId: string; groceryItemName: string }>) {
   for (const m of mappings) {
-    data[m.rawName.toLowerCase().trim()] = { groceryItemId: m.groceryItemId, groceryItemName: m.groceryItemName };
-  }
-  try {
-    fs.writeFileSync(INGREDIENT_MAPPINGS_PATH, JSON.stringify(data, null, 2), "utf-8");
-  } catch (e) {
-    // Read-only filesystem (e.g. Vercel) — mappings are a local convenience only.
-    console.warn("[import/confirm] could not persist ingredient mappings:", e instanceof Error ? e.message : e);
+    const rawName = m.rawName.toLowerCase().trim();
+    if (!rawName) continue;
+    try {
+      await prisma.ingredientNameMapping.upsert({
+        where: { rawName },
+        update: { groceryItemId: m.groceryItemId, groceryItemName: m.groceryItemName },
+        create: { rawName, groceryItemId: m.groceryItemId, groceryItemName: m.groceryItemName },
+      });
+    } catch (e) {
+      console.warn("[import/confirm] could not persist ingredient mapping:", e instanceof Error ? e.message : e);
+    }
   }
 }
 
-function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>) {
-  if (rules.length === 0) return;
-  let choices: Record<string, unknown> = {};
-  try { choices = JSON.parse(fs.readFileSync(UNIT_CHOICES_PATH, "utf-8")); } catch { /* new file */ }
+// Persist unit-conversion choices (1 foreignUnit = factor × targetUnit). Non-fatal.
+async function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>) {
   for (const r of rules) {
     const key = `${r.name.toLowerCase()}|${r.foreignUnit.toLowerCase()}`;
-    choices[key] = { action: "use_unit", unit: r.targetUnit, rate: r.factor, from_unit: r.foreignUnit };
-  }
-  try {
-    fs.writeFileSync(UNIT_CHOICES_PATH, JSON.stringify(choices, null, 2), "utf-8");
-  } catch (e) {
-    // Read-only filesystem (e.g. Vercel) — unit rules are a local convenience only.
-    console.warn("[import/confirm] could not persist unit rules:", e instanceof Error ? e.message : e);
+    try {
+      await prisma.unitRule.upsert({
+        where: { key },
+        update: { targetUnit: r.targetUnit, rate: r.factor, foreignUnit: r.foreignUnit },
+        create: { key, targetUnit: r.targetUnit, rate: r.factor, foreignUnit: r.foreignUnit },
+      });
+    } catch (e) {
+      console.warn("[import/confirm] could not persist unit rule:", e instanceof Error ? e.message : e);
+    }
   }
 }
 
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       recipes: ConfirmedRecipe[];
       newUnitRules?: Array<{ name: string; foreignUnit: string; targetUnit: string; factor: number }>;
     };
-    saveUnitRules(newUnitRules);
+    await saveUnitRules(newUnitRules);
 
     // Save manually resolved ingredient mappings
     const newIngredientMappings: Array<{ rawName: string; groceryItemId: string; groceryItemName: string }> = [];
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    saveIngredientMappings(newIngredientMappings);
+    await saveIngredientMappings(newIngredientMappings);
 
     if (!Array.isArray(recipes) || recipes.length === 0) {
       return NextResponse.json({ error: "Nu sunt rețete de importat" }, { status: 400 });
