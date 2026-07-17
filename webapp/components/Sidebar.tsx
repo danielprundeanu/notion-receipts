@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple, Settings as SettingsIcon } from "lucide-react";
+import { BookOpen, Calendar, ShoppingCart, Apple, Settings as SettingsIcon } from "lucide-react";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
@@ -19,9 +20,7 @@ export default function Sidebar() {
       {/* Brand header */}
       <div className="p-5 border-b border-gray-100 dark:border-[#2e2e2e]">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-            <ChefHat size={16} className="text-white" />
-          </div>
+          <Image src="/logo.png" alt="Meal Planner" width={32} height={32} className="w-8 h-8 rounded-lg shrink-0" />
           <span className="font-semibold text-gray-900 dark:text-[#e3e3e3]">Meal Planner</span>
         </div>
       </div>

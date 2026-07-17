@@ -39,7 +39,7 @@ export type IngredientMatch = {
   groceryItemName?: string;
   groceryItemUnit?: string | null;
   groceryItemUnit2?: string | null;
-  candidates?: Array<{ id: string; name: string; unit: string | null }>;
+  candidates?: Array<{ id: string; name: string; unit: string | null; unit2?: string | null }>;
 };
 
 export type UnitConflict = {
@@ -172,14 +172,14 @@ async function matchIngredient(name: string, nameMappings: Record<string, Ingred
       groceryItemName: best.displayName,
       groceryItemUnit: best.unit,
       groceryItemUnit2: best.unit2,
-      candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit })),
+      candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit, unit2: c.unit2 })),
     };
   }
 
   // Low confidence → return as new but with candidates
   return {
     status: "new",
-    candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit })),
+    candidates: scored.map((c) => ({ id: c.id, name: c.displayName, unit: c.unit, unit2: c.unit2 })),
   };
 }
 

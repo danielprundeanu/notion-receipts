@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.13.0] — 2026-07-18
+
+### 🎨 UI / UX
+- **Iconă nouă a aplicației** — farfurie cu somon / broccoli / orez, cu ramă portocalie. Folosită pentru icoana de iOS („Add to Home Screen"), favicon-ul din tab, favicon-ul legacy și logo-ul din sidebar (înlocuiește ChefHat).
+- **Recalculare instantanee a unităților la pasul de resolve din import** — când selectezi alt ingredient pentru unul nematchuit, verificarea unităților (potrivit / necesită conversie) se actualizează imediat din unitățile ingredientului ales, fără să mai aștepte round-trip-ul la DB (care acum doar completează `conversion`).
+
+### ⚙️ Internals
+- `api/import/parse` include acum `unit2` în candidați (necesar pentru seeding-ul instant al unităților).
+- Icoanele dinamice `apple-icon.tsx` / `icon.tsx` înlocuite cu asset-uri statice (`apple-icon.png` 180×180, `icon.png` 48×48, `favicon.ico` regenerat, `public/logo.png`).
+
 ## [0.12.0] — 2026-07-17
 
 ### ✨ Features

@@ -324,10 +324,38 @@ function ReviewRow({
   const [aiSuggested, setAiSuggested] = useState(false);
   const [aiNote, setAiNote] = useState<string | null>(null);
 
+  // Reține id-ul ingredientului „seeded" instant la selecție, ca efectul de încărcare
+  // să NU recalculeze target/factor peste ce s-a setat deja (ex: o sugestie AI).
+  const seededRef = useRef<string | null>(null);
+
   // Când utilizatorul editează factorul manual, sugestia AI nu mai e „sugestie"
   function handleFactorChange(v: string) {
     setFactor(v);
     if (aiSuggested) { setAiSuggested(false); setAiNote(null); }
+  }
+
+  // Calculează target + factor pentru unitățile unui ingredient
+  function applyUnits(unit: string | null, unit2: string | null) {
+    const us = [unit, unit2].filter((u): u is string => !!u);
+    if (foreign && us.length >= 1 && !us.includes(foreign)) {
+      setTarget(us[0]);
+      setFactor(getAutoFactor(foreign, us[0]));
+    } else {
+      setTarget("");
+      setFactor("");
+    }
+  }
+
+  // Selectează un ingredient din listă — actualizează INSTANT verificarea unităților
+  // (fără a aștepta round-trip-ul la DB); efectul de mai jos completează apoi `conversion`.
+  function pickItem(item: { id: string; name: string; unit: string | null; unit2?: string | null }) {
+    if (item.id === selectedId) return;
+    seededRef.current = item.id;
+    setSelectedId(item.id);
+    setSel({ name: item.name, unit: item.unit, unit2: item.unit2 ?? null, conversion: null });
+    applyUnits(item.unit, item.unit2 ?? null);
+    setAddU2(false);
+    setAiSuggested(false); setAiNote(null);
   }
 
   // Debounced DB search
@@ -356,14 +384,12 @@ function ReviewRow({
         setAddU2(false);
         if (!d) { setSel(null); return; }
         setSel({ name: d.name, unit: d.unit, unit2: d.unit2, conversion: d.conversion });
-        const us = [d.unit, d.unit2].filter((u): u is string => !!u);
-        if (foreign && us.length >= 1 && !us.includes(foreign)) {
-          const t = us[0];
-          setTarget(t);
-          setFactor(getAutoFactor(foreign, t));
+        // Dacă a fost deja „seeded" instant la selecție, nu recalcula target/factor
+        // (păstrează eventuala sugestie AI); altfel (mount inițial) fă setup-ul complet.
+        if (seededRef.current === selectedId) {
+          seededRef.current = null;
         } else {
-          setTarget("");
-          setFactor("");
+          applyUnits(d.unit, d.unit2);
         }
       })
       .catch(() => { if (!cancelled) setSelLoading(false); });
@@ -581,7 +607,7 @@ function ReviewRow({
                   : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
                 }`}>
                   <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={selectedThis}
-                    onChange={() => setSelectedId(c.id)} className="accent-orange-500" />
+                    onChange={() => pickItem(c)} className="accent-orange-500" />
                   <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
                   {uStr && <span className="text-xs text-gray-400 dark:text-[#555] tabular-nums">{uStr}</span>}
                   {isAuto && <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">auto-matched</span>}
@@ -594,7 +620,7 @@ function ReviewRow({
               isNew ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
             }`}>
               <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={isNew}
-                onChange={() => setSelectedId("new")} className="accent-orange-500" />
+                onChange={() => { seededRef.current = null; setSelectedId("new"); }} className="accent-orange-500" />
               <Plus size={13} className="text-orange-500" />
               <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Crează ingredient nou &ldquo;{ing.name}&rdquo;</span>
             </label>
