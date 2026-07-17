@@ -225,8 +225,8 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                   </div>
                 </button>
 
-                {/* Thumbnail */}
-                <div className="hidden sm:block w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2a2a2a] shrink-0 relative">
+                {/* Thumbnail — vizibil inline între checkbox și nume pe toate ecranele */}
+                <div className="block w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2a2a2a] shrink-0 relative">
                   {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
                     <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="40px" className="object-cover" loading="lazy" />
                   ) : (

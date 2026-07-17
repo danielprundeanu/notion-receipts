@@ -1377,6 +1377,11 @@ export default function ImportPage() {
                   });
                   return (
                     <div className="px-4 py-3 space-y-3">
+                      {/* Column headers: original din text vs. ce se importă */}
+                      <div className="grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2e2e]">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555]">Din text</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555]">Se importă</span>
+                      </div>
                       {Object.entries(groups).map(([gName, items]) => (
                         <div key={gName}>
                           <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-1">{gName}</p>
@@ -1391,7 +1396,12 @@ export default function ImportPage() {
                               const dispUnit = uc?.targetUnit ?? ing.unit;
                               const dispName = ext.newItem?.name ?? ing.match.groceryItemName ?? ing.name;
                               const needsReview = (ing.match.status !== "matched" || (!!uc && !uc.autoResolved)) && !ext.skipped && !ext.reviewed;
-                              const canEdit = needsReview || ext.reviewed;
+                              // Orice ingredient (inclusiv matched) poate fi deschis pentru ajustări
+                              const canEdit = !ext.skipped;
+                              // Diferențe între ce era în text și ce se importă
+                              const qtyChanged = dispQty !== ing.qty;
+                              const unitChanged = (dispUnit ?? null) !== (ing.unit ?? null);
+                              const nameChanged = dispName.toLowerCase() !== ing.name.toLowerCase();
                               return (
                                 <div
                                   key={ii}
@@ -1399,14 +1409,25 @@ export default function ImportPage() {
                                     setFocusIngredientKey(`${i}-${ii}`);
                                     setStep(3);
                                   } : undefined}
-                                  className={`flex items-center justify-between gap-2 text-xs py-0.5 rounded px-1 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors" : ""}`}
+                                  className={`grid grid-cols-2 gap-2 items-center text-xs py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors" : ""}`}
                                   title={canEdit ? "Click pentru a edita" : undefined}
                                 >
-                                  <span className="text-gray-700 dark:text-[#c0c0c0]">
-                                    {dispQty != null && `${dispQty} `}{dispUnit && `${dispUnit} `}
-                                    <span className={needsReview ? "text-yellow-600 dark:text-yellow-400" : ""}>{dispName}</span>
+                                  {/* Din text (original) */}
+                                  <span className="min-w-0 truncate text-gray-400 dark:text-[#666] tabular-nums">
+                                    {ing.qty != null && `${ing.qty} `}{ing.unit && `${ing.unit} `}
+                                    <span className="text-gray-500 dark:text-[#787878]">{ing.name}</span>
+                                    {ing.obs && <span className="text-gray-300 dark:text-[#555]"> · {ing.obs}</span>}
                                   </span>
-                                  {!ext.skipped && <MatchBadge status={ing.match.status} hasUnitConflict={!!uc && !uc.autoResolved} reviewed={ext.reviewed} />}
+                                  {/* Se importă (rezultat) */}
+                                  <div className="min-w-0 flex items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate text-gray-700 dark:text-[#c0c0c0]">
+                                      <span className={`tabular-nums ${qtyChanged || unitChanged ? "text-orange-600 dark:text-orange-400 font-medium" : ""}`}>
+                                        {dispQty != null && `${dispQty} `}{dispUnit && `${dispUnit} `}
+                                      </span>
+                                      <span className={nameChanged ? "text-orange-600 dark:text-orange-400 font-medium" : needsReview ? "text-yellow-600 dark:text-yellow-400" : ""}>{dispName}</span>
+                                    </span>
+                                    {!ext.skipped && <MatchBadge status={ing.match.status} hasUnitConflict={!!uc && !uc.autoResolved} reviewed={ext.reviewed} />}
+                                  </div>
                                 </div>
                               );
                             })}

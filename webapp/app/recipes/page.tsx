@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getRecipes } from "@/lib/actions";
 import { Star, Search, Plus, Download } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import SortSelect from "@/components/SortSelect";
 import RecipesGrid from "@/components/RecipesGrid";
 
@@ -28,9 +27,6 @@ export default async function RecipesPage({
           <p className="text-sm text-gray-600 dark:text-[#9a9a9a] mt-0.5">{recipes.length} recipes</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="md:hidden">
-            <ThemeToggle compact />
-          </div>
           <Link
             href="/recipes/import"
             className="p-2 text-gray-500 dark:text-[#787878] hover:text-orange-500 dark:hover:text-orange-400 transition-colors"

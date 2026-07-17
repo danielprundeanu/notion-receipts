@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, Apple } from "lucide-react";
+import { BookOpen, Calendar, ShoppingCart, Apple, Settings } from "lucide-react";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
   { href: "/planner", label: "Planner", icon: Calendar },
   { href: "/grocery-list", label: "Grocery", icon: ShoppingCart },
   { href: "/ingredients", label: "Ingredients", icon: Apple },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function BottomNav() {

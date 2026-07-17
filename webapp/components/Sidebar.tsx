@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple } from "lucide-react";
-import ThemeToggle from "./ThemeToggle";
+import { BookOpen, Calendar, ShoppingCart, ChefHat, Apple, Settings as SettingsIcon } from "lucide-react";
 
 const nav = [
   { href: "/recipes", label: "Recipes", icon: BookOpen },
@@ -52,9 +51,19 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Theme toggle — pinned to the bottom */}
+      {/* Settings — pinned to the bottom */}
       <div className="p-3 border-t border-gray-100 dark:border-[#2e2e2e]">
-        <ThemeToggle />
+        <Link
+          href="/settings"
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+            pathname === "/settings" || pathname.startsWith("/settings/")
+              ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400"
+              : "text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] hover:text-gray-900 dark:hover:text-[#e3e3e3]"
+          }`}
+        >
+          <SettingsIcon size={17} />
+          Settings
+        </Link>
       </div>
     </aside>
   );

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0] — 2026-07-17
+
+### ✨ Features
+- **Pagină nouă de Setări** — comutatorul light/dark a fost mutat într-o pagină dedicată `/settings` (secțiunea „Aspect"). „Settings" adăugat în sidebar (jos) și în bara de navigație mobilă.
+- **Comparație side-by-side la pasul de preview din import** — fiecare ingredient e afișat pe două coloane: „Din text" (linia originală din fișier) vs. „Se importă" (rezultatul după conversie de unități, împărțire pe porții și mapare la ingredient). Diferențele de cantitate / unitate / nume sunt evidențiate cu portocaliu.
+- **Editare a oricărui ingredient la preview** — se pot deschide acum și cardurile deja „matched", nu doar cele care necesită revizuire, pentru ajustări de ultim moment.
+
+### 🎨 UI / UX
+- **Thumbnail inline în vizualizarea listă (Recipes)** — imaginea rețetei apare ca un pătrat mic cu colțuri rotunjite între checkbox și nume, vizibil acum și pe mobil.
+
+### ⚙️ Internals
+- Comandă nouă `/ship` — changelog + bump versiune + commit + push pe origin (deploy producție).
+
 ## [0.10.0] — 2026-07-17
 
 ### ✨ Features
