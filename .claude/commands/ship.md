@@ -58,14 +58,19 @@ Dacă `$1` este gol, propune versiunea următoare incrementând minor (ex: `0.1.
    git commit -m "chore: release v$VERSION"
    ```
 
-8. **Push pe origin** — push pe branch-ul curent (cel din Context de mai sus):
+8. **Creează tag-ul de versiune** — tag anotat `vX.Y.Z` pe commit-ul de release:
+   ```
+   git tag -a v$VERSION -m "Release v$VERSION"
+   ```
+   Dacă tag-ul există deja, oprește-te și raportează — NU-l suprascrie (`-f`).
+
+9. **Push pe origin** — push pe branch-ul curent (cel din Context de mai sus) + tag-ul:
    ```
    git push origin HEAD
+   git push origin v$VERSION
    ```
    Dacă push-ul eșuează (ex: remote înainte cu commit-uri, protecție de branch), NU forța (`--force`) —
    raportează eroarea utilizatorului și oprește-te.
 
-9. **Confirmă rezultatul** — spune ce versiune a fost lansată, pe ce branch s-a făcut push, și, dacă
-   branch-ul e `main`, menționează că deploy-ul de producție pe Vercel a pornit.
-
-Nu taga git-ul automat — lasă utilizatorul să decidă dacă vrea tag.
+10. **Confirmă rezultatul** — spune ce versiune a fost lansată, ce tag a fost creat, pe ce branch s-a
+    făcut push, și, dacă branch-ul e `main`, menționează că deploy-ul de producție pe Vercel a pornit.
