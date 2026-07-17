@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft, ArrowRight, Upload, Link2, FileText,
   CheckCircle, AlertCircle, Loader2,
-  ChevronDown, ChevronUp, X, Check, Search, Plus,
+  ChevronDown, ChevronUp, X, Check, Search, Plus, Sparkles,
 } from "lucide-react";
 import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
 import { getGroceryCategories, getGroceryItemDetails } from "@/lib/actions";
@@ -319,6 +319,17 @@ function ReviewRow({
   const [factor, setFactor] = useState<string>("");   // 1 foreign = factor × target  (direction A)
   const [addU2, setAddU2] = useState(false);
 
+  // ── AI conversion suggestion state ──
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSuggested, setAiSuggested] = useState(false);
+  const [aiNote, setAiNote] = useState<string | null>(null);
+
+  // Când utilizatorul editează factorul manual, sugestia AI nu mai e „sugestie"
+  function handleFactorChange(v: string) {
+    setFactor(v);
+    if (aiSuggested) { setAiSuggested(false); setAiNote(null); }
+  }
+
   // Debounced DB search
   useEffect(() => {
     if (searchQuery.trim().length < 2) { setSearchResults([]); return; }
@@ -334,6 +345,7 @@ function ReviewRow({
 
   // Load details for the selected grocery item (units + conversion)
   useEffect(() => {
+    setAiSuggested(false); setAiNote(null); setAiLoading(false);
     if (selectedId === "new" || !selectedId) { setSel(null); setAddU2(false); return; }
     let cancelled = false;
     setSelLoading(true);
@@ -365,6 +377,34 @@ function ReviewRow({
   const matches = !!foreign && units.includes(foreign);
   const singleUnit = units.length === 1;
   const needsConversion = !!foreign && units.length >= 1 && !matches;
+
+  // ── AI suggestion: pre-completează factorul pentru conversiile dependente de
+  //     ingredient (unde tabelul static getAutoFactor n-are nimic). Doar prima dată —
+  //     odată acceptată, regula se salvează în DB și data viitoare vine auto-resolved. ──
+  useEffect(() => {
+    if (isNew || !foreign || !sel || !needsConversion) return;
+    if (factor !== "") return;          // avem deja un factor (standard sau introdus manual)
+    const toUnit = target || units[0];
+    if (!toUnit) return;
+    let cancelled = false;
+    setAiLoading(true);
+    fetch("/api/import/suggest-conversion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ingredientName: sel.name, fromUnit: foreign, toUnit }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { factor?: number; note?: string } | null) => {
+        if (cancelled || !d || !d.factor) return;
+        setFactor(String(+Number(d.factor).toFixed(6)));
+        setAiSuggested(true);
+        setAiNote(d.note || null);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAiLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsConversion, sel, target, singleUnit]);
 
   const factorNum = parseFloat(factor);
   const factorValid = factor !== "" && !isNaN(factorNum) && factorNum > 0;
@@ -619,7 +659,7 @@ function ReviewRow({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 tabular-nums">
                   <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">1 {foreign} =</span>
-                  <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
+                  <input type="number" min="0" step="any" value={factor} onChange={(e) => handleFactorChange(e.target.value)}
                     placeholder="ex: 240"
                     className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
                   <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">{units[0]}</span>
@@ -643,10 +683,10 @@ function ReviewRow({
                       isTarget ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-gray-200 dark:border-[#3a3a3a] bg-gray-50 dark:bg-[#262626]"
                     }`}>
                       <input type="radio" name={`target-${recipeIndex}-${ingIndex}`} checked={isTarget}
-                        onChange={() => { setTarget(u); const a = getAutoFactor(foreign, u); if (a) setFactor(a); }}
+                        onChange={() => { setTarget(u); setFactor(getAutoFactor(foreign, u)); setAiSuggested(false); setAiNote(null); }}
                         className="accent-orange-500" />
                       {isTarget ? (
-                        <input type="number" min="0" step="any" value={factor} onChange={(e) => setFactor(e.target.value)}
+                        <input type="number" min="0" step="any" value={factor} onChange={(e) => handleFactorChange(e.target.value)}
                           placeholder="ex: 240"
                           className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
                       ) : (
@@ -657,6 +697,21 @@ function ReviewRow({
                     </label>
                   );
                 })}
+              </div>
+            )}
+
+            {/* AI conversion suggestion status */}
+            {aiLoading && (
+              <p className="text-xs text-purple-500 dark:text-purple-400 flex items-center gap-1.5">
+                <Loader2 size={12} className="animate-spin" /> AI caută o conversie potrivită…
+              </p>
+            )}
+            {aiSuggested && !aiLoading && (
+              <div className="flex items-start gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg px-2.5 py-1.5">
+                <Sparkles size={12} className="mt-0.5 shrink-0" />
+                <span>
+                  <strong>Sugerat de AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Verifică și ajustează dacă nu e corect.
+                </span>
               </div>
             )}
 

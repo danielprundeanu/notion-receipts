@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.0] — 2026-07-17
+
+### ✨ Features
+- **Sugestii AI pentru conversia unităților la import** — la pasul de resolve, pentru conversiile dependente de ingredient (ex: 1 cup făină ≈ 120 g) pe care tabelul standard nu le acoperă, aplicația pre-completează automat factorul cu Claude Haiku 4.5, cu un badge „✨ Sugerat de AI" și o notă. Rămâne editabil — tu accepți. Rută nouă server-side `app/api/import/suggest-conversion` (cheia API nu se expune în client); regula acceptată se salvează în DB (`UnitRule`), deci AI-ul e chemat doar prima dată per ingredient.
+
+### ⚙️ Internals
+- Dependență nouă `@anthropic-ai/sdk`; variabilă de env `ANTHROPIC_API_KEY` (opțional — feature-ul se dezactivează elegant dacă lipsește).
+- `.env.local` scos din tracking (era comis din greșeală) și ignorat de git.
+
 ## [0.11.0] — 2026-07-17
 
 ### ✨ Features
