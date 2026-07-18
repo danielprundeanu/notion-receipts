@@ -30,9 +30,13 @@ export default function SortSelect({
   fav?: string;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>(() => {
+    if (typeof window === "undefined") return "grid";
+    return (localStorage.getItem("recipesView") as ViewMode) ?? "grid";
+  });
 
   useEffect(() => {
+    localStorage.setItem("recipesView", view);
     window.dispatchEvent(new CustomEvent("viewchange", { detail: view }));
   }, [view]);
 

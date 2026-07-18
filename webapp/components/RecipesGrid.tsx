@@ -73,9 +73,9 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
 
   return (
     <div>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4 min-h-[36px]">
-        {isSelecting ? (
+      {/* Toolbar — only visible when items are selected */}
+      {isSelecting && (
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
             <button
               onClick={toggleAll}
@@ -85,46 +85,42 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
             </button>
             <span className="text-xs text-gray-400 dark:text-[#555]">{selected.size} selectate</span>
           </div>
-        ) : (
-          <div />
-        )}
-        <div className="flex items-center gap-2">
-          {isSelecting && !confirmDelete && (
-            <button
-              onClick={() => setConfirmDelete(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg transition-colors"
-            >
-              <Trash2 size={13} /> Șterge {selected.size}
-            </button>
-          )}
-          {isSelecting && confirmDelete && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500 dark:text-[#787878]">Ești sigur?</span>
+          <div className="flex items-center gap-2">
+            {!confirmDelete && (
               <button
-                onClick={handleDelete}
-                disabled={isPending}
-                className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg transition-colors"
               >
-                {isPending ? "Se șterge…" : "Șterge definitiv"}
+                <Trash2 size={13} /> Șterge {selected.size}
               </button>
-              <button
-                onClick={() => setConfirmDelete(false)}
-                className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-[#787878] dark:hover:text-[#b8b8b8] transition-colors"
-              >
-                Anulează
-              </button>
-            </div>
-          )}
-          {isSelecting && (
+            )}
+            {confirmDelete && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-500 dark:text-[#787878]">Ești sigur?</span>
+                <button
+                  onClick={handleDelete}
+                  disabled={isPending}
+                  className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isPending ? "Se șterge…" : "Șterge definitiv"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-[#787878] dark:hover:text-[#b8b8b8] transition-colors"
+                >
+                  Anulează
+                </button>
+              </div>
+            )}
             <button
               onClick={() => { setSelected(new Set()); setConfirmDelete(false); }}
               className="text-xs text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] transition-colors"
             >
               ✕
             </button>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Grid view — 1 col mobile */}
       {view === "grid" && (
