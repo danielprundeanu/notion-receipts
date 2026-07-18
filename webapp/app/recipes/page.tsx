@@ -41,6 +41,10 @@ export default async function RecipesPage({
       {/* Search + filter chips (sticky on mobile) */}
       <RecipesFilterBar q={q} cat={cat} fav={fav} sort={sort} />
 
+      {/* Scroll anchor — on filter change we scroll here; scroll-margin clears the
+          sticky filter bar so the first card lands right beneath it. */}
+      <div id="recipes-top" aria-hidden className="scroll-mt-14 md:scroll-mt-4" />
+
       {/* Content */}
       {recipes.length === 0 ? (
         <div className="text-center py-20 text-gray-500 dark:text-[#787878]">
