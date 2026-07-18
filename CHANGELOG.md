@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.14.0] — 2026-07-18
+
+### ✨ Features
+- **Grid 2 coloane pe mobile** — opțiune nouă de afișare în pagina de rețete: 2 carduri pe rând pe mobil, cu imagini și text mai compacte. Selectorul de view are acum 3 butoane dedicate (1 coloană / 2 coloane / listă), cel activ evidențiat cu portocaliu.
+
+### 🐛 Fixes
+- **Import rețete funcțional pe Vercel** — înlocuit Python subprocess (`spawn python3`) cu scraper-ul TypeScript nativ; importul prin URL și text nu mai returnează `ENOENT` în mediul serverless.
+
 ## [0.13.0] — 2026-07-18
 
 ### 🎨 UI / UX
