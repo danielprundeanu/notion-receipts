@@ -386,7 +386,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-8">
+    <div className="max-w-4xl mx-auto p-4 pb-[calc(5rem_+_env(safe-area-inset-bottom))] md:p-8 md:pb-8">
       {/* Nav */}
       <div className="flex items-center justify-between mb-6">
         <Link
