@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, List } from "lucide-react";
+import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Grid2X2, List } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SORT_OPTIONS = [
@@ -9,6 +9,14 @@ const SORT_OPTIONS = [
   { value: "date_asc",  icon: ArrowUpNarrowWide,  label: "Oldest first" },
   { value: "name_asc",  icon: ArrowDownAZ,         label: "A–Z" },
 ] as const;
+
+type ViewMode = "grid" | "grid2" | "list";
+
+const VIEW_OPTIONS: { value: ViewMode; icon: React.ElementType; title: string }[] = [
+  { value: "grid",  icon: LayoutGrid, title: "Grid (1 coloană mobile)" },
+  { value: "grid2", icon: Grid2X2,    title: "Grid (2 coloane mobile)" },
+  { value: "list",  icon: List,        title: "Listă" },
+];
 
 export default function SortSelect({
   current,
@@ -22,7 +30,7 @@ export default function SortSelect({
   fav?: string;
 }) {
   const router = useRouter();
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<ViewMode>("grid");
 
   useEffect(() => {
     window.dispatchEvent(new CustomEvent("viewchange", { detail: view }));
@@ -41,23 +49,30 @@ export default function SortSelect({
   }
 
   const active = SORT_OPTIONS.find((o) => o.value === current) ?? SORT_OPTIONS[0];
-  const Icon = active.icon;
+  const SortIcon = active.icon;
 
   return (
     <div className="shrink-0 flex items-center gap-1">
-      <button
-        onClick={() => setView(view === "grid" ? "list" : "grid")}
-        className="p-1.5 text-gray-400 dark:text-[#555] hover:text-gray-700 dark:hover:text-[#b8b8b8] transition-colors"
-        title={view === "grid" ? "Vizualizare listă" : "Vizualizare grid"}
-      >
-        {view === "grid" ? <List size={17} /> : <LayoutGrid size={17} />}
-      </button>
+      {VIEW_OPTIONS.map(({ value, icon: Icon, title }) => (
+        <button
+          key={value}
+          onClick={() => setView(value)}
+          title={title}
+          className={`p-1.5 rounded transition-colors ${
+            view === value
+              ? "text-orange-500 dark:text-orange-400"
+              : "text-gray-400 dark:text-[#555] hover:text-gray-700 dark:hover:text-[#b8b8b8]"
+          }`}
+        >
+          <Icon size={17} />
+        </button>
+      ))}
       <button
         onClick={cycleSort}
         className="p-1.5 text-gray-400 dark:text-[#555] hover:text-gray-700 dark:hover:text-[#b8b8b8] transition-colors"
         title={active.label}
       >
-        <Icon size={17} />
+        <SortIcon size={17} />
       </button>
     </div>
   );

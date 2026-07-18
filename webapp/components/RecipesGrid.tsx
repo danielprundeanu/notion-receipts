@@ -30,12 +30,12 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
-  const [view, setView] = useState<"grid" | "list">("grid");
+  const [view, setView] = useState<"grid" | "grid2" | "list">("grid");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     function onViewChange(e: Event) {
-      setView((e as CustomEvent<"grid" | "list">).detail);
+      setView((e as CustomEvent<"grid" | "grid2" | "list">).detail);
     }
     window.addEventListener("viewchange", onViewChange);
     return () => window.removeEventListener("viewchange", onViewChange);
@@ -126,7 +126,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
         </div>
       </div>
 
-      {/* Grid view */}
+      {/* Grid view — 1 col mobile */}
       {view === "grid" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
           {recipes.map((recipe) => {
@@ -141,7 +141,6 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                     : "border-gray-100 dark:border-[#2e2e2e] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a3a3a]"
                 }`}
               >
-                {/* Checkbox overlay */}
                 <button
                   onClick={() => toggleSelect(recipe.id)}
                   className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
@@ -152,7 +151,6 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 >
                   {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
                 </button>
-
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
@@ -175,6 +173,62 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                         {recipe.name}
                       </h3>
                       {recipe.favorite && <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
+                    </div>
+                  </div>
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Grid view — 2 col mobile */}
+      {view === "grid2" && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {recipes.map((recipe) => {
+            const cats = (recipe.category ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 1);
+            const isSelected = selected.has(recipe.id);
+            return (
+              <div
+                key={recipe.id}
+                className={`relative bg-white dark:bg-[#252525] rounded-xl border transition-all overflow-hidden group ${
+                  isSelected
+                    ? "border-orange-400 dark:border-orange-500 ring-2 ring-orange-300 dark:ring-orange-700"
+                    : "border-gray-100 dark:border-[#2e2e2e] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a3a3a]"
+                }`}
+              >
+                <button
+                  onClick={() => toggleSelect(recipe.id)}
+                  className={`absolute top-2 left-2 z-10 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                    isSelected
+                      ? "bg-orange-500 border-orange-500"
+                      : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#555] opacity-0 group-hover:opacity-100"
+                  }`}
+                >
+                  {isSelected && <span className="text-white text-[9px] font-bold">✓</span>}
+                </button>
+                <Link href={`/recipes/${recipe.id}`} className="block">
+                  <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] flex items-center justify-center overflow-hidden">
+                    {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
+                      <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" loading="lazy" />
+                    ) : (
+                      <span className="text-3xl opacity-20">🍽️</span>
+                    )}
+                    {cats.length > 0 && (
+                      <div className="absolute top-1.5 right-1.5">
+                        {cats.map((c) => {
+                          const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
+                          return <span key={c} className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${cls}`}>{c}</span>;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-2">
+                    <div className="flex items-start justify-between gap-1">
+                      <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3] text-xs leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
+                        {recipe.name}
+                      </h3>
+                      {recipe.favorite && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
                     </div>
                   </div>
                 </Link>
