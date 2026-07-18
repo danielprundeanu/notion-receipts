@@ -46,8 +46,11 @@ export default function RootLayout({
         <ThemeProvider>
           <div className="flex h-screen">
             <Sidebar />
-            <main className="flex-1 overflow-auto mobile-safe-pb">
+            <main className="flex-1 overflow-auto">
               {children}
+              {/* Spacer clears the fixed BottomNav on mobile — real content
+                  element, since scroll-container padding is unreliable here. */}
+              <div className="mobile-safe-pb" aria-hidden />
             </main>
           </div>
           <BottomNav />

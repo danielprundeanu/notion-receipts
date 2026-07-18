@@ -12,9 +12,13 @@ h1 {
 /* ─── Class-based dark mode for Tailwind v4 ─── */
 @variant dark (&:where(.dark, .dark *));
 
-/* ─── Mobile safe-area bottom padding (respects iOS home bar) ─── */
+/* ─── Mobile bottom-nav clearance spacer (respects iOS home bar) ───
+   Applied to a real content element (not the scroll container) because
+   a scroll container's padding-bottom is not reliably included in the
+   scrollable height on mobile webkit/blink, which hides the last content
+   behind the fixed BottomNav. 5rem clears the ~57px nav with a gap. */
 .mobile-safe-pb {
-  padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
 }
 @media (min-width: 768px) {
   .mobile-safe-pb {
