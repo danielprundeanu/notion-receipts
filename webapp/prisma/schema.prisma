@@ -7,6 +7,16 @@ datasource db {
   provider = "postgresql"
 }
 
+// App access is controlled — accounts are created only via the seed script,
+// there is no public signup. Data (recipes, planner, grocery) stays shared.
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+}
+
 model Recipe {
   id           String        @id @default(cuid())
   name         String
