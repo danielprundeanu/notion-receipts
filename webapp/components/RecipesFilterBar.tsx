@@ -96,16 +96,16 @@ export default function RecipesFilterBar({
       {!(stuck && searchOpen) && (
         <div className={stickyBarCls}>
           {/* Chips */}
-          <div className={`flex gap-1.5 ${stuck ? "overflow-x-auto scrollbar-none flex-nowrap items-center" : "flex-wrap mb-2"}`}>
+          <div className={`flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center ${stuck ? "" : "mb-2"}`}>
 
-            {/* Search chip — mobile only, sticky only */}
+            {/* Search chip — mobile only, sticky only, icon only */}
             {stuck && (
               <button
                 onClick={() => setSearchOpen(true)}
-                className={`${chip} flex items-center gap-1 md:hidden ${q ? on : off}`}
+                className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors md:hidden ${q ? on : off}`}
+                title="Search"
               >
-                <Search size={10} />
-                {q || "Search"}
+                <Search size={13} />
               </button>
             )}
 
