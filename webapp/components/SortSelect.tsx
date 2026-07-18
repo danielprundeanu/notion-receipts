@@ -40,6 +40,16 @@ export default function SortSelect({
     window.dispatchEvent(new CustomEvent("viewchange", { detail: view }));
   }, [view]);
 
+  // Keep multiple SortSelect instances (e.g. sticky bar + 2-row default) in sync.
+  useEffect(() => {
+    function onViewChange(e: Event) {
+      const v = (e as CustomEvent<ViewMode>).detail;
+      setView((prev) => (prev === v ? prev : v));
+    }
+    window.addEventListener("viewchange", onViewChange);
+    return () => window.removeEventListener("viewchange", onViewChange);
+  }, []);
+
   function cycleSort() {
     const idx = SORT_OPTIONS.findIndex((o) => o.value === current);
     const next = SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length];
