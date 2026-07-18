@@ -9,6 +9,35 @@
 
 import { parse as parseHtml } from "node-html-parser";
 
+// ─── Unsupported hosts (video / social — not structured recipe pages) ──────────
+
+const UNSUPPORTED_HOSTS = [
+  "instagram.com", "youtube.com", "youtu.be", "tiktok.com",
+  "facebook.com", "fb.watch", "twitter.com", "x.com", "pinterest.com",
+];
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+function isUnsupportedHost(url: string): boolean {
+  const h = hostOf(url);
+  return UNSUPPORTED_HOSTS.some((d) => h === d || h.endsWith("." + d));
+}
+
+// Build a RawRecipe that only carries an error (keeps the shape consistent).
+function errorRecipe(url: string, error: string): RawRecipe {
+  return {
+    name: "", servings: null, time: null, difficulty: null, category: null,
+    link: url, image: null, favorite: false, ingredients: [], instructions: [],
+    error, url,
+  };
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type RawIngredient = {
@@ -471,6 +500,14 @@ function extractFromHtml(html: string, url: string): RawRecipe | null {
 // ─── URL fetcher ──────────────────────────────────────────────────────────────
 
 async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
+  // Video / social links are not structured recipe pages — fail fast with a clear hint.
+  if (isUnsupportedHost(url)) {
+    return errorRecipe(
+      url,
+      "Link video/social (Instagram, YouTube, TikTok etc.) — nu conține o rețetă structurată. Copiază rețeta ca text și folosește importul din text."
+    );
+  }
+
   let html: string;
   try {
     const origin = new URL(url).origin;
@@ -495,10 +532,24 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
       },
       signal: AbortSignal.timeout(15000),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (!res.ok) {
+      if ([401, 403, 429, 503].includes(res.status)) {
+        return errorRecipe(url, `Site-ul blochează accesul automat (HTTP ${res.status}). Site-urile protejate (ex. Cloudflare) nu pot fi importate direct — copiază rețeta ca text.`);
+      }
+      return errorRecipe(url, `Site-ul a răspuns cu HTTP ${res.status}.`);
+    }
     html = await res.text();
   } catch (e) {
-    return { name: "", servings: null, time: null, difficulty: null, category: null, link: url, image: null, favorite: false, ingredients: [], instructions: [], error: `Fetch error: ${e instanceof Error ? e.message : e}`, url };
+    const msg = e instanceof Error ? e.message : String(e);
+    const friendly = /timeout|aborted|timed out/i.test(msg)
+      ? "Site-ul nu a răspuns la timp (timeout). Încearcă din nou sau importă rețeta ca text."
+      : `Nu s-a putut accesa site-ul (${msg}).`;
+    return errorRecipe(url, friendly);
+  }
+
+  // Cloudflare / bot-challenge interstitial served instead of the page.
+  if (/Just a moment|cf-browser-verification|Attention Required!/i.test(html) && !/application\/ld\+json/i.test(html)) {
+    return errorRecipe(url, "Site-ul e protejat de Cloudflare și blochează importul automat — copiază rețeta ca text.");
   }
 
   // Extract all JSON-LD script tags
@@ -530,20 +581,10 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
   const htmlResult = extractFromHtml(html, url);
   if (htmlResult) return htmlResult;
 
-  return {
-    name: "",
-    servings: null,
-    time: null,
-    difficulty: null,
-    category: null,
-    link: url,
-    image: null,
-    favorite: false,
-    ingredients: [],
-    instructions: [],
-    error: `Nu s-a putut extrage rețeta de la ${url}`,
+  return errorRecipe(
     url,
-  };
+    "Pagina a fost accesată, dar nu conține o rețetă structurată recognoscibilă. Verifică linkul sau importă rețeta ca text."
+  );
 }
 
 // ─── Text parser (=== format) ─────────────────────────────────────────────────

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { parseUrls, parseText, type RawRecipe } from "@/lib/recipe-scraper";
 
+// URL scraping fetches external sites (up to 15s each, in parallel) — give the
+// serverless function room beyond Vercel's default 10s so slow sites don't get cut off.
+export const maxDuration = 30;
+
 type UnitChoice = { action: string; unit: string; rate: number; from_unit?: string | null };
 type IngredientNameMapping = { groceryItemId: string; groceryItemName: string };
 
