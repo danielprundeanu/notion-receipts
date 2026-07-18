@@ -92,46 +92,49 @@ export default function RecipesFilterBar({
 
       {/* ── Filter chips bar (sticky) ── */}
       <div className={barCls}>
-        <div className="flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center">
-          {/* Search chip — mobile only; collapses in/out smoothly with stuck */}
+        <div className="flex items-center">
+          {/* Search chip — mobile only; pinned left, stays fixed while chips scroll */}
           <button
             onClick={() => setSearchOpen(true)}
             title="Search"
             aria-hidden={!stuck}
             tabIndex={stuck ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
-              stuck ? "w-8 opacity-100" : "w-0 opacity-0 -ml-1.5 pointer-events-none"
+              stuck ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
             } ${q ? on : off}`}
           >
             <Search size={13} />
           </button>
 
-          <Link scroll={false} href={q ? `?q=${q}` : "/recipes"} className={`${chip} ${!cat && !favOnly ? on : off}`}>
-            All
-          </Link>
-
-          <Link
-            scroll={false}
-            href={`?${q ? `q=${q}&` : ""}fav=1`}
-            className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
-          >
-            <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-            Favorites
-          </Link>
-
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c}
-              scroll={false}
-              href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
-              className={`${chip} ${cat === c ? on : off}`}
-            >
-              {c}
+          {/* Scrolling chips */}
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center">
+            <Link scroll={false} href={q ? `?q=${q}` : "/recipes"} className={`${chip} ${!cat && !favOnly ? on : off}`}>
+              All
             </Link>
-          ))}
 
-          {/* Sort/view at end of the row — desktop always; mobile only when stuck */}
-          <div className={`shrink-0 ml-auto pl-1 ${stuck ? "flex" : "hidden"} md:flex`}>
+            <Link
+              scroll={false}
+              href={`?${q ? `q=${q}&` : ""}fav=1`}
+              className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
+            >
+              <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+              Favorites
+            </Link>
+
+            {CATEGORIES.map((c) => (
+              <Link
+                key={c}
+                scroll={false}
+                href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
+                className={`${chip} ${cat === c ? on : off}`}
+              >
+                {c}
+              </Link>
+            ))}
+          </div>
+
+          {/* Sort/view — desktop only, pinned right (outside the scroll, not in the sticky mobile bar) */}
+          <div className="hidden md:flex shrink-0 pl-1">
             <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
           </div>
         </div>
