@@ -109,11 +109,12 @@ export default function RecipesFilterBar({
               </button>
             )}
 
-            <Link href={q ? `?q=${q}` : "/recipes"} className={`${chip} ${!cat && !favOnly ? on : off}`}>
+            <Link scroll={false} href={q ? `?q=${q}` : "/recipes"} className={`${chip} ${!cat && !favOnly ? on : off}`}>
               All
             </Link>
 
             <Link
+              scroll={false}
               href={`?${q ? `q=${q}&` : ""}fav=1`}
               className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
             >
@@ -124,6 +125,7 @@ export default function RecipesFilterBar({
             {CATEGORIES.map((c) => (
               <Link
                 key={c}
+                scroll={false}
                 href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
                 className={`${chip} ${cat === c ? on : off}`}
               >

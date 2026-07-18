@@ -49,7 +49,7 @@ export default function SortSelect({
     if (fav) p.set("fav", fav);
     if (next.value !== "date_desc") p.set("sort", next.value);
     const qs = p.toString();
-    router.push(`/recipes${qs ? `?${qs}` : ""}`);
+    router.push(`/recipes${qs ? `?${qs}` : ""}`, { scroll: false });
   }
 
   const active = SORT_OPTIONS.find((o) => o.value === current) ?? SORT_OPTIONS[0];
