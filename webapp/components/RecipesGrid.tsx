@@ -284,12 +284,23 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                   )}
                 </div>
 
-                {/* Name */}
-                <Link href={`/recipes/${recipe.id}`} className="flex-1 min-w-0 flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3] truncate hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
-                    {recipe.name}
-                  </span>
-                  {recipe.favorite && <Star size={12} className="text-amber-400 fill-amber-400 shrink-0" />}
+                {/* Name (+ favorite; + category tag on mobile) */}
+                <Link href={`/recipes/${recipe.id}`} className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3] truncate hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+                      {recipe.name}
+                    </span>
+                    {recipe.favorite && <Star size={12} className="text-amber-400 fill-amber-400 shrink-0" />}
+                  </div>
+                  {/* Category tags — mobile only (desktop shows them in the Category column) */}
+                  {cats.length > 0 && (
+                    <div className="flex sm:hidden items-center gap-1 flex-wrap">
+                      {cats.map((c) => {
+                        const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
+                        return <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
+                      })}
+                    </div>
+                  )}
                 </Link>
 
                 {/* Category */}
