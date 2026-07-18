@@ -14,7 +14,7 @@ export default async function RecipesPage({
   const recipes = await getRecipes(q, cat, favOnly, sort ?? "date_desc");
 
   return (
-    <div className="px-4 pt-4 md:p-8">
+    <div className="px-4 pt-4 pb-[calc(5rem_+_env(safe-area-inset-bottom))] md:p-8 md:pb-8">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
