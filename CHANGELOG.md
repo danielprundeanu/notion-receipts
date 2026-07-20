@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.15.0] — 2026-07-20
+
+### ✨ Features
+- **Acces controlat cu login** — aplicația e protejată integral de un ecran de autentificare (Auth.js v5, provider Credentials, sesiuni JWT). Conturi predefinite (fără signup public), create prin seed; middleware care blochează toate rutele mai puțin `/login`, `/api/auth/*` și asset-urile statice.
+- **Erori de import mai clare la URL** — detecție a link-urilor video/social (Instagram, YouTube, TikTok…) cu mesaj dedicat; diferențiere între site blocat (403/Cloudflare), timeout și „fără rețetă structurată"; `maxDuration=30` pe ruta de parse pentru site-uri lente.
+
+### 🎨 UI / UX
+- **Bară de filtre sticky pe mobil** — la scroll, bara de căutare + chip-uri rămâne fixată sus, cu căutarea transformată într-un chip; tranziție lină la fixare; chip-urile pe un singur rând scrollabil.
+- **Spațiu între bara de filtre și grila de rețete pe desktop** — bara nu mai e lipită de carduri.
+- **Tag de categorie în vizualizarea listă pe mobil.**
+
+### 🐛 Fixes
+- **Import — unitate lipsă pe produse măsurate în greutate** — o cantitate fără unitate (ex. „1 chicken breast") potrivită cu un ingredient măsurat doar în g/ml era importată tăcut fără unitate; acum e tratată ca „piece" și cere conversia la pasul de resolve (cu sugestie AI + salvare ca `UnitRule`), în loc să ajungă în DB fără unitate.
+- **Clearance pentru bara de navigație de jos** — conținutul din josul paginilor (detaliu rețetă, listă) nu mai e ascuns sub bottom-nav pe mobil (spacer global în layout).
+- **Middleware auth** — `manifest.webmanifest` exclus din matcher (nu mai e redirecționat către login).
+
+### ⚙️ Internals
+- Model Prisma `User` + tabel pe Neon; variabilă `AUTH_SECRET` necesară (Vercel + `.env.local`); script `scripts/seed-users.ts` pentru crearea conturilor. Dependențe noi: `next-auth@5`, `bcryptjs`.
+
 ## [0.14.0] — 2026-07-18
 
 ### ✨ Features
