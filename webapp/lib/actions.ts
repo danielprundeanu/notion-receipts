@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "./db";
+import { ingredientGrams } from "./nutrition";
 import { revalidatePath } from "next/cache";
 
 // ─── Recipe Form Types ────────────────────────────────────────────────────────
@@ -320,10 +321,9 @@ export async function getWeekNutrition(
       if (!ing.groceryItem || !ing.quantity) continue;
       const gi = ing.groceryItem;
       if (!gi.kcal && !gi.protein) continue;
-      const isMassUnit = gi.unit === "g" || gi.unit === "ml";
-      const gramFactor = isMassUnit ? 1 : gi.unitWeight;
-      if (!gramFactor) continue;
-      const factor = (ing.quantity * scale * gramFactor) / 100;
+      const grams = ingredientGrams(ing.quantity, ing.unit, gi);
+      if (grams == null) continue;
+      const factor = (grams * scale) / 100;
       if (!totals[plan.dayOfWeek]) totals[plan.dayOfWeek] = { kcal: 0, carbs: 0, fat: 0, protein: 0 };
       totals[plan.dayOfWeek].kcal    += (gi.kcal    ?? 0) * factor;
       totals[plan.dayOfWeek].carbs   += (gi.carbs   ?? 0) * factor;
@@ -519,6 +519,74 @@ export async function getGroceryItems() {
       createdAt: true,
     },
   });
+}
+
+// ─── Unit audit ───────────────────────────────────────────────────────────────
+// Surfaces the two systematic import problems that break nutrition:
+//  1. grocery items used "by the piece" (non-mass unit) but missing unitWeight —
+//     these silently contribute 0 (or wrong) nutrition. Same condition under which
+//     ingredientGrams() returns null.
+//  2. ingredient rows whose stored unit isn't one of the grocery item's units.
+
+export type MissingUnitWeightRow = {
+  id: string;
+  name: string;
+  nameRo: string | null;
+  unit: string | null;
+  unit2: string | null;
+  uses: number;
+  recipes: number;
+  sampleRecipes: string[];
+};
+
+export type UnitMismatchRow = {
+  ingredientId: string;
+  recipeId: string;
+  recipeName: string;
+  itemName: string;
+  ingUnit: string | null;
+  itemUnit: string | null;
+  itemUnit2: string | null;
+};
+
+export async function getUnitAudit(): Promise<{
+  missingUnitWeight: MissingUnitWeightRow[];
+  mismatches: UnitMismatchRow[];
+}> {
+  const missingUnitWeight = await prisma.$queryRawUnsafe<MissingUnitWeightRow[]>(`
+    SELECT g.id, g.name, g."nameRo",
+           g.unit, g.unit2,
+           COUNT(*)::int AS uses,
+           COUNT(DISTINCT i."recipeId")::int AS recipes,
+           (ARRAY_AGG(DISTINCT r.name))[1:3] AS "sampleRecipes"
+    FROM "Ingredient" i
+    JOIN "GroceryItem" g ON g.id = i."groceryItemId"
+    JOIN "Recipe" r ON r.id = i."recipeId"
+    WHERE g."unitWeight" IS NULL
+      AND i.quantity IS NOT NULL
+      AND lower(COALESCE(i.unit, g.unit, '')) NOT IN ('g', 'ml')
+      AND NOT (
+        g.unit2 IS NOT NULL AND lower(COALESCE(i.unit, '')) = lower(g.unit2)
+        AND g.conversion IS NOT NULL AND lower(COALESCE(g.unit, '')) IN ('g', 'ml')
+      )
+    GROUP BY g.id, g.name, g."nameRo", g.unit, g.unit2
+    ORDER BY uses DESC, g.name ASC
+  `);
+
+  const mismatches = await prisma.$queryRawUnsafe<UnitMismatchRow[]>(`
+    SELECT i.id AS "ingredientId", i."recipeId", r.name AS "recipeName",
+           g.name AS "itemName", i.unit AS "ingUnit",
+           g.unit AS "itemUnit", g.unit2 AS "itemUnit2"
+    FROM "Ingredient" i
+    JOIN "GroceryItem" g ON g.id = i."groceryItemId"
+    JOIN "Recipe" r ON r.id = i."recipeId"
+    WHERE i.unit IS NOT NULL AND i.unit <> ''
+      AND lower(i.unit) <> lower(COALESCE(g.unit, ''))
+      AND lower(i.unit) <> lower(COALESCE(g.unit2, ''))
+    ORDER BY g.name ASC, r.name ASC
+  `);
+
+  return { missingUnitWeight, mismatches };
 }
 
 export async function getRecipeWeekPlanServings(

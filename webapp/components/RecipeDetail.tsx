@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings } from "@/lib/actions";
+import { ingredientGrams } from "@/lib/nutrition";
 
 export type RecipeData = {
   id: string;
@@ -39,6 +40,8 @@ export type RecipeData = {
     groceryItem: {
       name: string;
       unit: string | null;
+      unit2: string | null;
+      conversion: number | null;
       kcal: number | null;
       carbs: number | null;
       fat: number | null;
@@ -374,11 +377,10 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
     if (!ing.groceryItem || !ing.quantity) continue;
     const gi = ing.groceryItem;
     if (!gi.kcal && !gi.protein) continue;
-    const isMassUnit = gi.unit === "g" || gi.unit === "ml";
-    const gramFactor = isMassUnit ? 1 : gi.unitWeight;
-    if (!gramFactor) continue;
+    const grams = ingredientGrams(ing.quantity, ing.unit, gi);
+    if (grams == null) continue;
     hasNutrition = true;
-    const factor = (ing.quantity * scale * gramFactor) / 100;
+    const factor = (grams * scale) / 100;
     totalKcal += (gi.kcal ?? 0) * factor;
     totalCarbs += (gi.carbs ?? 0) * factor;
     totalFat += (gi.fat ?? 0) * factor;

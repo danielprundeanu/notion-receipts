@@ -59,12 +59,16 @@ npx tsx scripts/<name>.ts   # one-off DB scripts
 - Recipe parsing is **pure TypeScript** (`lib/recipe-scraper.ts`). It replaced an old Python
   subprocess (`scripts/web_import_handler.py`) that crashed on Vercel with
   `spawn .../python3 ENOENT`. **Never reintroduce `child_process`/Python in API routes.**
-- `data/ingredient_name_mappings.json` and `data/unit_choices.json` (repo root) remember manual
-  ingredient mappings and unit-conversion choices between imports. They are read by
-  `app/api/import/parse` and written by `app/api/import/confirm`. **They are written to the local
-  filesystem only** — on Vercel the FS is read-only, so those writes are silently skipped
-  (`confirm` catches the error). So "learn from past imports" works locally but NOT in production.
-  (Migrating these to DB tables is a known TODO.)
+- "Learn from past imports" is **DB-backed** via two Prisma tables — `IngredientNameMapping`
+  (remembers manual ingredient→grocery-item mappings, keyed by lowercased raw name) and `UnitRule`
+  (remembers unit-conversion choices, keyed by `"ingredientname|foreignunit"`). They are read in
+  `app/api/import/parse` (`loadIngredientNameMappings()` / `loadUnitChoices()`) and upserted in
+  `app/api/import/confirm` (`saveIngredientMappings()` / `saveUnitRules()`). Because these are
+  Postgres writes, **learning works in production on Vercel** (Neon is writable) — this replaces
+  the old `data/ingredient_name_mappings.json` / `data/unit_choices.json` files, which no longer
+  exist. Two caveats: (1) a mapping is only saved when the user flags it (`saveMapping`) during the
+  Resolve step — auto/similar matches aren't learned; (2) these only affect **future** imports at
+  parse time — they never retroactively fix an already-imported recipe (edit those in place).
 
 ## Deployment constraints
 - Vercel serverless FS is read-only except `/tmp`. Never write to `public/` or repo files at

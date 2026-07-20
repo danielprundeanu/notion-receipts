@@ -241,18 +241,21 @@ export async function POST(req: NextRequest) {
           // Resolve the ingredient's effective unit + any conflict against the matched item.
           let effectiveUnit = ing.unit;
           let unitConflict: UnitConflict | undefined;
+
+          // Bare count with no unit word ("1 chicken breast", "2 eggs"): treat a unit-less
+          // quantity as a count so it becomes a proper "piece" item instead of silently
+          // importing unit=null (which nutrition can't convert). For a matched item prefer
+          // its own count unit; for a brand-new item default to "piece" (the new grocery
+          // item is then created as a count item). A qty-less "salt to taste" needs no unit.
+          if (!effectiveUnit && ing.qty != null) {
+            const allowed = [match.groceryItemUnit, match.groceryItemUnit2].filter(Boolean) as string[];
+            effectiveUnit = allowed.find((u) => COUNT_UNITS.has(u)) ?? "piece";
+          }
+
           if (match.groceryItemId) {
             const allowed = [match.groceryItemUnit, match.groceryItemUnit2].filter(Boolean) as string[];
-
-            // Bare count with no unit word ("1 chicken breast"): if the item is sold by a
-            // count unit use that; otherwise it's measured by weight/volume (g, ml, …) so a
-            // bare "1" is ambiguous — treat it as "piece" so it flows through the normal
-            // resolve path (prompting "1 piece = ? g") instead of silently importing unit=null.
-            // Only when there IS a quantity — a qty-less "salt to taste" needs no unit.
-            if (!effectiveUnit && ing.qty != null && allowed.length > 0) {
-              effectiveUnit = allowed.find((u) => COUNT_UNITS.has(u)) ?? "piece";
-            }
-
+            // A count-style unit ("piece") synthesized for a weight/volume item flows through
+            // the normal resolve path (prompting "1 piece = ? g") instead of silently importing.
             if (effectiveUnit && allowed.length > 0 && !allowed.includes(effectiveUnit)) {
               unitConflict = resolveUnitConflict(ing.name, effectiveUnit, allowed, unitChoices);
             }

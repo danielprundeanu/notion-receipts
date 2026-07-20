@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { getGroceryItems, updateGroceryItem } from "@/lib/actions";
-import { Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus } from "lucide-react";
+import { Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
 
 type GroceryItem = {
@@ -240,6 +241,12 @@ export default function IngredientsPage() {
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Ingredients</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500 dark:text-[#787878]">{items.length} items</span>
+          <Link
+            href="/ingredients/audit"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-[#b8b8b8] border border-gray-200 dark:border-[#3a3a3a] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2f2f2f] transition-colors"
+          >
+            <ScanSearch size={15} /> Audit unități
+          </Link>
           <button
             onClick={() => setCreatingNew(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"

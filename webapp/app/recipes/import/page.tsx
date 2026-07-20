@@ -1344,6 +1344,15 @@ export default function ImportPage() {
               </div>
             )}
 
+            {unitConflictIngredients.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>
+                  <strong>{unitConflictIngredients.length} unități nerezolvate</strong> se vor importa ca „piece”. Dacă produsul n-are greutate pe bucată (g/buc), nutriția nu va fi corectă — le poți completa oricând din <strong>Ingredients → Audit unități</strong>.
+                </span>
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900 rounded-xl p-3 text-sm text-red-700 dark:text-red-400">
                 {error}
