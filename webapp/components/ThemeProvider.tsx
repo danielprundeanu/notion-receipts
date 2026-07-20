@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 type Theme = "light" | "dark";
 
@@ -24,6 +24,7 @@ export default function ThemeProvider({
   children: React.ReactNode;
 }) {
   const [theme, setTheme] = useState<Theme>("light");
+  const firstApply = useRef(true);
 
   // On mount: read preference from localStorage or system
   useEffect(() => {
@@ -37,6 +38,13 @@ export default function ThemeProvider({
 
   // Apply / remove the `dark` class on <html> whenever theme changes
   useEffect(() => {
+    // Skip the very first run: the inline <head> script already applied the correct class
+    // pre-paint, and the mount effect above is about to sync `theme`. Mutating here first
+    // (with the initial "light") would clobber that and cause a flash.
+    if (firstApply.current) {
+      firstApply.current = false;
+      return;
+    }
     const root = document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");

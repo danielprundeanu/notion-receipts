@@ -1527,7 +1527,7 @@ export default function ImportPage() {
                   return (
                     <div className="px-4 py-3 space-y-3">
                       {/* Column headers: original din text vs. ce se importă */}
-                      <div className="grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2a24]">
+                      <div className="hidden sm:grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2a24]">
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Din text</span>
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Se importă</span>
                       </div>
@@ -1558,7 +1558,7 @@ export default function ImportPage() {
                                     setFocusIngredientKey(`${i}-${ii}`);
                                     setStep(3);
                                   } : undefined}
-                                  className={`grid grid-cols-2 gap-2 items-center text-xs py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors" : ""}`}
+                                  className={`grid grid-cols-1 sm:grid-cols-2 gap-0.5 sm:gap-2 sm:items-center text-xs py-1.5 sm:py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors" : ""}`}
                                   title={canEdit ? "Click pentru a edita" : undefined}
                                 >
                                   {/* Din text (original) */}

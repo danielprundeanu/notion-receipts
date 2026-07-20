@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.22.0] — 2026-07-21
+
+### 🎨 UI / UX
+- **Fără flash de temă la pornire** — un script inline aplică tema (dark/light) înainte de primul paint, oglindind logica din ThemeProvider; nu mai apare clipirea albă la cold-load, mai ales în PWA-ul instalat pe dark.
+- **Ținte tactile mai mari pe mobil** — stepperele de porții (detaliu rețetă + planner) 28→40px, săgețile de navigare a săptămânilor ~44px (planner + listă cumpărături), rândurile de bifare din lista de cumpărături mai înalte.
+- **Selecție rețete pe mobil** — în modul selecție, tap pe card selectează rețeta în loc să o deschidă (pe mobil nu există hover pentru checkbox).
+- **Ștergere vizibilă în planner pe mobil** — buton de ștergere mereu prezent pe card (swipe-ul rămâne scurtătură).
+- **Import pe mobil** — comparația „Din text / Se importă" se stivuiește vertical în loc să trunchieze pe două coloane.
+
 ## [0.21.0] — 2026-07-21
 
 ### 🐛 Fixes

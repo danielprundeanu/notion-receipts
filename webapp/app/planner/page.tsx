@@ -270,7 +270,7 @@ function RecipeCard({
         <div className="md:hidden flex items-center gap-1.5 shrink-0">
           <button
             onClick={(e) => { e.stopPropagation(); onServingsChange(Math.max(1, entry.servings - 1)); }}
-            className="w-7 h-7 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            className="w-10 h-10 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
             <Minus size={12} />
           </button>
@@ -279,11 +279,20 @@ function RecipeCard({
           </span>
           <button
             onClick={(e) => { e.stopPropagation(); onServingsChange(entry.servings + 1); }}
-            className="w-7 h-7 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
+            className="w-10 h-10 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
           >
             <Plus size={12} />
           </button>
         </div>
+
+        {/* Delete — always-visible affordance on mobile (swipe still works as a shortcut) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          aria-label="Șterge din planner"
+          className="md:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-orange-300 dark:text-orange-700/70 active:text-red-500 hover:text-red-500 transition-colors"
+        >
+          <Trash2 size={15} />
+        </button>
 
         {/* X — desktop hover only */}
         <button
@@ -747,12 +756,12 @@ function RecipeSelectorModal({
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setServings((s) => Math.max(1, s - 1))}
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
+              className="w-10 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
             >−</button>
             <span className="w-5 text-center text-sm font-semibold text-gray-800 dark:text-[#eae5de]">{servings}</span>
             <button
               onClick={() => setServings((s) => s + 1)}
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
+              className="w-10 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
             >+</button>
           </div>
           <button
@@ -915,7 +924,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
+        className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronLeft size={18} />
       </button>
@@ -930,7 +939,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
+        className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronRight size={18} />
       </button>

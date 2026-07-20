@@ -172,17 +172,23 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                     : "border-gray-100 dark:border-[#2e2a24] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a352e]"
                 }`}
               >
-                <button
-                  onClick={() => toggleSelect(recipe.id)}
-                  className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    isSelected
-                      ? "bg-orange-500 border-orange-500"
-                      : `bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b] ${selectMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
-                  }`}
+                {(selectMode || isSelected) && (
+                  <button
+                    onClick={() => toggleSelect(recipe.id)}
+                    className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      isSelected
+                        ? "bg-orange-500 border-orange-500"
+                        : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b]"
+                    }`}
+                  >
+                    {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+                  </button>
+                )}
+                <Link
+                  href={`/recipes/${recipe.id}`}
+                  className="block"
+                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
                 >
-                  {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
-                </button>
-                <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
                       <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 100vw, 25vw" />
@@ -228,17 +234,23 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                     : "border-gray-100 dark:border-[#2e2a24] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a352e]"
                 }`}
               >
-                <button
-                  onClick={() => toggleSelect(recipe.id)}
-                  className={`absolute top-2 left-2 z-10 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                    isSelected
-                      ? "bg-orange-500 border-orange-500"
-                      : `bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b] ${selectMode ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`
-                  }`}
+                {(selectMode || isSelected) && (
+                  <button
+                    onClick={() => toggleSelect(recipe.id)}
+                    className={`absolute top-2 left-2 z-10 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
+                      isSelected
+                        ? "bg-orange-500 border-orange-500"
+                        : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b]"
+                    }`}
+                  >
+                    {isSelected && <span className="text-white text-[9px] font-bold">✓</span>}
+                  </button>
+                )}
+                <Link
+                  href={`/recipes/${recipe.id}`}
+                  className="block"
+                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
                 >
-                  {isSelected && <span className="text-white text-[9px] font-bold">✓</span>}
-                </button>
-                <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
                       <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 50vw, 25vw" />
@@ -320,7 +332,11 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 </div>
 
                 {/* Name (+ favorite; + category tag on mobile) */}
-                <Link href={`/recipes/${recipe.id}`} className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <Link
+                  href={`/recipes/${recipe.id}`}
+                  className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2"
+                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
+                >
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-sm font-medium text-gray-900 dark:text-[#eae5de] truncate hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
                       {recipe.name}

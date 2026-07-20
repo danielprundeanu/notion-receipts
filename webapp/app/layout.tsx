@@ -43,6 +43,14 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${workSans.variable} ${dmSerifText.variable}`}>
       <body className={workSans.className}>
+        {/* Anti-flash: apply the `dark` class before first paint, mirroring ThemeProvider's
+            logic (localStorage 'theme' → prefers-color-scheme). Prevents a white flash on a
+            cold load with dark theme, especially in the installed PWA. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');document.documentElement.style.colorScheme=d?'dark':'light';}catch(e){}})();`,
+          }}
+        />
         <ThemeProvider>
           <div className="flex h-screen">
             <Sidebar />

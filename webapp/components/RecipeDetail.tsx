@@ -280,7 +280,7 @@ function AddToPlannerModal({
                         <button
                           type="button"
                           onClick={() => setMeal(m, -1)}
-                          className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
+                          className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors text-sm ${
                             active
                               ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
                               : "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
@@ -294,7 +294,7 @@ function AddToPlannerModal({
                         <button
                           type="button"
                           onClick={() => setMeal(m, 1)}
-                          className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
+                          className={`w-10 h-10 rounded-full border flex items-center justify-center transition-colors text-sm ${
                             active
                               ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
                               : "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
@@ -490,7 +490,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setServings((s) => Math.max(1, s - 1))}
-            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
+            className="w-10 h-10 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Minus size={12} />
           </button>
@@ -499,7 +499,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           </span>
           <button
             onClick={() => setServings((s) => s + 1)}
-            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
+            className="w-10 h-10 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Plus size={12} />
           </button>

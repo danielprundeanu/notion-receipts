@@ -118,7 +118,7 @@ export default function GroceryListPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
+            className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronLeft size={18} />
           </button>
@@ -127,7 +127,7 @@ export default function GroceryListPage() {
           </span>
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
+            className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronRight size={18} />
           </button>
@@ -228,7 +228,7 @@ export default function GroceryListPage() {
                       <li key={item.id}>
                         <button
                           onClick={() => toggleCheck(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
                             done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                           }`}
                         >
