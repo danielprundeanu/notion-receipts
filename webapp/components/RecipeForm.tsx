@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil } from "lucide-react";
+import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil, Sparkles } from "lucide-react";
 import {
   createRecipe,
   updateRecipe,
@@ -183,6 +183,31 @@ function GroceryItemEditModal({
   const [saving, setSaving] = useState(false);
   const [fetchingNutrition, setFetchingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
+  const [aiConvLoading, setAiConvLoading] = useState(false);
+  const [aiConvNote, setAiConvNote] = useState<string | null>(null);
+  const [aiConvError, setAiConvError] = useState<string | null>(null);
+
+  async function handleSuggestConversion() {
+    if (!item || !item.unit || !unit2.trim()) return;
+    setAiConvLoading(true);
+    setAiConvNote(null);
+    setAiConvError(null);
+    try {
+      const res = await fetch("/api/import/suggest-conversion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // factor = câte `toUnit` (primary) reprezintă 1 `fromUnit` (unit2) = valoarea `conversion`.
+        body: JSON.stringify({ ingredientName: item.name, fromUnit: unit2.trim(), toUnit: item.unit }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAiConvError(data.error ?? "Nu s-a putut genera sugestia"); return; }
+      if (data.factor != null) { setConversion(String(data.factor)); setAiConvNote(data.note || ""); }
+    } catch {
+      setAiConvError("Eroare la conexiune");
+    } finally {
+      setAiConvLoading(false);
+    }
+  }
 
   async function handleFetchNutrition() {
     if (!item) return;
@@ -259,7 +284,7 @@ function GroceryItemEditModal({
                 <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">2nd unit</span>
                 <input
                   value={unit2}
-                  onChange={(e) => setUnit2(e.target.value)}
+                  onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
                   placeholder="cup, tbsp…"
                   className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
@@ -267,16 +292,36 @@ function GroceryItemEditModal({
             </div>
 
             <div>
-              <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">
-                Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
-              </span>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                  Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
+                </span>
+                <button
+                  type="button"
+                  onClick={handleSuggestConversion}
+                  disabled={aiConvLoading || !item.unit || !unit2.trim()}
+                  className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
+                  title="Estimează cu AI (valori uzuale de gătit)"
+                >
+                  {aiConvLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                  {aiConvLoading ? "Se caută..." : "Sugestie AI"}
+                </button>
+              </div>
               <input
                 type="number" step="0.001" min="0"
                 value={conversion}
-                onChange={(e) => setConversion(e.target.value)}
+                onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
                 placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
                 className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
+              {aiConvNote != null && (
+                <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
+                  Sugerat de AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Verifică și ajustează.
+                </p>
+              )}
+              {aiConvError && (
+                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{aiConvError}</p>
+              )}
             </div>
 
             <div>
