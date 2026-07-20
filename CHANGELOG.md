@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.18.0] — 2026-07-20
+
+### ✨ Features
+- **Căutare bilingvă (RO/EN) + fără diacritice pentru rețete** — căutarea din pagina de rețete și din planner găsește acum rețetele indiferent de limba în care scrii și indiferent de diacritice: „supa" sau „pui" găsesc rețete cu titlu în engleză (ex. „Chicken Soup", „Big Greek Salad with Grilled Chicken"). Fiecare rețetă a primit un titlu tradus în cealaltă limbă (folosit doar la căutare) și un câmp normalizat pe care se face matching-ul. Cele ~199 de titluri existente au fost traduse; rețetele noi sau editate sunt traduse automat la salvare (Claude Haiku, best-effort — degradează elegant fără cheie API).
+
+### ⚙️ Internals
+- `Recipe`: câmpuri noi `nameRo` + `searchText` (aplicate pe Neon). Utilitar `lib/search.ts` (`normalizeSearch` / `buildRecipeSearchText`, folosit identic la stocare și la interogare). `createRecipe`/`updateRecipe` populează ambele câmpuri; `getRecipes` / `searchRecipesForPlanner` / `getRecipesPanel` fac match pe `searchText`.
+
 ## [0.17.0] — 2026-07-20
 
 ### ✨ Features
