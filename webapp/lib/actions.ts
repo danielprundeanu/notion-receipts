@@ -563,6 +563,10 @@ export async function updateGroceryItem(
   }
 ): Promise<void> {
   await prisma.groceryItem.update({ where: { id }, data });
+  // Recipe pages render this item's name/nutrition — refresh them so an edit here
+  // (e.g. changing kcal or a unit) isn't stale on the recipe detail / grocery list.
+  revalidatePath("/recipes");
+  revalidatePath("/grocery-list");
 }
 
 // Deleting a grocery item would set groceryItemId = null on every ingredient that

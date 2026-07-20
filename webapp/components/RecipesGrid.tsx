@@ -38,6 +38,22 @@ function getViewSnapshot(): ViewMode {
   return (localStorage.getItem("recipesView") as ViewMode) || "grid";
 }
 
+// next/image throws at render for any remote host not in next.config remotePatterns —
+// and since the grid maps every recipe, one bad host would crash the WHOLE list. Local
+// paths and Vercel Blob URLs are configured/safe; anything else remote falls back to a
+// plain <img> so it renders (unoptimized) instead of taking the page down.
+function isOptimizableSrc(url: string): boolean {
+  return url.startsWith("/") || url.includes(".public.blob.vercel-storage.com");
+}
+
+function RecipeCover({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
+  if (isOptimizableSrc(src)) {
+    return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading="lazy" />;
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />;
+}
+
 export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
   // View is an external store (localStorage + SortSelect's "viewchange" event), so it's
   // correct on mount without an event-timing race or a hydration mismatch.
@@ -169,7 +185,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                      <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="(max-width: 640px) 100vw, 25vw" className="object-cover" loading="lazy" />
+                      <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 100vw, 25vw" />
                     ) : (
                       <span className="text-4xl opacity-20">🍽️</span>
                     )}
@@ -225,7 +241,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 <Link href={`/recipes/${recipe.id}`} className="block">
                   <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                      <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="(max-width: 640px) 50vw, 25vw" className="object-cover" loading="lazy" />
+                      <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 50vw, 25vw" />
                     ) : (
                       <span className="text-3xl opacity-20">🍽️</span>
                     )}
@@ -297,7 +313,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 {/* Thumbnail — vizibil inline între checkbox și nume pe toate ecranele */}
                 <div className="block w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2a2620] shrink-0 relative">
                   {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                    <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="40px" className="object-cover" loading="lazy" />
+                    <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="40px" />
                   ) : (
                     <span className="flex items-center justify-center w-full h-full text-lg opacity-30">🍽️</span>
                   )}

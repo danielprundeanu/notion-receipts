@@ -568,21 +568,27 @@ function RecipeSelectorModal({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<RecipeRef | null>(null);
   const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
 
   useEffect(() => {
-    getRecipeCategories().then(setCategories);
+    getRecipeCategories().then(setCategories).catch(() => {});
   }, []);
 
   useEffect(() => {
     const t = setTimeout(async () => {
       setLoading(true);
-      const r = await getRecipesPanel(
-        query || undefined,
-        activeCategory || undefined,
-        favOnly || undefined
-      );
-      setResults(r as RecipeRef[]);
-      setLoading(false);
+      try {
+        const r = await getRecipesPanel(
+          query || undefined,
+          activeCategory || undefined,
+          favOnly || undefined
+        );
+        setResults(r as RecipeRef[]);
+      } catch {
+        setResults([]); // don't leave the spinner hanging on a failed search
+      } finally {
+        setLoading(false);
+      }
     }, 250);
     return () => clearTimeout(t);
   }, [query, activeCategory, favOnly]);
@@ -590,15 +596,21 @@ function RecipeSelectorModal({
   async function handleSave() {
     if (!selected) return;
     setSaving(true);
-    const { id: realId } = await addToWeekPlan({
-      recipeId: selected.id,
-      weekStartIso: weekStart.toISOString(),
-      dayOfWeek: day,
-      mealType,
-      servings,
-    });
-    onSelect({ id: realId, dayOfWeek: day, mealType, servings, recipe: selected });
-    setSaving(false);
+    setAddError(null);
+    try {
+      const { id: realId } = await addToWeekPlan({
+        recipeId: selected.id,
+        weekStartIso: weekStart.toISOString(),
+        dayOfWeek: day,
+        mealType,
+        servings,
+      });
+      onSelect({ id: realId, dayOfWeek: day, mealType, servings, recipe: selected });
+    } catch {
+      setAddError("Nu s-a putut adăuga. Încearcă din nou.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -719,6 +731,9 @@ function RecipeSelectorModal({
         </div>
 
         {/* Footer — servings + add */}
+        {addError && (
+          <p className="px-4 pt-2 text-xs text-red-600 dark:text-red-400 text-center shrink-0">{addError}</p>
+        )}
         <div className="px-4 pt-3 border-t border-gray-100 dark:border-[#2e2a24] shrink-0 flex items-center gap-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
           {selected && (
             <div className="flex items-center gap-1.5 mr-auto min-w-0">
@@ -767,6 +782,13 @@ export default function PlannerPage() {
   );
   const [mobileDay, setMobileDay] = useState(todayDayIndex);
   const [dragActive, setDragActive] = useState<RecipeRef | null>(null);
+  // Transient error toast for failed mutations (add/remove/servings) — planner data is
+  // shared, so a silent failure must never look like it saved.
+  const [toast, setToast] = useState<string | null>(null);
+  function showError(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -775,13 +797,18 @@ export default function PlannerPage() {
 
   const loadPlans = useCallback(async () => {
     setLoadingPlans(true);
-    const [data, nutrition] = await Promise.all([
-      getWeekPlan(weekStart.toISOString()),
-      getWeekNutrition(weekStart.toISOString()),
-    ]);
-    setPlans(data as PlanEntry[]);
-    setDayNutrition(nutrition);
-    setLoadingPlans(false);
+    try {
+      const [data, nutrition] = await Promise.all([
+        getWeekPlan(weekStart.toISOString()),
+        getWeekNutrition(weekStart.toISOString()),
+      ]);
+      setPlans(data as PlanEntry[]);
+      setDayNutrition(nutrition);
+    } catch {
+      showError("Nu s-a putut încărca planner-ul. Reîncarcă pagina.");
+    } finally {
+      setLoadingPlans(false); // never leave the spinner hanging
+    }
   }, [weekStart]);
 
   useEffect(() => {
@@ -793,17 +820,29 @@ export default function PlannerPage() {
   }
 
   async function handleRemove(id: string) {
+    const snapshot = plans;
     setPlans((prev) => prev.filter((p) => p.id !== id));
-    await removeFromWeekPlan(id);
-    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
+    try {
+      await removeFromWeekPlan(id);
+      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
+    } catch {
+      setPlans(snapshot); // rollback — the delete didn't persist
+      showError("Nu s-a putut șterge din planner. Încearcă din nou.");
+    }
   }
 
   async function handleServingsChange(id: string, newServings: number) {
+    const snapshot = plans;
     setPlans((prev) =>
       prev.map((p) => (p.id === id ? { ...p, servings: newServings } : p))
     );
-    await updateWeekPlanServings(id, newServings);
-    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
+    try {
+      await updateWeekPlanServings(id, newServings);
+      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
+    } catch {
+      setPlans(snapshot); // rollback — the servings change didn't persist
+      showError("Nu s-a putut actualiza porțiile. Încearcă din nou.");
+    }
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -837,19 +876,25 @@ export default function PlannerPage() {
       { id: tempId, dayOfWeek: dayIdx, mealType: meal, servings, recipe },
     ]);
 
-    const { id: realId } = await addToWeekPlan({
-      recipeId: recipe.id,
-      weekStartIso: weekStart.toISOString(),
-      dayOfWeek: dayIdx,
-      mealType: meal,
-      servings,
-    });
+    try {
+      const { id: realId } = await addToWeekPlan({
+        recipeId: recipe.id,
+        weekStartIso: weekStart.toISOString(),
+        dayOfWeek: dayIdx,
+        mealType: meal,
+        servings,
+      });
 
-    // Replace temp ID with real DB id (no full reload)
-    setPlans((prev) =>
-      prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p))
-    );
-    getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
+      // Replace temp ID with real DB id (no full reload)
+      setPlans((prev) =>
+        prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p))
+      );
+      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
+    } catch {
+      // Drop the optimistic entry so no dangling `temp-` row lingers in the UI.
+      setPlans((prev) => prev.filter((p) => p.id !== tempId));
+      showError("Nu s-a putut adăuga în planner. Încearcă din nou.");
+    }
   }
 
   const weekNav = (
@@ -899,6 +944,14 @@ export default function PlannerPage() {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
+      {toast && (
+        <div
+          role="alert"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium shadow-lg max-w-[90vw] text-center"
+        >
+          {toast}
+        </div>
+      )}
       <div className="p-4 md:p-6 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
@@ -1081,7 +1134,7 @@ export default function PlannerPage() {
             onSelect={(entry) => {
               setPlans((prev) => [...prev, entry]);
               setModal(null);
-              getWeekNutrition(weekStart.toISOString()).then(setDayNutrition);
+              getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
             }}
           />
         )}

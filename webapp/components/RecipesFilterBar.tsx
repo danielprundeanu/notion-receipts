@@ -108,8 +108,9 @@ export default function RecipesFilterBar({
     const io = new IntersectionObserver(
       ([e]) => {
         setStuck(!e.isIntersecting);
-        // Don't auto-close the search overlay on scroll — while it's open the user is
-        // actively searching; closing it when results shrink causes the jarring jump.
+        // Collapse the mobile search overlay back into the in-flow input once we reach
+        // the top (the intuitive behaviour). The query is kept — the in-flow box shows it.
+        if (e.isIntersecting) setSearchOpen(false);
       },
       { root: root ?? null, threshold: 0 }
     );
@@ -147,10 +148,9 @@ export default function RecipesFilterBar({
 
   return (
     <>
-      {/* ── Search input (always in flow — scrolls away, never removed). Hidden (but
-             keeps its space) while the mobile overlay is open, so scrolling to the top
-             doesn't show two identical search boxes. ── */}
-      <form className={`relative mb-3 md:max-w-sm ${searchOpen ? "invisible md:visible" : ""}`} onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+      {/* ── Search input (always in flow — scrolls away). When scrolled, the sticky bar's
+             chip opens the overlay below; back at the top this is the only search box. ── */}
+      <form className="relative mb-3 md:max-w-sm" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
         <input
           value={value}
@@ -173,9 +173,9 @@ export default function RecipesFilterBar({
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Expanded search overlay (mobile) — fixed at top, stays open while searching
-             (independent of scroll/stuck) so shrinking results don't close it ── */}
-      {searchOpen && (
+      {/* ── Expanded search overlay (mobile, sticky mode) — collapses back to the in-flow
+             input when you scroll to the top (handled in the IntersectionObserver). ── */}
+      {stuck && searchOpen && (
         <div className="fixed inset-x-0 top-0 z-40 px-4 py-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#2e2a24] shadow-sm md:hidden">
           <form className="relative" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />

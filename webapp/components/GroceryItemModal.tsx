@@ -44,6 +44,8 @@ export default function GroceryItemModal({
   const [deleting, setDeleting] = useState(false);
   // Set when the server refuses a delete because the item is still used in recipes.
   const [deleteBlocked, setDeleteBlocked] = useState<number | null>(null);
+  // Set when a save fails, so the modal shows an error instead of a stuck spinner.
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [name, setName] = useState(initialName);
   const [nameRo, setNameRo] = useState("");
   const [category, setCategory] = useState("");
@@ -154,6 +156,7 @@ export default function GroceryItemModal({
   async function handleSave() {
     if (!name.trim() || !unit.trim()) return;
     setSaving(true);
+    setSaveError(null);
 
     const payload = {
       name: name.trim(),
@@ -168,28 +171,32 @@ export default function GroceryItemModal({
       protein: protein ? parseFloat(protein) : null,
     };
 
-    if (isEdit && itemId) {
-      await updateGroceryItem(itemId, payload);
-      onSaved({
-        id: itemId,
-        name: payload.name,
-        nameRo: payload.nameRo,
-        category: payload.category,
-        unit: payload.unit,
-        unit2: payload.unit2 ?? null,
-        conversion: payload.conversion,
-        kcal: payload.kcal,
-        carbs: payload.carbs,
-        fat: payload.fat,
-        protein: payload.protein,
-      });
-    } else {
-      const item = await createGroceryItem(payload);
-      onSaved(item);
+    try {
+      if (isEdit && itemId) {
+        await updateGroceryItem(itemId, payload);
+        onSaved({
+          id: itemId,
+          name: payload.name,
+          nameRo: payload.nameRo,
+          category: payload.category,
+          unit: payload.unit,
+          unit2: payload.unit2 ?? null,
+          conversion: payload.conversion,
+          kcal: payload.kcal,
+          carbs: payload.carbs,
+          fat: payload.fat,
+          protein: payload.protein,
+        });
+      } else {
+        const item = await createGroceryItem(payload);
+        onSaved(item);
+      }
+      onClose();
+    } catch {
+      setSaveError("Nu s-a putut salva. Încearcă din nou.");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    onClose();
   }
 
   const inputCls =
@@ -413,6 +420,10 @@ export default function GroceryItemModal({
               </>
             )}
           </div>
+        )}
+
+        {saveError && (
+          <p className="mt-4 text-sm text-red-600 dark:text-red-400">{saveError}</p>
         )}
 
         <div className="flex items-center gap-3 mt-4">

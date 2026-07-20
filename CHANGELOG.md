@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.21.0] — 2026-07-21
+
+### 🐛 Fixes
+- **Grila de rețete nu mai poate fi dărâmată de o imagine remote** — cardurile trimit URL-urile locale/blob prin `next/image` și orice host remote neconfigurat printr-un `<img>` simplu, deci o singură copertă scrapuită nu mai prăbușește toată lista (ecranul principal pe mobil).
+- **Upload imagine în wizardul de import** — mutat pe Vercel Blob (ca uploadul de copertă din v0.19); eșecul e acum vizibil în UI, nu tăcut.
+- **Importul nu mai stochează base64 în DB** — coperțile inline se urcă pe blob; dacă nu se poate, se renunță la imagine (null) în loc să persiste string-ul base64.
+- **Planner fără eșecuri tăcute** — adăugarea/ștergerea/schimbarea porțiilor fac rollback la starea anterioară și arată un mesaj dacă salvarea eșuează; un add eșuat nu mai lasă un card „fantomă" cu id temporar.
+- **Editarea inline din Ingredients** — o salvare eșuată revine la valoarea veche + mesaj (înainte părea salvată dar nu era).
+- **Modale fără spinner blocat** — „Adaugă în planner" (din rețetă și din slotul de planner) și editorul de produs tratează erorile: butonul nu mai rămâne blocat în spinner, apare un mesaj.
+- **Fără spinner infinit la încărcare** — planner / listă cumpărături / ingrediente nu mai rămân blocate pe „se încarcă" la eroare; lista de cumpărături arată „Reîncearcă".
+- **Nutriția din rețete se împrospătează** — editarea unui produs (kcal, unități) revalidează paginile de rețetă și lista de cumpărături.
+- **Coperta nu se mai pierde** — Save în editorul de rețetă e blocat cât timp se încarcă imaginea.
+
+### ⚙️ Internals
+- Ambele rute de upload (`/api/upload-recipe-image`, `/api/import/upload-image`) și fallback-ul base64 din import folosesc Vercel Blob când `BLOB_READ_WRITE_TOKEN` e setat (store trebuie **public**), cu fallback pe filesystem în dev.
+
 ## [0.20.0] — 2026-07-21
 
 ### 🐛 Fixes

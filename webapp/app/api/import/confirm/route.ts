@@ -39,21 +39,37 @@ async function saveUnitRules(rules: Array<{ name: string; foreignUnit: string; t
   }
 }
 
-function saveBase64Image(dataUrl: string): string {
+async function saveBase64Image(dataUrl: string): Promise<string | null> {
   const m = dataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
   if (!m) return dataUrl;
-  const ext = m[1].split("/")[1] ?? "jpg";
+  const contentType = m[1];
+  const ext = contentType.split("/")[1] ?? "jpg";
   const buf = Buffer.from(m[2], "base64");
   const hash = crypto.createHash("md5").update(buf).digest("hex");
   const filename = `${hash}.${ext}`;
+
+  // Prefer Vercel Blob (persistent, and keeps megabytes of base64 out of the DB).
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    try {
+      const { put } = await import("@vercel/blob");
+      const blob = await put(`recipes/${filename}`, buf, {
+        access: "public", contentType, addRandomSuffix: false, allowOverwrite: true,
+      });
+      return blob.url;
+    } catch (e) {
+      console.warn("[import/confirm] blob upload failed:", e instanceof Error ? e.message : e);
+    }
+  }
+
+  // Dev fallback: write to public/. On a read-only FS with no blob token, drop the
+  // image (return null) rather than persisting the whole base64 string in the DB.
   const dest = path.join(process.cwd(), "public", "images", "recipes", filename);
   try {
     if (!fs.existsSync(dest)) fs.writeFileSync(dest, buf);
     return `/images/recipes/${filename}`;
   } catch (e) {
-    // Read-only filesystem (e.g. Vercel) — keep the inline data URL so the image still renders.
-    console.warn("[import/confirm] could not save image to disk, keeping inline data URL:", e instanceof Error ? e.message : e);
-    return dataUrl;
+    console.warn("[import/confirm] could not save image, dropping it:", e instanceof Error ? e.message : e);
+    return null;
   }
 }
 
@@ -144,9 +160,9 @@ export async function POST(req: NextRequest) {
       const savedServings = isBatch ? originalServings : 1;
       console.log(`[import] "${recipeData.name}" batch=${recipeData.batch} isBatch=${isBatch} servings=${recipeData.servings} originalServings=${originalServings} savedServings=${savedServings}`);
 
-      // Compute the image URL before opening the transaction (saveBase64Image does sync fs).
+      // Resolve the image URL before opening the transaction (may upload to blob).
       const imageUrl = recipeData.image?.startsWith("data:image/")
-        ? saveBase64Image(recipeData.image)
+        ? await saveBase64Image(recipeData.image)
         : recipeData.image ?? null;
 
       // Import each recipe atomically: Recipe + all its ingredients/instructions (and any

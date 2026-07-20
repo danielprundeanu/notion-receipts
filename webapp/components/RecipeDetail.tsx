@@ -105,6 +105,7 @@ function AddToPlannerModal({
     { [todayIdx]: emptyMeals() }
   );
   const [saving, setSaving] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   const selectedDays = Object.keys(dayMealServings).map(Number).sort((a, b) => a - b);
@@ -150,22 +151,28 @@ function AddToPlannerModal({
   async function handleAdd() {
     if (totalEntries === 0) return;
     setSaving(true);
-    for (const dayIdx of selectedDays) {
-      const meals = dayMealServings[dayIdx];
-      for (const meal of MEALS) {
-        if ((meals?.[meal] ?? 0) > 0) {
-          await addToWeekPlan({
-            recipeId: recipe.id,
-            weekStartIso: weekStart.toISOString(),
-            dayOfWeek: dayIdx,
-            mealType: meal,
-            servings: meals[meal],
-          });
+    setAddError(null);
+    try {
+      for (const dayIdx of selectedDays) {
+        const meals = dayMealServings[dayIdx];
+        for (const meal of MEALS) {
+          if ((meals?.[meal] ?? 0) > 0) {
+            await addToWeekPlan({
+              recipeId: recipe.id,
+              weekStartIso: weekStart.toISOString(),
+              dayOfWeek: dayIdx,
+              mealType: meal,
+              servings: meals[meal],
+            });
+          }
         }
       }
+      setDone(true);
+    } catch {
+      setAddError("Nu s-a putut adăuga în planner. Încearcă din nou.");
+    } finally {
+      setSaving(false);
     }
-    setDone(true);
-    setSaving(false);
   }
 
   return (
@@ -302,6 +309,9 @@ function AddToPlannerModal({
               </div>
             </div>
 
+            {addError && (
+              <p className="mb-2 text-sm text-red-600 dark:text-red-400 text-center">{addError}</p>
+            )}
             <button
               onClick={handleAdd}
               disabled={saving || totalEntries === 0}

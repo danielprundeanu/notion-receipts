@@ -1294,11 +1294,11 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e2a24]">
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || imageUploading}
           className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
-          {initial?.id ? "Save changes" : "Create recipe"}
+          {imageUploading ? "Se încarcă imaginea…" : initial?.id ? "Save changes" : "Create recipe"}
         </button>
         <button
           type="button"

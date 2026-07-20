@@ -82,18 +82,23 @@ function RecipeReviewCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const imgRef = useRef<HTMLInputElement>(null);
 
   async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadError(null);
     try {
       const form = new FormData();
       form.append("file", file);
       const res = await fetch("/api/import/upload-image", { method: "POST", body: form });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) onImageChange(data.url);
+      else setUploadError(data?.error ?? "Nu s-a putut încărca imaginea.");
+    } catch {
+      setUploadError("Nu s-a putut încărca imaginea.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -197,6 +202,14 @@ function RecipeReviewCard({
             )}
           </button>
           <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+          {uploadError && (
+            <span
+              className="text-[10px] leading-tight text-red-500 dark:text-red-400 max-w-[110px] truncate"
+              title={uploadError}
+            >
+              {uploadError}
+            </span>
+          )}
           <button
             onClick={onRemove}
             className="text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors"

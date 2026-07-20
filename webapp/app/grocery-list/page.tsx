@@ -44,6 +44,7 @@ export default function GroceryListPage() {
   const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()));
   const [grouped, setGrouped] = useState<Record<string, GroceryEntry[]>>({});
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -52,17 +53,24 @@ export default function GroceryListPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const data = await getGroceryList(weekStart.toISOString());
-    setGrouped(data);
-    // Restore this week's ticked items (persisted per-device) instead of wiping them,
-    // so checkmarks survive a refresh or a tab switch mid-shop on mobile.
+    setLoadError(false);
     try {
-      const saved = localStorage.getItem(`grocery-checked:${weekStart.toISOString()}`);
-      setChecked(saved ? new Set(JSON.parse(saved) as string[]) : new Set());
+      const data = await getGroceryList(weekStart.toISOString());
+      setGrouped(data);
+      // Restore this week's ticked items (persisted per-device) instead of wiping them,
+      // so checkmarks survive a refresh or a tab switch mid-shop on mobile.
+      try {
+        const saved = localStorage.getItem(`grocery-checked:${weekStart.toISOString()}`);
+        setChecked(saved ? new Set(JSON.parse(saved) as string[]) : new Set());
+      } catch {
+        setChecked(new Set());
+      }
     } catch {
-      setChecked(new Set());
+      setGrouped({});
+      setLoadError(true); // show an error + retry instead of a false "no items"
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, [weekStart]);
 
   useEffect(() => { load(); }, [load]);
@@ -178,6 +186,16 @@ export default function GroceryListPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 size={20} className="animate-spin text-gray-400" />
+        </div>
+      ) : loadError ? (
+        <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
+          <p className="font-medium">Nu s-a putut încărca lista</p>
+          <button
+            onClick={() => load()}
+            className="mt-3 px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            Reîncearcă
+          </button>
         </div>
       ) : totalCount === 0 ? (
         <div className="text-center py-20 text-gray-400 dark:text-[#5c554b]">

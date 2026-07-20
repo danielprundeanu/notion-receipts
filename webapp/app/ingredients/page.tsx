@@ -241,6 +241,12 @@ export default function IngredientsPage() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  // Transient error toast for inline-edit saves that fail (otherwise silent).
+  const [toast, setToast] = useState<string | null>(null);
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     getGroceryItems().then((data) => {
@@ -252,6 +258,9 @@ export default function IngredientsPage() {
         setEditingId(editId);
         window.history.replaceState(null, "", "/ingredients");
       }
+    }).catch(() => {
+      setLoading(false); // don't leave the page stuck on "Loading…"
+      showToast("Nu s-a putut încărca lista de ingrediente. Reîncarcă pagina.");
     });
   }, []);
 
@@ -298,13 +307,23 @@ export default function IngredientsPage() {
       ? null
       : isNum ? parseFloat(raw) : raw;
 
+    const prevValue = items.find((it) => it.id === id)?.[field];
+
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, [field]: value } : item
       )
     );
 
-    await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
+    try {
+      await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
+    } catch {
+      // Revert the optimistic cell edit so the UI doesn't show an unsaved value.
+      setItems((prev) =>
+        prev.map((item) => (item.id === id ? { ...item, [field]: prevValue } : item))
+      );
+      showToast("Nu s-a putut salva modificarea. Încearcă din nou.");
+    }
   }
 
   // ── Multi-select helpers ──────────────────────────────────────────────────
@@ -432,6 +451,14 @@ export default function IngredientsPage() {
 
   return (
     <div className="p-4 md:p-6">
+      {toast && (
+        <div
+          role="alert"
+          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium shadow-lg max-w-[90vw] text-center"
+        >
+          {toast}
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingredients</h1>
