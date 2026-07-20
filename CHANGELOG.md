@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.0] — 2026-07-20
+
+### ✨ Features
+- **Referințe în cardul de ingredient** — la editarea unui ingredient (`/ingredients`) apare secțiunea „Folosit în", cu rețetele care-l folosesc, ca chip-uri clickabile care duc direct la rețetă.
+- **Taguri libere în editorul de rețetă** — pe lângă categoriile predefinite, un chip „+ Tag" la coada listei permite adăugarea de categorii proprii (deocamdată pentru organizare/căutare, fără afișare separată).
+- **Management în masă al ingredientelor** — selectare multiplă în tabelul `/ingredients` (inclusiv „tot ce e vizibil"), ștergere în bloc și setare de categorie pentru mai multe produse deodată.
+
+### 🎨 UI / UX
+- **Audit unități rafinat** — se listează doar produsele a căror nutriție chiar contează (au kcal/proteine setate), cu unitățile problematice afișate explicit și link direct la produs/rețetă.
+
+### ⚙️ Internals
+- Acțiuni noi `getRecipesUsingGroceryItem`, `deleteGroceryItems`, `setGroceryItemsCategory`.
+- Script one-off `scripts/merge-categories.ts` (dry-run + `--apply`, cu backup JSON) pentru unificarea/redenumirea categoriilor de ingrediente.
+
 ## [0.16.0] — 2026-07-20
 
 ### ✨ Features
