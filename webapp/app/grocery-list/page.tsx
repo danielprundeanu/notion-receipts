@@ -48,20 +48,33 @@ export default function GroceryListPage() {
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
+  const checkedKey = `grocery-checked:${weekStart.toISOString()}`;
+
   const load = useCallback(async () => {
     setLoading(true);
     const data = await getGroceryList(weekStart.toISOString());
     setGrouped(data);
-    setChecked(new Set());
+    // Restore this week's ticked items (persisted per-device) instead of wiping them,
+    // so checkmarks survive a refresh or a tab switch mid-shop on mobile.
+    try {
+      const saved = localStorage.getItem(`grocery-checked:${weekStart.toISOString()}`);
+      setChecked(saved ? new Set(JSON.parse(saved) as string[]) : new Set());
+    } catch {
+      setChecked(new Set());
+    }
     setLoading(false);
   }, [weekStart]);
 
   useEffect(() => { load(); }, [load]);
 
+  // Persist on toggle (keyed to the current week) rather than in an effect: a
+  // week-change re-render updates checkedKey before load() flips `loading`, so an
+  // effect could write the old week's ticks under the new week's key.
   const toggleCheck = (id: string) =>
     setChecked((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      try { localStorage.setItem(checkedKey, JSON.stringify([...n])); } catch { /* non-fatal */ }
       return n;
     });
 

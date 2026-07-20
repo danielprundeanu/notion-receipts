@@ -1,10 +1,15 @@
 "use server";
 
 import { prisma } from "./db";
+import type { Prisma } from "@/app/generated/prisma/client";
 import { ingredientGrams } from "./nutrition";
 import { buildRecipeSearchText, normalizeSearch } from "./search";
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
+
+// Generous limits: a large recipe recreates many rows sequentially, and each
+// round-trip to Neon adds latency — the default 5s interactive-tx timeout is too tight.
+const RECIPE_TX_OPTS = { maxWait: 15_000, timeout: 30_000 } as const;
 
 // ─── Recipe Form Types ────────────────────────────────────────────────────────
 
@@ -64,23 +69,26 @@ export async function getGroceryItemDetails(id: string) {
 
 // ─── Recipe CRUD ──────────────────────────────────────────────────────────────
 
+// Runs against a transaction client (tx) so recipe + ingredients + instructions
+// are created all-or-nothing by the caller.
 async function buildIngredientsAndInstructions(
+  tx: Prisma.TransactionClient,
   recipeId: string,
   data: RecipeFormInput
 ) {
   for (const ing of data.ingredients) {
     if (!ing.groceryItemName.trim()) continue;
 
-    let groceryItem = await prisma.groceryItem.findFirst({
+    let groceryItem = await tx.groceryItem.findFirst({
       where: { name: ing.groceryItemName.trim() },
     });
     if (!groceryItem) {
-      groceryItem = await prisma.groceryItem.create({
+      groceryItem = await tx.groceryItem.create({
         data: { name: ing.groceryItemName.trim(), unit: ing.unit ?? null },
       });
     }
 
-    await prisma.ingredient.create({
+    await tx.ingredient.create({
       data: {
         recipeId,
         groceryItemId: groceryItem.id,
@@ -98,7 +106,7 @@ async function buildIngredientsAndInstructions(
   for (const inst of data.instructions) {
     if (!inst.text.trim()) continue;
     order++;
-    await prisma.instruction.create({
+    await tx.instruction.create({
       data: {
         recipeId,
         step: order,
@@ -134,24 +142,28 @@ async function translateTitleAlt(title: string): Promise<string | null> {
 }
 
 export async function createRecipe(data: RecipeFormInput): Promise<string> {
+  // Translation is an external API call — keep it out of the transaction.
   const nameRo = data.nameRo?.trim() || (await translateTitleAlt(data.name));
-  const recipe = await prisma.recipe.create({
-    data: {
-      name: data.name,
-      nameRo,
-      searchText: buildRecipeSearchText(data.name, nameRo),
-      category: data.categories.length > 0 ? data.categories.join(", ") : null,
-      servings: data.servings,
-      time: data.time,
-      difficulty: data.difficulty,
-      favorite: data.favorite,
-      link: data.link,
-      imageUrl: data.imageUrl ?? null,
-    },
-  });
-  await buildIngredientsAndInstructions(recipe.id, data);
+  const recipeId = await prisma.$transaction(async (tx) => {
+    const recipe = await tx.recipe.create({
+      data: {
+        name: data.name,
+        nameRo,
+        searchText: buildRecipeSearchText(data.name, nameRo),
+        category: data.categories.length > 0 ? data.categories.join(", ") : null,
+        servings: data.servings,
+        time: data.time,
+        difficulty: data.difficulty,
+        favorite: data.favorite,
+        link: data.link,
+        imageUrl: data.imageUrl ?? null,
+      },
+    });
+    await buildIngredientsAndInstructions(tx, recipe.id, data);
+    return recipe.id;
+  }, RECIPE_TX_OPTS);
   revalidatePath("/recipes");
-  return recipe.id;
+  return recipeId;
 }
 
 export async function updateRecipe(
@@ -167,24 +179,28 @@ export async function updateRecipe(
       nameRo = await translateTitleAlt(data.name);
     }
   }
-  await prisma.recipe.update({
-    where: { id },
-    data: {
-      name: data.name,
-      nameRo,
-      searchText: buildRecipeSearchText(data.name, nameRo),
-      category: data.categories.length > 0 ? data.categories.join(", ") : null,
-      servings: data.servings,
-      time: data.time,
-      difficulty: data.difficulty,
-      favorite: data.favorite,
-      link: data.link,
-      imageUrl: data.imageUrl ?? null,
-    },
-  });
-  await prisma.ingredient.deleteMany({ where: { recipeId: id } });
-  await prisma.instruction.deleteMany({ where: { recipeId: id } });
-  await buildIngredientsAndInstructions(id, data);
+  // Update + wipe + rebuild must be atomic: without a transaction, a failure
+  // after deleteMany leaves the recipe with no ingredients/instructions.
+  await prisma.$transaction(async (tx) => {
+    await tx.recipe.update({
+      where: { id },
+      data: {
+        name: data.name,
+        nameRo,
+        searchText: buildRecipeSearchText(data.name, nameRo),
+        category: data.categories.length > 0 ? data.categories.join(", ") : null,
+        servings: data.servings,
+        time: data.time,
+        difficulty: data.difficulty,
+        favorite: data.favorite,
+        link: data.link,
+        imageUrl: data.imageUrl ?? null,
+      },
+    });
+    await tx.ingredient.deleteMany({ where: { recipeId: id } });
+    await tx.instruction.deleteMany({ where: { recipeId: id } });
+    await buildIngredientsAndInstructions(tx, id, data);
+  }, RECIPE_TX_OPTS);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
 }
@@ -395,13 +411,20 @@ export async function addToWeekPlan(data: {
   servings: number;
 }): Promise<{ id: string }> {
   const weekStart = new Date(data.weekStartIso);
+  // Guard against 0 / negative / NaN servings and out-of-range days: these feed
+  // scale = servings / recipeServings in the grocery list + nutrition, where a bad
+  // value silently hides ingredients or produces negative quantities.
+  const servings = Math.max(1, Math.round(data.servings || 1));
+  const dayOfWeek = Number.isFinite(data.dayOfWeek)
+    ? Math.min(6, Math.max(0, Math.round(data.dayOfWeek)))
+    : 0;
   const entry = await prisma.weekPlan.create({
     data: {
       recipeId: data.recipeId,
       weekStart,
-      dayOfWeek: data.dayOfWeek,
+      dayOfWeek,
       mealType: data.mealType,
-      servings: data.servings,
+      servings,
     },
     select: { id: true },
   });
@@ -416,7 +439,8 @@ export async function removeFromWeekPlan(id: string) {
 }
 
 export async function updateWeekPlanServings(id: string, servings: number): Promise<void> {
-  await prisma.weekPlan.update({ where: { id }, data: { servings } });
+  const safe = Math.max(1, Math.round(servings || 1));
+  await prisma.weekPlan.update({ where: { id }, data: { servings: safe } });
   revalidatePath("/planner");
   revalidatePath("/grocery-list");
 }
@@ -462,7 +486,11 @@ export async function getGroceryList(
 
     for (const ing of plan.recipe.ingredients) {
       if (!ing.groceryItem) continue;
-      const key = ing.groceryItem.id;
+      const unit = ing.unit ?? ing.groceryItem.unit;
+      // Key by item AND unit: never sum incompatible units (e.g. 200 g + 1 cup)
+      // into a nonsense total. Same-unit lines still aggregate; mixed-unit ones
+      // show as separate lines on the list — correct rather than misleading.
+      const key = `${ing.groceryItem.id}::${(unit ?? "").trim().toLowerCase()}`;
       const qty = (ing.quantity || 0) * scale;
 
       if (map.has(key)) {
@@ -471,7 +499,7 @@ export async function getGroceryList(
         map.set(key, {
           name: ing.groceryItem.name,
           quantity: qty,
-          unit: ing.unit ?? ing.groceryItem.unit,
+          unit,
           category: ing.groceryItem.category ?? "Other",
         });
       }
@@ -537,17 +565,57 @@ export async function updateGroceryItem(
   await prisma.groceryItem.update({ where: { id }, data });
 }
 
-export async function deleteGroceryItem(id: string): Promise<void> {
+// Deleting a grocery item would set groceryItemId = null on every ingredient that
+// references it (optional relation → ON DELETE SET NULL). Since an ingredient's name
+// comes from its grocery item, that silently turns those rows into nameless orphans in
+// recipes — shared between both users. So we refuse to delete an item still in use and
+// let the caller tell the user to remove it from the recipes first.
+export async function deleteGroceryItem(
+  id: string
+): Promise<{ ok: true } | { ok: false; usedIn: number }> {
+  const usedIn = await prisma.ingredient.count({ where: { groceryItemId: id } });
+  if (usedIn > 0) return { ok: false, usedIn };
   await prisma.groceryItem.delete({ where: { id } });
   revalidatePath("/ingredients");
   revalidatePath("/recipes");
+  return { ok: true };
 }
 
-export async function deleteGroceryItems(ids: string[]): Promise<void> {
-  if (ids.length === 0) return;
-  await prisma.groceryItem.deleteMany({ where: { id: { in: ids } } });
-  revalidatePath("/ingredients");
-  revalidatePath("/recipes");
+// Bulk variant: deletes only the unreferenced items, reports the rest as blocked.
+export async function deleteGroceryItems(
+  ids: string[]
+): Promise<{ deleted: string[]; blocked: { id: string; name: string; uses: number }[] }> {
+  if (ids.length === 0) return { deleted: [], blocked: [] };
+
+  const refRows = await prisma.ingredient.findMany({
+    where: { groceryItemId: { in: ids } },
+    select: { groceryItemId: true },
+  });
+  const useCount = new Map<string, number>();
+  for (const row of refRows) {
+    if (!row.groceryItemId) continue;
+    useCount.set(row.groceryItemId, (useCount.get(row.groceryItemId) ?? 0) + 1);
+  }
+
+  const deletableIds = ids.filter((id) => !useCount.has(id));
+  const blockedIds = ids.filter((id) => useCount.has(id));
+
+  const blocked: { id: string; name: string; uses: number }[] = [];
+  if (blockedIds.length > 0) {
+    const items = await prisma.groceryItem.findMany({
+      where: { id: { in: blockedIds } },
+      select: { id: true, name: true },
+    });
+    for (const it of items) blocked.push({ id: it.id, name: it.name, uses: useCount.get(it.id) ?? 0 });
+  }
+
+  if (deletableIds.length > 0) {
+    await prisma.groceryItem.deleteMany({ where: { id: { in: deletableIds } } });
+    revalidatePath("/ingredients");
+    revalidatePath("/recipes");
+  }
+
+  return { deleted: deletableIds, blocked };
 }
 
 export async function setGroceryItemsCategory(ids: string[], category: string | null): Promise<void> {

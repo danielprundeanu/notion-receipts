@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.20.0] — 2026-07-21
+
+### 🐛 Fixes
+- **Fără pierdere de date la editarea/crearea rețetei** — `updateRecipe`/`createRecipe` rulează acum într-o tranzacție (`$transaction`): update-ul, ștergerea și recrearea ingredientelor/instrucțiunilor sunt all-or-nothing. O eroare la mijloc (timeout Neon, funcție serverless rece) nu mai poate goli o rețetă.
+- **Import atomic per rețetă** — fiecare rețetă importată (rețetă + ingrediente + instrucțiuni + produse noi) se comite integral sau deloc; la eșec în mijloc, răspunsul spune câte rețete au reușit, ca să știi de unde reiei.
+- **Ștergerea unui produs folosit e blocată** — un produs folosit în rețete nu mai poate fi șters (înainte lăsa tăcut ingrediente fără nume în rețetele partajate). Modalul și ștergerea în masă arată clar în câte rețete e folosit.
+- **Lista de cumpărături nu mai adună unități diferite** — cantitățile aceluiași produs în unități diferite (ex. 200 g + 1 cup) apar ca linii separate, nu însumate greșit într-un total fără sens.
+- **Validare porții în planner** — porții 0/negative/NaN sunt normalizate la minim 1 (înainte ascundeau ingrediente din listă sau produceau nutriție negativă).
+- **Filtrele Recipes nu mai sparg URL-ul** — link-urile de categorie codifică acum `q` (o căutare cu `&` sau `#` nu mai rupe adresa) și păstrează sortarea aleasă.
+
+### 🎨 UI / UX
+- **Iconițe custom în navigație** — BottomNav (mobil) și Sidebar (desktop) folosesc iconițe `.webp` proprii în locul celor lucide.
+- **Protecție la pierderea muncii** — formularul de rețetă avertizează (`beforeunload` + confirmare la „Cancel") când ai modificări nesalvate; progresul din wizardul de import se păstrează la refresh/back (sessionStorage); bifele din lista de cumpărături persistă per săptămână (localStorage).
+- **Acțiuni în masă (Ingredients)** — selecția se golește la schimbarea filtrului (nu mai lovesc rânduri ascunse) și butoanele nu mai rămân blocate în „busy" la eroare.
+
+### ⚙️ Internals
+- Tranzacții interactive Prisma pentru scrierile multi-pas (rețete + import); `deleteGroceryItem`/`deleteGroceryItems` verifică referințele înainte de ștergere.
+- `RecipesGrid`: modul de vizualizare mutat pe `useSyncExternalStore` (localStorage + eveniment `viewchange`) — corect la mount, fără hydration mismatch.
+- Iconițe noi în `public/icons/*.webp`.
+
 ## [0.19.0] — 2026-07-20
 
 ### ✨ Features

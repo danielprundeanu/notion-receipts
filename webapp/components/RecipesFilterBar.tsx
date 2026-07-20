@@ -51,10 +51,28 @@ export default function RecipesFilterBar({
     }
   }
 
+  // Build a chip href via URLSearchParams so q is always encoded (a query with
+  // `&` or `#` no longer breaks the URL) and the current sort is preserved.
+  function chipHref(next: { cat?: string; fav?: string }): string {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (next.cat) params.set("cat", next.cat);
+    if (next.fav) params.set("fav", next.fav);
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+    return qs ? `/recipes?${qs}` : "/recipes";
+  }
+
   function onSearchInput(next: string) {
     setValue(next);
     if (debRef.current) clearTimeout(debRef.current);
     debRef.current = setTimeout(() => pushQ(next), 250);
+  }
+
+  function clearSearch() {
+    setValue("");
+    if (debRef.current) clearTimeout(debRef.current);
+    pushQ("");
   }
 
   // Remember the last-used filters and restore them when landing on a bare
@@ -90,7 +108,8 @@ export default function RecipesFilterBar({
     const io = new IntersectionObserver(
       ([e]) => {
         setStuck(!e.isIntersecting);
-        if (e.isIntersecting) setSearchOpen(false);
+        // Don't auto-close the search overlay on scroll — while it's open the user is
+        // actively searching; closing it when results shrink causes the jarring jump.
       },
       { root: root ?? null, threshold: 0 }
     );
@@ -98,7 +117,9 @@ export default function RecipesFilterBar({
     return () => io.disconnect();
   }, []);
 
-  // On filter change, jump to the first recipe card (just under the sticky bar).
+  // On category/favorite change, jump to the first recipe card (a deliberate filter
+  // action). NOT on `q` — live search filters in place; re-scrolling on every keystroke
+  // yanks the page (and closed the mobile search) when results shrink.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -106,7 +127,7 @@ export default function RecipesFilterBar({
       return;
     }
     document.getElementById("recipes-top")?.scrollIntoView({ block: "start" });
-  }, [cat, fav, q]);
+  }, [cat, fav]);
 
   const chip = "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors";
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
@@ -126,22 +147,35 @@ export default function RecipesFilterBar({
 
   return (
     <>
-      {/* ── Search input (always in flow — scrolls away, never removed) ── */}
-      <form className="relative mb-3" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+      {/* ── Search input (always in flow — scrolls away, never removed). Hidden (but
+             keeps its space) while the mobile overlay is open, so scrolling to the top
+             doesn't show two identical search boxes. ── */}
+      <form className={`relative mb-3 md:max-w-sm ${searchOpen ? "invisible md:visible" : ""}`} onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
         <input
           value={value}
           onChange={(e) => onSearchInput(e.target.value)}
           placeholder="Search recipes…"
-          className="w-full md:max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
+          className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
         />
+        {value && (
+          <button
+            type="button"
+            onClick={clearSearch}
+            title="Golește căutarea"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
+          >
+            <X size={14} />
+          </button>
+        )}
       </form>
 
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Expanded search overlay (mobile, sticky mode) — fixed so it never shifts flow ── */}
-      {stuck && searchOpen && (
+      {/* ── Expanded search overlay (mobile) — fixed at top, stays open while searching
+             (independent of scroll/stuck) so shrinking results don't close it ── */}
+      {searchOpen && (
         <div className="fixed inset-x-0 top-0 z-40 px-4 py-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#2e2a24] shadow-sm md:hidden">
           <form className="relative" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
@@ -154,7 +188,8 @@ export default function RecipesFilterBar({
             />
             <button
               type="button"
-              onClick={() => setSearchOpen(false)}
+              onClick={() => { clearSearch(); setSearchOpen(false); }}
+              title="Închide"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
             >
               <X size={14} />
@@ -183,7 +218,7 @@ export default function RecipesFilterBar({
           <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center">
             <Link
               scroll={false}
-              href={q ? `?q=${q}` : "/recipes"}
+              href={chipHref({})}
               onClick={() => sessionStorage.setItem("recipesFiltersCleared", "1")}
               className={`${chip} ${!cat && !favOnly ? on : off}`}
             >
@@ -192,7 +227,7 @@ export default function RecipesFilterBar({
 
             <Link
               scroll={false}
-              href={`?${q ? `q=${q}&` : ""}fav=1`}
+              href={chipHref({ fav: "1" })}
               className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
             >
               <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
@@ -203,7 +238,7 @@ export default function RecipesFilterBar({
               <Link
                 key={c}
                 scroll={false}
-                href={`?${q ? `q=${q}&` : ""}cat=${encodeURIComponent(c)}`}
+                href={chipHref({ cat: c })}
                 className={`${chip} ${cat === c ? on : off}`}
               >
                 {c}

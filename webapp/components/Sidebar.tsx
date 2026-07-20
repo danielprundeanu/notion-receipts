@@ -3,13 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, Apple, Settings as SettingsIcon } from "lucide-react";
 
 const nav = [
-  { href: "/recipes", label: "Recipes", icon: BookOpen },
-  { href: "/planner", label: "Planner", icon: Calendar },
-  { href: "/grocery-list", label: "Grocery List", icon: ShoppingCart },
-  { href: "/ingredients", label: "Ingredients", icon: Apple },
+  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Grocery List", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
 ];
 
 export default function Sidebar() {
@@ -27,7 +26,7 @@ export default function Sidebar() {
 
       {/* Navigation links */}
       <nav className="flex-1 p-3 space-y-0.5">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, img }) => {
           // Exact match for /recipes to avoid matching /recipes/import
           const active =
             href === "/recipes"
@@ -43,7 +42,7 @@ export default function Sidebar() {
                   : "text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] hover:text-gray-900 dark:hover:text-[#eae5de]"
               }`}
             >
-              <Icon size={17} />
+              <Image src={img} alt="" width={20} height={20} className={`transition-opacity ${active ? "opacity-100" : "opacity-60"}`} />
               {label}
             </Link>
           );
@@ -60,7 +59,13 @@ export default function Sidebar() {
               : "text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] hover:text-gray-900 dark:hover:text-[#eae5de]"
           }`}
         >
-          <SettingsIcon size={17} />
+          <Image
+            src="/icons/settings.webp"
+            alt=""
+            width={20}
+            height={20}
+            className={`transition-opacity ${pathname === "/settings" || pathname.startsWith("/settings/") ? "opacity-100" : "opacity-60"}`}
+          />
           Settings
         </Link>
       </div>

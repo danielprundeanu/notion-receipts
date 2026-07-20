@@ -42,6 +42,8 @@ export default function GroceryItemModal({
   const [loading, setLoading] = useState(isEdit);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // Set when the server refuses a delete because the item is still used in recipes.
+  const [deleteBlocked, setDeleteBlocked] = useState<number | null>(null);
   const [name, setName] = useState(initialName);
   const [nameRo, setNameRo] = useState("");
   const [category, setCategory] = useState("");
@@ -137,8 +139,14 @@ export default function GroceryItemModal({
   async function handleDelete() {
     if (!itemId) return;
     setDeleting(true);
-    await deleteGroceryItem(itemId);
+    setDeleteBlocked(null);
+    const res = await deleteGroceryItem(itemId);
     setDeleting(false);
+    if (!res.ok) {
+      // Item is still referenced — surface it instead of silently orphaning ingredients.
+      setDeleteBlocked(res.usedIn);
+      return;
+    }
     onClose();
     onDeleted?.();
   }
@@ -361,27 +369,49 @@ export default function GroceryItemModal({
 
         {isEdit && confirmDelete && (
           <div className="mt-4 p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900">
-            <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-              Ștergi definitiv <strong>{name}</strong>? Ingredientul va fi eliminat din toate rețetele.
-            </p>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors"
-              >
-                {deleting && <Loader2 size={13} className="animate-spin" />}
-                Șterge definitiv
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
-              >
-                Anulează
-              </button>
-            </div>
+            {usedIn && usedIn.length > 0 ? (
+              <>
+                <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                  Nu poți șterge <strong>{name}</strong> — e folosit în {usedIn.length} {usedIn.length === 1 ? "rețetă" : "rețete"} (vezi lista de mai sus). Înlocuiește-l sau elimină-l din ele întâi.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDelete(false); setDeleteBlocked(null); }}
+                  className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
+                >
+                  Am înțeles
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                  Ștergi definitiv <strong>{name}</strong>? Acțiunea nu poate fi anulată.
+                </p>
+                {deleteBlocked != null && (
+                  <p className="text-sm text-red-700 dark:text-red-400 mb-3">
+                    Produsul e folosit în {deleteBlocked} {deleteBlocked === 1 ? "rețetă" : "rețete"} — nu a fost șters.
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors"
+                  >
+                    {deleting && <Loader2 size={13} className="animate-spin" />}
+                    Șterge definitiv
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmDelete(false); setDeleteBlocked(null); }}
+                    className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
+                  >
+                    Anulează
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
 

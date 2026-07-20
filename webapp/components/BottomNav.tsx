@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { BookOpen, Calendar, ShoppingCart, Apple, Settings } from "lucide-react";
 
 const nav = [
-  { href: "/recipes", label: "Recipes", icon: BookOpen },
-  { href: "/planner", label: "Planner", icon: Calendar },
-  { href: "/grocery-list", label: "Grocery", icon: ShoppingCart },
-  { href: "/ingredients", label: "Ingredients", icon: Apple },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Grocery", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
+  { href: "/settings", label: "Settings", img: "/icons/settings.webp" },
 ];
 
 export default function BottomNav() {
@@ -20,7 +20,7 @@ export default function BottomNav() {
       className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#201c18] border-t border-gray-100 dark:border-[#2e2a24] flex md:hidden z-40 transition-colors duration-200"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      {nav.map(({ href, label, icon: Icon }) => {
+      {nav.map(({ href, label, img }) => {
         const active =
           href === "/recipes"
             ? pathname === "/recipes" || (pathname.startsWith("/recipes/") && !pathname.startsWith("/recipes/import"))
@@ -35,7 +35,13 @@ export default function BottomNav() {
                 : "text-gray-400 dark:text-[#5c554b]"
             }`}
           >
-            <Icon size={21} />
+            <Image
+              src={img}
+              alt=""
+              width={32}
+              height={32}
+              className={`transition-opacity ${active ? "opacity-100" : "opacity-45"}`}
+            />
             <span className="text-[10px] font-medium">{label}</span>
           </Link>
         );

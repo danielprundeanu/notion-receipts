@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Star, Trash2, Clock, ChevronRight } from "lucide-react";
@@ -29,20 +29,23 @@ const CATEGORY_COLORS: Record<string, string> = {
   "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
 };
 
+type ViewMode = "grid" | "grid2" | "list";
+function subscribeView(cb: () => void) {
+  window.addEventListener("viewchange", cb);
+  return () => window.removeEventListener("viewchange", cb);
+}
+function getViewSnapshot(): ViewMode {
+  return (localStorage.getItem("recipesView") as ViewMode) || "grid";
+}
+
 export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
-  const [view, setView] = useState<"grid" | "grid2" | "list">("grid");
+  // View is an external store (localStorage + SortSelect's "viewchange" event), so it's
+  // correct on mount without an event-timing race or a hydration mismatch.
+  const view = useSyncExternalStore(subscribeView, getViewSnapshot, () => "grid" as ViewMode);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  useEffect(() => {
-    function onViewChange(e: Event) {
-      setView((e as CustomEvent<"grid" | "grid2" | "list">).detail);
-    }
-    window.addEventListener("viewchange", onViewChange);
-    return () => window.removeEventListener("viewchange", onViewChange);
-  }, []);
 
   // Select mode is toggled from the filter bar (SortSelect) via a window event.
   // When it turns off, drop the current selection.

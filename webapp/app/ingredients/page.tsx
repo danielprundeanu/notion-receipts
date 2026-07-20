@@ -324,6 +324,16 @@ export default function IngredientsPage() {
     setConfirmBulkDelete(false);
   }
 
+  // Changing the filter/search must drop any selection: a selection made against a
+  // different view must never be bulk-acted on while those rows are off-screen.
+  function clearSelectionIfAny() {
+    if (selectedIds.size === 0) return;
+    setSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+  }
+  function changeSearch(v: string) { setSearch(v); clearSelectionIfAny(); }
+  function changeCategory(v: string) { setCategory(v); clearSelectionIfAny(); }
+
   const allVisibleSelected = sorted.length > 0 && sorted.every((i) => selectedIds.has(i.id));
   function toggleSelectAllVisible() {
     setSelectedIds((prev) => {
@@ -342,10 +352,15 @@ export default function IngredientsPage() {
     const ids = [...selectedIds];
     setBulkBusy(true);
     setBulkMsg(null);
-    await setGroceryItemsCategory(ids, cat);
-    setItems((prev) => prev.map((it) => selectedIds.has(it.id) ? { ...it, category: cat } : it));
-    setBulkBusy(false);
-    setBulkMsg(`Categorie setată pentru ${ids.length} produse.`);
+    try {
+      await setGroceryItemsCategory(ids, cat);
+      setItems((prev) => prev.map((it) => selectedIds.has(it.id) ? { ...it, category: cat } : it));
+      setBulkMsg(`Categorie setată pentru ${ids.length} ${ids.length === 1 ? "produs" : "produse"}.`);
+    } catch {
+      setBulkMsg("Nu s-a putut seta categoria. Încearcă din nou.");
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   async function handleBulkDelete() {
@@ -353,12 +368,25 @@ export default function IngredientsPage() {
     if (ids.length === 0) return;
     setBulkBusy(true);
     setBulkMsg(null);
-    await deleteGroceryItems(ids);
-    setItems((prev) => prev.filter((it) => !selectedIds.has(it.id)));
-    setSelectedIds(new Set());
-    setConfirmBulkDelete(false);
-    setBulkBusy(false);
-    setBulkMsg(`${ids.length} produse șterse.`);
+    try {
+      const res = await deleteGroceryItems(ids);
+      const deletedSet = new Set(res.deleted);
+      setItems((prev) => prev.filter((it) => !deletedSet.has(it.id)));
+      // Keep the blocked (still-used) items selected so the user sees which remained.
+      setSelectedIds(new Set(res.blocked.map((b) => b.id)));
+      setConfirmBulkDelete(false);
+      if (res.blocked.length === 0) {
+        setBulkMsg(`${res.deleted.length} ${res.deleted.length === 1 ? "produs șters" : "produse șterse"}.`);
+      } else if (res.deleted.length === 0) {
+        setBulkMsg(`Niciun produs șters — ${res.blocked.length} ${res.blocked.length === 1 ? "e folosit" : "sunt folosite"} în rețete.`);
+      } else {
+        setBulkMsg(`${res.deleted.length} șterse; ${res.blocked.length} păstrate (folosite în rețete).`);
+      }
+    } catch {
+      setBulkMsg("Nu s-a putut șterge. Încearcă din nou.");
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   // Autofill nutrition for selected items — fills only currently-empty macros.
@@ -430,13 +458,13 @@ export default function IngredientsPage() {
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => changeSearch(e.target.value)}
             placeholder="Search ingredient…"
             className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
           {search && (
             <button
-              onClick={() => setSearch("")}
+              onClick={() => changeSearch("")}
               title="Șterge căutarea"
               aria-label="Șterge căutarea"
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-[#6e675c] hover:text-gray-600 dark:hover:text-[#a49c90] rounded transition-colors"
@@ -447,7 +475,7 @@ export default function IngredientsPage() {
         </div>
         <select
           value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          onChange={(e) => changeCategory(e.target.value)}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
         >
           <option value="">All categories</option>

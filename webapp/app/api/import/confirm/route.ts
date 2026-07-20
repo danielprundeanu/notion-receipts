@@ -99,6 +99,10 @@ type ConfirmedRecipe = {
 // ─── POST handler ─────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  // Declared outside the try so a mid-loop failure can still report what was imported.
+  const created: string[] = [];
+  const newIngredientCount: number[] = [];
+
   try {
     const { recipes, newUnitRules = [] } = (await req.json()) as {
       recipes: ConfirmedRecipe[];
@@ -134,111 +138,117 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const created: string[] = [];
-    const newIngredientCount: number[] = [];
-
     for (const recipeData of recipes) {
       const isBatch = recipeData.batch !== false;  // default true
       const originalServings = recipeData.servings && recipeData.servings > 0 ? recipeData.servings : 1;
       const savedServings = isBatch ? originalServings : 1;
       console.log(`[import] "${recipeData.name}" batch=${recipeData.batch} isBatch=${isBatch} servings=${recipeData.servings} originalServings=${originalServings} savedServings=${savedServings}`);
 
-      // Create recipe
-      const recipe = await prisma.recipe.create({
-        data: {
-          name: recipeData.name,
-          servings: savedServings,
-          time: recipeData.time,
-          difficulty: recipeData.difficulty,
-          category: recipeData.category,
-          favorite: recipeData.favorite,
-          link: recipeData.link,
-          imageUrl: recipeData.image?.startsWith("data:image/")
-            ? saveBase64Image(recipeData.image)
-            : recipeData.image ?? null,
-          ...(recipeData.createdAt ? { createdAt: new Date(recipeData.createdAt) } : {}),
-        },
-      });
+      // Compute the image URL before opening the transaction (saveBase64Image does sync fs).
+      const imageUrl = recipeData.image?.startsWith("data:image/")
+        ? saveBase64Image(recipeData.image)
+        : recipeData.image ?? null;
 
-      let newItemsCreated = 0;
+      // Import each recipe atomically: Recipe + all its ingredients/instructions (and any
+      // grocery-item upserts) commit together or not at all. A mid-recipe failure no longer
+      // leaves a half-imported, ingredient-less recipe behind.
+      const { recipeId, newItemsCreated } = await prisma.$transaction(async (tx) => {
+        const recipe = await tx.recipe.create({
+          data: {
+            name: recipeData.name,
+            servings: savedServings,
+            time: recipeData.time,
+            difficulty: recipeData.difficulty,
+            category: recipeData.category,
+            favorite: recipeData.favorite,
+            link: recipeData.link,
+            imageUrl,
+            ...(recipeData.createdAt ? { createdAt: new Date(recipeData.createdAt) } : {}),
+          },
+        });
 
-      // Create ingredients
-      const sortedIngredients = [...recipeData.ingredients].sort(
-        (a, b) => a.groupOrder - b.groupOrder || a.order - b.order
-      );
+        let newItemsCreated = 0;
 
-      for (const ing of sortedIngredients) {
-        let groceryItemId: string | null = ing.groceryItemId ?? null;
+        // Create ingredients
+        const sortedIngredients = [...recipeData.ingredients].sort(
+          (a, b) => a.groupOrder - b.groupOrder || a.order - b.order
+        );
 
-        // Set unit2 (and optionally the conversion) on existing grocery item if requested
-        if (groceryItemId && ing.addUnit2 && ing.unit) {
-          await prisma.groceryItem.update({
-            where: { id: groceryItemId },
+        for (const ing of sortedIngredients) {
+          let groceryItemId: string | null = ing.groceryItemId ?? null;
+
+          // Set unit2 (and optionally the conversion) on existing grocery item if requested
+          if (groceryItemId && ing.addUnit2 && ing.unit) {
+            await tx.groceryItem.update({
+              where: { id: groceryItemId },
+              data: {
+                unit2: ing.unit,
+                ...(ing.unit2Conversion != null ? { conversion: ing.unit2Conversion } : {}),
+              },
+            });
+          }
+
+          // Create new GroceryItem if needed
+          if (!groceryItemId && ing.newItem) {
+            const existing = await tx.groceryItem.findFirst({
+              where: { name: { equals: ing.newItem.name, mode: "insensitive" } },
+            });
+
+            if (existing) {
+              groceryItemId = existing.id;
+            } else {
+              const createdItem = await tx.groceryItem.create({
+                data: {
+                  name: ing.newItem.name,
+                  unit: ing.newItem.unit,
+                  unit2: ing.newItem.unit2 ?? null,
+                  category: ing.newItem.category,
+                },
+              });
+              groceryItemId = createdItem.id;
+              newItemsCreated++;
+            }
+          }
+
+          // Divide qty by original servings only when batch=false (per-serving mode)
+          const normalizedQty = ing.qty != null
+            ? (isBatch ? ing.qty : ing.qty / originalServings)
+            : null;
+
+          await tx.ingredient.create({
             data: {
-              unit2: ing.unit,
-              ...(ing.unit2Conversion != null ? { conversion: ing.unit2Conversion } : {}),
+              recipeId: recipe.id,
+              groceryItemId,
+              quantity: normalizedQty,
+              unit: ing.unit,
+              notes: ing.obs ?? null,
+              groupName: ing.groupName,
+              groupOrder: ing.groupOrder,
+              order: ing.order,
             },
           });
         }
 
-        // Create new GroceryItem if needed
-        if (!groceryItemId && ing.newItem) {
-          const existing = await prisma.groceryItem.findFirst({
-            where: { name: { equals: ing.newItem.name, mode: "insensitive" } },
+        // Create instructions
+        let order = 0;
+        for (const inst of recipeData.instructions) {
+          if (!inst.text.trim()) continue;
+          order++;
+          await tx.instruction.create({
+            data: {
+              recipeId: recipe.id,
+              step: order,
+              text: inst.text.trim(),
+              isSection: inst.isSection,
+              instrType: inst.isSection ? null : "numbered",
+            },
           });
-
-          if (existing) {
-            groceryItemId = existing.id;
-          } else {
-            const created = await prisma.groceryItem.create({
-              data: {
-                name: ing.newItem.name,
-                unit: ing.newItem.unit,
-                unit2: ing.newItem.unit2 ?? null,
-                category: ing.newItem.category,
-              },
-            });
-            groceryItemId = created.id;
-            newItemsCreated++;
-          }
         }
 
-        // Divide qty by original servings only when batch=false (per-serving mode)
-        const normalizedQty = ing.qty != null
-          ? (isBatch ? ing.qty : ing.qty / originalServings)
-          : null;
+        return { recipeId: recipe.id, newItemsCreated };
+      }, { maxWait: 15_000, timeout: 30_000 });
 
-        await prisma.ingredient.create({
-          data: {
-            recipeId: recipe.id,
-            groceryItemId,
-            quantity: normalizedQty,
-            unit: ing.unit,
-            notes: ing.obs ?? null,
-            groupName: ing.groupName,
-            groupOrder: ing.groupOrder,
-            order: ing.order,
-          },
-        });
-      }
-
-      // Create instructions
-      let order = 0;
-      for (const inst of recipeData.instructions) {
-        if (!inst.text.trim()) continue;
-        order++;
-        await prisma.instruction.create({
-          data: {
-            recipeId: recipe.id,
-            step: order,
-            text: inst.text.trim(),
-            isSection: inst.isSection,
-            instrType: inst.isSection ? null : "numbered",
-          },
-        });
-      }
-
-      created.push(recipe.id);
+      created.push(recipeId);
       newIngredientCount.push(newItemsCreated);
     }
 
@@ -253,8 +263,19 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error("[import/confirm] error:", err);
+    // Some recipes may have committed before the failure (each is atomic). Refresh their
+    // views and tell the client how many succeeded so the user knows where things stand.
+    if (created.length > 0) {
+      revalidatePath("/recipes");
+      revalidatePath("/ingredients");
+    }
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Eroare internă" },
+      {
+        error: err instanceof Error ? err.message : "Eroare internă",
+        recipesCreated: created.length,
+        recipeIds: created,
+        newIngredientsCreated: newIngredientCount.reduce((a, b) => a + b, 0),
+      },
       { status: 500 }
     );
   }

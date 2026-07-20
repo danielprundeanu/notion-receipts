@@ -815,6 +815,52 @@ export default function ImportPage() {
     recipeIds: string[];
   } | null>(null);
 
+  // ── Persist wizard progress (survive refresh / mobile back-swipe / tab recycle) ──
+  const WIZARD_KEY = "recipeImportWizard";
+  const restoredRef = useRef(false);
+
+  // Restore once, after mount — runs post-hydration, so no SSR mismatch.
+  useEffect(() => {
+    if (restoredRef.current) return;
+    restoredRef.current = true;
+    try {
+      const raw = sessionStorage.getItem(WIZARD_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw) as {
+        step?: number; recipes?: ParsedRecipe[]; focusIngredientKey?: string | null;
+        inputMode?: "urls" | "text"; urlsText?: string; textContent?: string;
+      };
+      if (s.inputMode) setInputMode(s.inputMode);
+      if (typeof s.urlsText === "string") setUrlsText(s.urlsText);
+      if (typeof s.textContent === "string") setTextContent(s.textContent);
+      if (s.recipes && s.recipes.length) setRecipes(s.recipes);
+      if (s.focusIngredientKey !== undefined) setFocusIngredientKey(s.focusIngredientKey);
+      if (s.step && s.step >= 1 && s.step <= 3) setStep(s.step);
+    } catch { /* corrupt state — ignore */ }
+  }, []);
+
+  // Save while in progress; clear once the import has completed (step 4 / result).
+  useEffect(() => {
+    if (!restoredRef.current) return; // don't write before the restore pass has run
+    try {
+      if (importResult || step >= 4) {
+        sessionStorage.removeItem(WIZARD_KEY);
+      } else if (step > 1 || recipes.length > 0 || urlsText || textContent) {
+        sessionStorage.setItem(WIZARD_KEY, JSON.stringify({
+          step, recipes, focusIngredientKey, inputMode, urlsText, textContent,
+        }));
+      }
+    } catch { /* storage unavailable / quota — non-fatal */ }
+  }, [step, recipes, focusIngredientKey, inputMode, urlsText, textContent, importResult]);
+
+  // Warn before a full-page unload while there's unsaved wizard progress.
+  useEffect(() => {
+    if (step <= 1 || importResult) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [step, importResult]);
+
   // ── Step 1 → 2: Parse ──────────────────────────────────────────────────────
 
   async function handleParse() {

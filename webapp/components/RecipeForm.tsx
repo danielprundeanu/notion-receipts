@@ -506,6 +506,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Tracks unsaved edits so we can warn before a full-page unload or an explicit Cancel.
+  const [dirty, setDirty] = useState(false);
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   const [name, setName] = useState(initial?.name ?? "");
   const [nameRo, setNameRo] = useState(initial?.nameRo ?? "");
@@ -824,7 +832,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]";
 
   return (
-    <form onSubmit={handleSubmit} className={noWrapper ? "space-y-7" : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"}>
+    <form onSubmit={handleSubmit} onInput={() => { if (!dirty) setDirty(true); }} className={noWrapper ? "space-y-7" : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"}>
       {/* Name */}
       <div>
         <input
@@ -1294,7 +1302,10 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         </button>
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => {
+            if (dirty && !window.confirm("Ai modificări nesalvate. Sigur ieși fără să salvezi?")) return;
+            router.back();
+          }}
           className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
           Cancel
