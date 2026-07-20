@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.16.0] — 2026-07-20
+
+### ✨ Features
+- **Nutriție corectă pe unități „la bucată"** — calculul de nutriție (planner + detaliu rețetă) convertește acum cantitatea în grame după **unitatea ingredientului** (g/ml direct, a 2-a unitate cu conversie, sau greutate pe bucată `unitWeight`), nu doar după unitatea primară a produsului. „1 avocado" / „1 chicken breast" nu mai era socotit ca „1 gram". Logică comună extrasă în `lib/nutrition.ts`.
+- **Ecran „Audit unități"** (`/ingredients/audit`) — listează produsele folosite la bucată fără greutate (cu completare `g/buc` pe loc, care se propagă automat în toate rețetele care le folosesc) și nepotrivirile de unitate (cu link la rețetă). Permite repararea în masă a erorilor sistematice după un import, fără editare rețetă cu rețetă.
+- **Editor rețetă îmbunătățit** — dificultate „Hard" (+ păstrarea oricărei valori din import care nu e în listă), reordonare ingrediente în cadrul unui grup (săgeți sus/jos) și editare directă a produsului (unități + nutriție) din editorul rețetei, chiar când produsul are deja 2 unități.
+
+### 🐛 Fixes
+- **Import — produse noi „la bucată"** — un „1 chicken breast" care creează un produs nou primește acum unitatea `piece` (nu `g`/fără unitate), ca să poată avea greutate pe bucată și nutriție corectă. Extinde fix-ul din 0.15.0 de la produsele existente la cele nou create.
+- La editarea nutriției unui produs din editorul de rețetă, unitatea deja aleasă a ingredientului nu mai e schimbată tăcut dacă rămâne validă.
+
+### 🎨 UI / UX
+- Avertisment la pasul de import pentru unitățile nerezolvate (se importă ca „piece"), cu trimitere către „Audit unități".
+
+### ⚙️ Internals
+- Script one-off `webapp/scripts/fix-piece-unitweights.ts` (dry-run + backup JSON + `--apply`, idempotent) pentru completarea `unitWeight` la produsele folosite la bucată.
+- Actualizată nota din `CLAUDE.md`: „learn from past imports" e acum DB-backed (`IngredientNameMapping` / `UnitRule`) și funcționează în producție — nu mai depinde de fișierele JSON locale.
+
 ## [0.15.0] — 2026-07-20
 
 ### ✨ Features
