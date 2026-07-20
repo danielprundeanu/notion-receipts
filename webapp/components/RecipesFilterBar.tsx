@@ -55,8 +55,8 @@ export default function RecipesFilterBar({
     "bg-[var(--color-bg-base)]",
     "border-b transition-[border-color,box-shadow] duration-200 ease-out",
     stuck ? "border-gray-100 dark:border-[#2e2e2e] shadow-sm" : "border-transparent shadow-none",
-    // desktop: plain static row, no sticky chrome
-    "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:bg-transparent md:border-none md:shadow-none",
+    // desktop: plain static row, no sticky chrome; add a gap before the grid
+    "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:mb-4 md:bg-transparent md:border-none md:shadow-none",
   ].join(" ");
 
   return (
