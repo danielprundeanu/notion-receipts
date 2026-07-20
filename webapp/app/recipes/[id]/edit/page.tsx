@@ -58,6 +58,7 @@ export default async function EditRecipePage({
   const initial: InitialRecipeData = {
     id: recipe.id,
     name: recipe.name,
+    nameRo: recipe.nameRo ?? "",
     categories: recipe.category?.split(", ").filter(Boolean) ?? [],
     servings: recipe.servings?.toString() ?? "",
     time: recipe.time?.toString() ?? "",
@@ -74,7 +75,7 @@ export default async function EditRecipePage({
       <div className="flex items-center justify-between mb-6">
         <Link
           href={`/recipes/${id}`}
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:text-gray-900 dark:hover:text-[#e3e3e3] transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
           <ArrowLeft size={15} /> Back to recipe
         </Link>

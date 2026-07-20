@@ -28,15 +28,15 @@ function StepIndicator({ step }: { step: number }) {
               ? "bg-orange-500 text-white"
               : i + 1 === step
               ? "bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-400 ring-2 ring-orange-400"
-              : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-400 dark:text-[#555]"
+              : "bg-gray-100 dark:bg-[#2a2620] text-gray-400 dark:text-[#5c554b]"
           }`}>
             {i + 1 < step ? <Check size={12} /> : i + 1}
           </div>
           <span className={`text-xs font-medium hidden sm:block ${
-            i + 1 === step ? "text-gray-900 dark:text-[#e3e3e3]" : "text-gray-400 dark:text-[#555]"
+            i + 1 === step ? "text-gray-900 dark:text-[#eae5de]" : "text-gray-400 dark:text-[#5c554b]"
           }`}>{label}</span>
           {i < steps.length - 1 && (
-            <div className={`w-6 h-px ${i + 1 < step ? "bg-orange-400" : "bg-gray-200 dark:bg-[#2e2e2e]"}`} />
+            <div className={`w-6 h-px ${i + 1 < step ? "bg-orange-400" : "bg-gray-200 dark:bg-[#2e2a24]"}`} />
           )}
         </div>
       ))}
@@ -123,19 +123,19 @@ function RecipeReviewCard({
   const total = recipe.ingredients.length;
 
   return (
-    <div className="border border-gray-200 dark:border-[#2e2e2e] rounded-xl overflow-hidden bg-white dark:bg-[#1f1f1f]">
+    <div className="border border-gray-200 dark:border-[#2e2a24] rounded-xl overflow-hidden bg-white dark:bg-[#201c18]">
       {/* Header */}
       <div className="px-4 py-3 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3] text-sm">{recipe.name}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-[#eae5de] text-sm">{recipe.name}</h3>
             {recipe.category && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400">
                 {recipe.category}
               </span>
             )}
           </div>
-          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#787878]">
+          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#7c756a]">
             {recipe.servings && <span>{recipe.servings} porții</span>}
             {recipe.time && <span>{recipe.time} min</span>}
             {recipe.difficulty && <span>{recipe.difficulty}</span>}
@@ -148,7 +148,7 @@ function RecipeReviewCard({
           </div>
           {/* Ingredient stats + batch toggle */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-xs text-gray-400 dark:text-[#555]">{total} ingrediente:</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{total} ingrediente:</span>
             {matched > 0 && (
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ {matched} matched</span>
             )}
@@ -160,13 +160,13 @@ function RecipeReviewCard({
             )}
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-gray-500 dark:text-[#787878]">Cantități per:</span>
+            <span className="text-xs text-gray-500 dark:text-[#7c756a]">Cantități per:</span>
             <button
               onClick={() => onBatchChange(true)}
               className={`text-xs px-2 py-0.5 rounded font-medium transition-colors ${
                 recipe.batch
                   ? "bg-orange-500 text-white"
-                  : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-500 dark:text-[#787878] hover:bg-gray-200 dark:hover:bg-[#333]"
+                  : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
               batch total
@@ -176,7 +176,7 @@ function RecipeReviewCard({
               className={`text-xs px-2 py-0.5 rounded font-medium transition-colors ${
                 !recipe.batch
                   ? "bg-orange-500 text-white"
-                  : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-500 dark:text-[#787878] hover:bg-gray-200 dark:hover:bg-[#333]"
+                  : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
               1 porție
@@ -188,7 +188,7 @@ function RecipeReviewCard({
           <button
             onClick={() => imgRef.current?.click()}
             title={recipe.image ? "Schimbă imaginea" : "Adaugă imagine"}
-            className={`transition-colors ${recipe.image ? "text-orange-400 hover:text-orange-600" : "text-gray-300 dark:text-[#444] hover:text-orange-400"}`}
+            className={`transition-colors ${recipe.image ? "text-orange-400 hover:text-orange-600" : "text-gray-300 dark:text-[#4a443c] hover:text-orange-400"}`}
           >
             {uploading ? <Loader2 size={16} className="animate-spin" /> : (
               recipe.image
@@ -199,14 +199,14 @@ function RecipeReviewCard({
           <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           <button
             onClick={onRemove}
-            className="text-gray-300 dark:text-[#444] hover:text-red-500 transition-colors"
+            className="text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors"
             title="Elimină rețeta"
           >
             <X size={16} />
           </button>
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-gray-400 hover:text-gray-600 dark:hover:text-[#9a9a9a] transition-colors"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
           >
             {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
@@ -215,28 +215,28 @@ function RecipeReviewCard({
 
       {/* Expanded ingredient list */}
       {expanded && (
-        <div className="border-t border-gray-100 dark:border-[#2e2e2e] px-4 py-3 space-y-1">
+        <div className="border-t border-gray-100 dark:border-[#2e2a24] px-4 py-3 space-y-1">
           {recipe.ingredients.map((ing, i) => (
             <div
               key={i}
               onClick={() => onIngredientToggle(i)}
               title={ing.match.status === "matched" && !ing.unitConflict ? "Click pentru a marca de revizuit" : "Click pentru a marca ca matched"}
-              className="flex items-center justify-between gap-2 py-0.5 cursor-pointer rounded hover:bg-gray-50 dark:hover:bg-[#2a2a2a] px-1 -mx-1 transition-colors"
+              className="flex items-center justify-between gap-2 py-0.5 cursor-pointer rounded hover:bg-gray-50 dark:hover:bg-[#2a2620] px-1 -mx-1 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <MatchBadge status={ing.match.status} hasUnitConflict={!!ing.unitConflict} reviewed={(ing as IngredientExt).reviewed} />
-                <span className="text-xs text-gray-700 dark:text-[#c0c0c0] truncate">
+                <span className="text-xs text-gray-700 dark:text-[#c4bcb0] truncate">
                   {ing.qty && `${ing.qty} `}{ing.unit && `${ing.unit} `}{ing.name}
                 </span>
               </div>
               {ing.match.groceryItemName && ing.match.groceryItemName !== ing.name && (
-                <span className="text-xs text-gray-400 dark:text-[#555] shrink-0">
+                <span className="text-xs text-gray-400 dark:text-[#5c554b] shrink-0">
                   → {ing.match.groceryItemName}
                 </span>
               )}
             </div>
           ))}
-          <p className="text-xs text-gray-400 dark:text-[#555] pt-1">Click pe un ingredient pentru a-i schimba statusul.</p>
+          <p className="text-xs text-gray-400 dark:text-[#5c554b] pt-1">Click pe un ingredient pentru a-i schimba statusul.</p>
         </div>
       )}
     </div>
@@ -534,11 +534,11 @@ function ReviewRow({
     : [];
   const list = [...autoMatch, ...baseList];
 
-  const inputCls = "w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400";
-  const labelCls = "block text-xs text-gray-500 dark:text-[#787878] mb-1";
+  const inputCls = "w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const labelCls = "block text-xs text-gray-500 dark:text-[#7c756a] mb-1";
 
   return (
-    <div ref={rowRef} className={`border rounded-xl bg-white dark:bg-[#1f1f1f] overflow-hidden transition-shadow ${
+    <div ref={rowRef} className={`border rounded-xl bg-white dark:bg-[#201c18] overflow-hidden transition-shadow ${
       focused ? "border-orange-400 ring-2 ring-orange-300 dark:ring-orange-800"
       : isReviewed ? "border-green-200 dark:border-green-900/50"
       : "border-yellow-200 dark:border-yellow-900/50"
@@ -551,9 +551,9 @@ function ReviewRow({
         onClick={onCollapse}
       >
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">&ldquo;{ing.name}&rdquo;</p>
-          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">{recipes[recipeIndex]?.name}</p>
-          <p className="text-xs text-gray-500 dark:text-[#787878] mt-0.5 tabular-nums">
+          <p className="text-sm font-medium text-gray-900 dark:text-[#eae5de]">&ldquo;{ing.name}&rdquo;</p>
+          <p className="text-xs text-gray-500 dark:text-[#7c756a] mt-0.5">{recipes[recipeIndex]?.name}</p>
+          <p className="text-xs text-gray-500 dark:text-[#7c756a] mt-0.5 tabular-nums">
             {qty != null ? `${qty} ` : ""}{foreign ?? ""}
           </p>
         </div>
@@ -568,7 +568,7 @@ function ReviewRow({
                 <AlertCircle size={10} /> needs review
               </span>
             )}
-            <ChevronUp size={13} className="text-gray-400 dark:text-[#555]" />
+            <ChevronUp size={13} className="text-gray-400 dark:text-[#5c554b]" />
           </div>
           {sameNameCount > 0 && (
             <span className="text-[10px] text-blue-500 dark:text-blue-400 font-medium">
@@ -581,19 +581,19 @@ function ReviewRow({
       <div className="px-4 py-3 space-y-4">
         {/* ── Ingredient — search + pick + create new ── */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Ingredient</p>
+          <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Ingredient</p>
           <div className="relative">
-            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555]" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Caută în baza de date..."
-              className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400"
+              className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] placeholder-gray-400 dark:placeholder-[#5c554b] focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
             {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
           </div>
 
           <div className="space-y-1 max-h-56 overflow-y-auto">
             {list.length === 0 && searchQuery.trim().length >= 2 && (
-              <p className="text-xs text-gray-400 dark:text-[#555]">Niciun rezultat pentru &ldquo;{searchQuery}&rdquo;.</p>
+              <p className="text-xs text-gray-400 dark:text-[#5c554b]">Niciun rezultat pentru &ldquo;{searchQuery}&rdquo;.</p>
             )}
             {list.map((c) => {
               const isAuto = (c as { isAuto?: boolean }).isAuto;
@@ -604,12 +604,12 @@ function ReviewRow({
                 <label key={c.id} className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
                   selectedThis ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20"
                   : isAuto ? "border-green-200 dark:border-green-900/50 bg-green-50 dark:bg-green-950/20 hover:bg-green-100 dark:hover:bg-green-950/30"
-                  : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                  : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2620]"
                 }`}>
                   <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={selectedThis}
                     onChange={() => pickItem(c)} className="accent-orange-500" />
-                  <span className="text-sm text-gray-700 dark:text-[#c0c0c0]">{c.name}</span>
-                  {uStr && <span className="text-xs text-gray-400 dark:text-[#555] tabular-nums">{uStr}</span>}
+                  <span className="text-sm text-gray-700 dark:text-[#c4bcb0]">{c.name}</span>
+                  {uStr && <span className="text-xs text-gray-400 dark:text-[#5c554b] tabular-nums">{uStr}</span>}
                   {isAuto && <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">auto-matched</span>}
                 </label>
               );
@@ -617,7 +617,7 @@ function ReviewRow({
 
             {/* Always-present: create new */}
             <label className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer border transition-colors ${
-              isNew ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+              isNew ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-transparent hover:bg-gray-50 dark:hover:bg-[#2a2620]"
             }`}>
               <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={isNew}
                 onChange={() => { seededRef.current = null; setSelectedId("new"); }} className="accent-orange-500" />
@@ -654,29 +654,29 @@ function ReviewRow({
 
         {/* ── Conversion (only for a real item with a foreign unit) ── */}
         {!isNew && foreign && (
-          <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2e2e] pt-3">
-            <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Conversie unități</p>
+          <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2a24] pt-3">
+            <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Conversie unități</p>
 
             {selLoading || !sel ? (
-              <p className="text-xs text-gray-400 dark:text-[#555] flex items-center gap-1.5">
+              <p className="text-xs text-gray-400 dark:text-[#5c554b] flex items-center gap-1.5">
                 <Loader2 size={12} className="animate-spin" /> se încarcă unitățile…
               </p>
             ) : units.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-[#787878]">
+              <p className="text-xs text-gray-500 dark:text-[#7c756a]">
                 Ingredientul nu are unitate setată — se stochează ca <strong>{qty} {foreign}</strong>.
               </p>
             ) : matches ? (
               /* Scenario 2 — foreign matches one of the item's units */
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 dark:text-[#787878]">Unitatea din fișier se potrivește:</p>
+                <p className="text-xs text-gray-500 dark:text-[#7c756a]">Unitatea din fișier se potrivește:</p>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-green-400 dark:border-green-700 bg-green-50 dark:bg-green-950/20 tabular-nums">
-                  <span className="text-sm font-medium text-gray-900 dark:text-[#e3e3e3]">{qty ?? ""} {foreign}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-[#eae5de]">{qty ?? ""} {foreign}</span>
                   <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">potrivit cu fișierul</span>
                 </div>
                 {matchOther && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#3a3a3a] bg-gray-50 dark:bg-[#262626] tabular-nums">
-                    <span className="text-sm text-gray-500 dark:text-[#9a9a9a]">{fmtNum(matchOther.val)} {matchOther.unit}</span>
-                    <span className="ml-auto text-xs text-gray-400 dark:text-[#555]">calculat din DB</span>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-gray-50 dark:bg-[#24211c] tabular-nums">
+                    <span className="text-sm text-gray-500 dark:text-[#a49c90]">{fmtNum(matchOther.val)} {matchOther.unit}</span>
+                    <span className="ml-auto text-xs text-gray-400 dark:text-[#5c554b]">calculat din DB</span>
                   </div>
                 )}
               </div>
@@ -684,11 +684,11 @@ function ReviewRow({
               /* Scenario 3 — item has a single unit; foreign differs */
               <div className="space-y-2">
                 <div className="flex items-center gap-2 tabular-nums">
-                  <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">1 {foreign} =</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">1 {foreign} =</span>
                   <input type="number" min="0" step="any" value={factor} onChange={(e) => handleFactorChange(e.target.value)}
                     placeholder="ex: 240"
-                    className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">{units[0]}</span>
+                    className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">{units[0]}</span>
                 </div>
                 <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 cursor-pointer">
                   <input type="checkbox" checked={addU2} onChange={(e) => setAddU2(e.target.checked)} className="accent-blue-500" />
@@ -700,13 +700,13 @@ function ReviewRow({
             ) : (
               /* Scenario 1 — item has two units; foreign matches neither */
               <div className="space-y-1.5">
-                <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">1 {foreign} =</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">1 {foreign} =</span>
                 {units.map((u) => {
                   const isTarget = target === u;
                   const derived = s1Other && s1Other.unit === u ? s1Other.val : null;
                   return (
                     <label key={u} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border cursor-pointer tabular-nums ${
-                      isTarget ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-gray-200 dark:border-[#3a3a3a] bg-gray-50 dark:bg-[#262626]"
+                      isTarget ? "border-orange-400 bg-orange-50 dark:bg-orange-950/20" : "border-gray-200 dark:border-[#3a352e] bg-gray-50 dark:bg-[#24211c]"
                     }`}>
                       <input type="radio" name={`target-${recipeIndex}-${ingIndex}`} checked={isTarget}
                         onChange={() => { setTarget(u); setFactor(getAutoFactor(foreign, u)); setAiSuggested(false); setAiNote(null); }}
@@ -714,12 +714,12 @@ function ReviewRow({
                       {isTarget ? (
                         <input type="number" min="0" step="any" value={factor} onChange={(e) => handleFactorChange(e.target.value)}
                           placeholder="ex: 240"
-                          className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                          className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-400" />
                       ) : (
-                        <span className="w-24 text-right text-sm text-gray-400 dark:text-[#666]">{fmtNum(derived)}</span>
+                        <span className="w-24 text-right text-sm text-gray-400 dark:text-[#6e675c]">{fmtNum(derived)}</span>
                       )}
-                      <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">{u}</span>
-                      <span className="ml-auto text-xs font-medium">{isTarget ? <span className="text-orange-600 dark:text-orange-400">țintă</span> : <span className="text-gray-400 dark:text-[#555]">derivat din DB</span>}</span>
+                      <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">{u}</span>
+                      <span className="ml-auto text-xs font-medium">{isTarget ? <span className="text-orange-600 dark:text-orange-400">țintă</span> : <span className="text-gray-400 dark:text-[#5c554b]">derivat din DB</span>}</span>
                     </label>
                   );
                 })}
@@ -745,7 +745,7 @@ function ReviewRow({
             {sel && units.length > 0 && (
               <div className={`text-xs px-3 py-1.5 rounded-lg tabular-nums ${
                 canSave ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/50"
-                : "bg-gray-50 dark:bg-[#262626] text-gray-500 dark:text-[#787878] border border-gray-200 dark:border-[#3a3a3a]"
+                : "bg-gray-50 dark:bg-[#24211c] text-gray-500 dark:text-[#7c756a] border border-gray-200 dark:border-[#3a352e]"
               }`}>
                 {matches
                   ? <>✓ se stochează ca <strong>{qty} {foreign}</strong></>
@@ -760,14 +760,14 @@ function ReviewRow({
         )}
 
         {/* ── Observații (last in hierarchy) ── */}
-        <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2e2e] pt-3">
-          <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">Observații</p>
+        <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2a24] pt-3">
+          <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Observații</p>
           <input
             type="text"
             value={obs}
             onChange={(e) => setObs(e.target.value)}
             placeholder="ex: roughly chopped, la temperatura camerei"
-            className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c0c0c0] placeholder-gray-300 dark:placeholder-[#444] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2620] text-gray-700 dark:text-[#c4bcb0] placeholder-gray-300 dark:placeholder-[#4a443c] focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
 
@@ -775,7 +775,7 @@ function ReviewRow({
         <div className="flex items-center gap-3 pt-1">
           {!isReviewed && (
             <button onClick={() => onSkip(recipeIndex, ingIndex)}
-              className="text-xs text-gray-400 dark:text-[#555] hover:text-gray-600 dark:hover:text-[#787878] transition-colors">
+              className="text-xs text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#7c756a] transition-colors">
               Sare peste
             </button>
           )}
@@ -1094,17 +1094,17 @@ export default function ImportPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#191919]">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#1a1714]">
       {/* Header */}
-      <div className="border-b border-gray-100 dark:border-[#2e2e2e] bg-white dark:bg-[#1f1f1f] px-4 md:px-8 py-3 flex items-center justify-between gap-3">
+      <div className="border-b border-gray-100 dark:border-[#2e2a24] bg-white dark:bg-[#201c18] px-4 md:px-8 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Link
             href="/recipes"
-            className="text-gray-500 dark:text-[#787878] hover:text-gray-700 dark:hover:text-[#9a9a9a] transition-colors"
+            className="text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#a49c90] transition-colors"
           >
             <ArrowLeft size={16} />
           </Link>
-          <h1 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
+          <h1 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
             Import rețete
           </h1>
         </div>
@@ -1123,7 +1123,7 @@ export default function ImportPage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   inputMode === "urls"
                     ? "bg-orange-500 text-white"
-                    : "bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#2e2e2e] text-gray-600 dark:text-[#9a9a9a]"
+                    : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
                 <Link2 size={15} /> Linkuri URL
@@ -1133,7 +1133,7 @@ export default function ImportPage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   inputMode === "text"
                     ? "bg-orange-500 text-white"
-                    : "bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#2e2e2e] text-gray-600 dark:text-[#9a9a9a]"
+                    : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
                 <FileText size={15} /> Text / Fișier
@@ -1141,9 +1141,9 @@ export default function ImportPage() {
             </div>
 
             {inputMode === "urls" ? (
-              <div className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#2e2e2e] rounded-xl p-4 space-y-3">
+              <div className="bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl p-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#c0c0c0] mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#c4bcb0] mb-1">
                     URL-uri rețete (un URL per linie)
                   </label>
                   <textarea
@@ -1151,17 +1151,17 @@ export default function ImportPage() {
                     onChange={(e) => setUrlsText(e.target.value)}
                     placeholder={"https://www.jamieoliver.com/recipes/...\nhttps://www.allrecipes.com/recipe/..."}
                     rows={6}
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
+                    className="w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] placeholder-gray-400 dark:placeholder-[#5c554b] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
                   />
                 </div>
-                <p className="text-xs text-gray-400 dark:text-[#555]">
+                <p className="text-xs text-gray-400 dark:text-[#5c554b]">
                   Suportă AllRecipes, Jamie Oliver, BBC Good Food, și alte site-uri cu schema.org/Recipe markup.
                 </p>
               </div>
             ) : (
-              <div className="bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#2e2e2e] rounded-xl p-4 space-y-3">
+              <div className="bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl p-4 space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-[#c0c0c0] mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-[#c4bcb0] mb-1">
                     Text rețetă (format structurat)
                   </label>
                   <textarea
@@ -1169,11 +1169,11 @@ export default function ImportPage() {
                     onChange={(e) => setTextContent(e.target.value)}
                     placeholder={"=== Nume Rețetă ===\nServings: 4 Batch: True\nTime: 30\nDifficulty: Easy\nCategories: Dinner, Lunch\nFavorite: No\nLink: https://...\nImage: data/local/img/photo.jpg\n\n# Ingrediente principale\n200g Ciocolată\n1 cup Lapte\n\n# Sosuri\n2 tbsp Ulei de cocos\n\n## Pași\n1. Primul pas\n2. Al doilea pas\n\n## Tips\n- Sfat util\n- Alt sfat"}
                     rows={12}
-                    className="w-full text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3] placeholder-gray-400 dark:placeholder-[#555] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
+                    className="w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] placeholder-gray-400 dark:placeholder-[#5c554b] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
                   />
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-gray-400 dark:text-[#555]">sau</span>
+                  <span className="text-xs text-gray-400 dark:text-[#5c554b]">sau</span>
                   <button
                     onClick={() => fileRef.current?.click()}
                     className="flex items-center gap-1.5 text-sm text-orange-600 dark:text-orange-400 hover:underline"
@@ -1213,7 +1213,7 @@ export default function ImportPage() {
         {step === 2 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600 dark:text-[#9a9a9a]">
+              <p className="text-sm text-gray-600 dark:text-[#a49c90]">
                 {validRecipes.length} rețete găsite · verifică și elimină ce nu dorești
               </p>
             </div>
@@ -1231,7 +1231,7 @@ export default function ImportPage() {
             ))}
 
             {recipes.length === 0 && (
-              <div className="text-center py-12 text-gray-400 dark:text-[#555]">
+              <div className="text-center py-12 text-gray-400 dark:text-[#5c554b]">
                 <p className="text-sm">Toate rețetele au fost eliminate.</p>
                 <button onClick={() => setStep(1)} className="mt-2 text-orange-500 hover:underline text-sm">
                   Înapoi la input
@@ -1243,7 +1243,7 @@ export default function ImportPage() {
               <div className="flex items-center justify-between pt-2">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#787878] dark:hover:text-[#9a9a9a] transition-colors"
+                  className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
                 >
                   <ArrowLeft size={14} /> Înapoi
                 </button>
@@ -1263,10 +1263,10 @@ export default function ImportPage() {
         {step === 3 && (
           <div className="space-y-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
                 Verifică ingrediente
               </h2>
-              <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
                 {allIngredients.length} ingrediente · {totalConflicts > 0 ? `${totalConflicts} necesită atenție` : "toate rezolvate"}
               </p>
             </div>
@@ -1287,17 +1287,17 @@ export default function ImportPage() {
                   <div
                     key={key}
                     onClick={() => setFocusIngredientKey(focusIngredientKey === key ? null : key)}
-                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-[#2a2a2a] bg-white dark:bg-[#1f1f1f] cursor-pointer hover:border-orange-300 dark:hover:border-orange-800 transition-colors select-none"
+                    className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-100 dark:border-[#2a2620] bg-white dark:bg-[#201c18] cursor-pointer hover:border-orange-300 dark:hover:border-orange-800 transition-colors select-none"
                   >
-                    <span className="text-sm text-gray-700 dark:text-[#c0c0c0] min-w-0 truncate">
+                    <span className="text-sm text-gray-700 dark:text-[#c4bcb0] min-w-0 truncate">
                       {dispQty != null && `${dispQty} `}{dispUnit && `${dispUnit} `}{dispName}
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
                       {ext.skipped
-                        ? <span className="text-xs text-gray-400 dark:text-[#555] line-through">skipped</span>
+                        ? <span className="text-xs text-gray-400 dark:text-[#5c554b] line-through">skipped</span>
                         : <MatchBadge status={ing.match.status} reviewed={ext.reviewed} hasUnitConflict={!!uc && !uc.autoResolved} />
                       }
-                      <ChevronDown size={13} className="text-gray-300 dark:text-[#444]" />
+                      <ChevronDown size={13} className="text-gray-300 dark:text-[#4a443c]" />
                     </div>
                   </div>
                 );
@@ -1362,7 +1362,7 @@ export default function ImportPage() {
             <div className="flex items-center justify-between pt-2">
               <button
                 onClick={() => setStep(2)}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#787878] dark:hover:text-[#9a9a9a] transition-colors"
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
               >
                 <ArrowLeft size={14} /> Înapoi la review
               </button>
@@ -1384,8 +1384,8 @@ export default function ImportPage() {
               <CheckCircle size={32} className="text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Import reușit!</h2>
-              <p className="text-sm text-gray-500 dark:text-[#787878] mt-1">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#eae5de]">Import reușit!</h2>
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">
                 {importResult.recipesCreated} rețete adăugate
                 {importResult.newIngredientsCreated > 0 &&
                   ` · ${importResult.newIngredientsCreated} ingrediente noi create`}
@@ -1401,7 +1401,7 @@ export default function ImportPage() {
                   setImportResult(null);
                   setError(null);
                 }}
-                className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-[#2e2e2e] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+                className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors"
               >
                 Import nou
               </button>
@@ -1419,31 +1419,31 @@ export default function ImportPage() {
         {step === 4 && !importResult && (
           <div className="space-y-5">
             <div>
-              <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3]">
+              <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
                 Preview rețete
               </h2>
-              <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
                 {validRecipes.length} rețete · {validRecipes.reduce((s, r) => s + r.ingredients.length, 0)} ingrediente · click pe ingredient pentru a edita
               </p>
             </div>
 
             {validRecipes.map((r, i) => (
-              <div key={i} className="border border-gray-200 dark:border-[#2e2e2e] rounded-xl overflow-hidden bg-white dark:bg-[#1f1f1f]">
+              <div key={i} className="border border-gray-200 dark:border-[#2e2a24] rounded-xl overflow-hidden bg-white dark:bg-[#201c18]">
                 {/* Recipe header */}
-                <div className="px-4 py-3 bg-gray-50 dark:bg-[#252525] flex items-start justify-between gap-3">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-[#24211c] flex items-start justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-sm text-gray-900 dark:text-[#e3e3e3]">{r.name}</h3>
+                      <h3 className="font-semibold text-sm text-gray-900 dark:text-[#eae5de]">{r.name}</h3>
                       {r.category && (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400">{r.category}</span>
                       )}
                       {r.favorite && <span className="text-xs text-yellow-500">★</span>}
                     </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#787878]">
+                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#7c756a]">
                       {r.servings && <span>{r.servings} porții</span>}
                       {r.time && <span>{r.time} min</span>}
                       {r.difficulty && <span>{r.difficulty}</span>}
-                      <span className={`px-1.5 py-0.5 rounded font-medium ${r.batch ? "bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400" : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-500 dark:text-[#787878]"}`}>
+                      <span className={`px-1.5 py-0.5 rounded font-medium ${r.batch ? "bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400" : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a]"}`}>
                         {r.batch ? "batch" : "per porție"}
                       </span>
                       {r.link && (
@@ -1468,13 +1468,13 @@ export default function ImportPage() {
                   return (
                     <div className="px-4 py-3 space-y-3">
                       {/* Column headers: original din text vs. ce se importă */}
-                      <div className="grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2e2e]">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555]">Din text</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555]">Se importă</span>
+                      <div className="grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2a24]">
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Din text</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Se importă</span>
                       </div>
                       {Object.entries(groups).map(([gName, items]) => (
                         <div key={gName}>
-                          <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-1">{gName}</p>
+                          <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-1">{gName}</p>
                           <div className="space-y-0.5">
                             {items.map(({ ing, ii }) => {
                               const ext = ing as IngredientExt;
@@ -1499,18 +1499,18 @@ export default function ImportPage() {
                                     setFocusIngredientKey(`${i}-${ii}`);
                                     setStep(3);
                                   } : undefined}
-                                  className={`grid grid-cols-2 gap-2 items-center text-xs py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors" : ""}`}
+                                  className={`grid grid-cols-2 gap-2 items-center text-xs py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors" : ""}`}
                                   title={canEdit ? "Click pentru a edita" : undefined}
                                 >
                                   {/* Din text (original) */}
-                                  <span className="min-w-0 truncate text-gray-400 dark:text-[#666] tabular-nums">
+                                  <span className="min-w-0 truncate text-gray-400 dark:text-[#6e675c] tabular-nums">
                                     {ing.qty != null && `${ing.qty} `}{ing.unit && `${ing.unit} `}
-                                    <span className="text-gray-500 dark:text-[#787878]">{ing.name}</span>
-                                    {ing.obs && <span className="text-gray-300 dark:text-[#555]"> · {ing.obs}</span>}
+                                    <span className="text-gray-500 dark:text-[#7c756a]">{ing.name}</span>
+                                    {ing.obs && <span className="text-gray-300 dark:text-[#5c554b]"> · {ing.obs}</span>}
                                   </span>
                                   {/* Se importă (rezultat) */}
                                   <div className="min-w-0 flex items-center justify-between gap-2">
-                                    <span className="min-w-0 truncate text-gray-700 dark:text-[#c0c0c0]">
+                                    <span className="min-w-0 truncate text-gray-700 dark:text-[#c4bcb0]">
                                       <span className={`tabular-nums ${qtyChanged || unitChanged ? "text-orange-600 dark:text-orange-400 font-medium" : ""}`}>
                                         {dispQty != null && `${dispQty} `}{dispUnit && `${dispUnit} `}
                                       </span>
@@ -1530,16 +1530,16 @@ export default function ImportPage() {
 
                 {/* Instructions preview */}
                 {r.instructions.length > 0 && (
-                  <div className="border-t border-gray-100 dark:border-[#2e2e2e] px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Instrucțiuni</p>
+                  <div className="border-t border-gray-100 dark:border-[#2e2a24] px-4 py-3">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Instrucțiuni</p>
                     <div className="space-y-1">
                       {r.instructions.slice(0, 4).map((inst, j) => (
                         inst.isSection
-                          ? <p key={j} className="text-xs font-semibold text-gray-700 dark:text-[#c0c0c0] pt-1">{inst.text}</p>
-                          : <p key={j} className="text-xs text-gray-600 dark:text-[#9a9a9a] leading-relaxed">{inst.text}</p>
+                          ? <p key={j} className="text-xs font-semibold text-gray-700 dark:text-[#c4bcb0] pt-1">{inst.text}</p>
+                          : <p key={j} className="text-xs text-gray-600 dark:text-[#a49c90] leading-relaxed">{inst.text}</p>
                       ))}
                       {r.instructions.length > 4 && (
-                        <p className="text-xs text-gray-400 dark:text-[#555]">... și încă {r.instructions.length - 4} pași</p>
+                        <p className="text-xs text-gray-400 dark:text-[#5c554b]">... și încă {r.instructions.length - 4} pași</p>
                       )}
                     </div>
                   </div>
@@ -1556,7 +1556,7 @@ export default function ImportPage() {
             <div className="flex items-center justify-between pt-2">
               <button
                 onClick={() => setStep(totalConflicts > 0 ? 3 : 2)}
-                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#787878] dark:hover:text-[#9a9a9a] transition-colors"
+                className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
               >
                 <ArrowLeft size={14} /> Înapoi
               </button>

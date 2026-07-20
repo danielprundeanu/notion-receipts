@@ -170,10 +170,10 @@ function AddToPlannerModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
+      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">Add to Planner</h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1">
+          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">Add to Planner</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
           </button>
         </div>
@@ -183,8 +183,8 @@ function AddToPlannerModal({
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
               <CalendarPlus size={20} className="text-green-600 dark:text-green-400" />
             </div>
-            <p className="font-medium text-gray-900 dark:text-[#e3e3e3] mb-1">Added!</p>
-            <p className="text-sm text-gray-500 dark:text-[#787878]">
+            <p className="font-medium text-gray-900 dark:text-[#eae5de] mb-1">Added!</p>
+            <p className="text-sm text-gray-500 dark:text-[#7c756a]">
               {totalEntries} slot{totalEntries !== 1 ? "s" : ""} added across{" "}
               {selectedDays.length} day{selectedDays.length !== 1 ? "s" : ""}
             </p>
@@ -196,7 +196,7 @@ function AddToPlannerModal({
           <>
             {/* Day selector */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide mb-2">Days</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Days</p>
               <div className="grid grid-cols-7 gap-1">
                 {DAYS.map((d, i) => {
                   const date = new Date(weekStart);
@@ -217,7 +217,7 @@ function AddToPlannerModal({
                             ? "border-2 border-orange-400 dark:border-orange-500 text-orange-600 dark:text-orange-400"
                             : isToday
                             ? "border border-orange-200 dark:border-orange-800/50 text-orange-600 dark:text-orange-400"
-                            : "hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-600 dark:text-[#9a9a9a]"
+                            : "hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
                         }`}
                       >
                         <span className="text-[9px] uppercase tracking-wide">{d}</span>
@@ -232,7 +232,7 @@ function AddToPlannerModal({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); removeDay(i); }}
-                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-[#555] text-white flex items-center justify-center text-[8px] leading-none hover:bg-red-400 transition-colors"
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-[#5c554b] text-white flex items-center justify-center text-[8px] leading-none hover:bg-red-400 transition-colors"
                         >
                           ×
                         </button>
@@ -246,7 +246,7 @@ function AddToPlannerModal({
             {/* Meal type + servings — per active day */}
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
                   Meals & Servings
                 </p>
                 <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
@@ -263,10 +263,10 @@ function AddToPlannerModal({
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
                         active
                           ? "border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-950/30"
-                          : "border-gray-200 dark:border-[#3a3a3a] hover:border-gray-300 dark:hover:border-[#4a4a4a]"
+                          : "border-gray-200 dark:border-[#3a352e] hover:border-gray-300 dark:hover:border-[#46403a]"
                       }`}
                     >
-                      <span className={`flex-1 text-sm font-medium ${active ? "text-orange-800 dark:text-orange-300" : "text-gray-600 dark:text-[#9a9a9a]"}`}>
+                      <span className={`flex-1 text-sm font-medium ${active ? "text-orange-800 dark:text-orange-300" : "text-gray-600 dark:text-[#a49c90]"}`}>
                         {m}
                       </span>
                       <div className="flex items-center gap-2">
@@ -276,12 +276,12 @@ function AddToPlannerModal({
                           className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
                             active
                               ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
-                              : "border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#555555] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                              : "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                           }`}
                         >
                           −
                         </button>
-                        <span className={`w-5 text-center text-sm font-bold ${active ? "text-orange-900 dark:text-orange-200" : "text-gray-300 dark:text-[#444444]"}`}>
+                        <span className={`w-5 text-center text-sm font-bold ${active ? "text-orange-900 dark:text-orange-200" : "text-gray-300 dark:text-[#4a443c]"}`}>
                           {s === 0 ? "—" : s}
                         </span>
                         <button
@@ -290,7 +290,7 @@ function AddToPlannerModal({
                           className={`w-7 h-7 rounded-full border flex items-center justify-center transition-colors text-sm ${
                             active
                               ? "border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
-                              : "border-gray-200 dark:border-[#3a3a3a] text-gray-400 dark:text-[#555555] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                              : "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                           }`}
                         >
                           +
@@ -393,7 +393,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       <div className="flex items-center justify-between mb-6">
         <Link
           href="/recipes"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:text-gray-900 dark:hover:text-[#e3e3e3] transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
           <ArrowLeft size={15} /> Back to recipes
         </Link>
@@ -401,13 +401,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <button
             onClick={() => setShowPlanner(true)}
             title="Add to Planner"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#b8b8b8] border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-1.5 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
           >
             <CalendarPlus size={13} /> Add to Planner
           </button>
           <Link
             href={`/recipes/${recipe.id}/edit`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#b8b8b8] border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[#2f2f2f] transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
             <Pencil size={13} /> Edit
           </Link>
@@ -416,7 +416,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
       {/* Cover image */}
       {recipe.imageUrl && (
-        <div className="w-full h-56 md:h-72 rounded-2xl overflow-hidden mb-6 bg-gray-100 dark:bg-[#2a2a2a]">
+        <div className="w-full h-56 md:h-72 rounded-2xl overflow-hidden mb-6 bg-gray-100 dark:bg-[#2a2620]">
           <img
             src={recipe.imageUrl}
             alt={recipe.name}
@@ -428,7 +428,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-[#e3e3e3]">{recipe.name}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-[#eae5de]">{recipe.name}</h1>
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={handleToggleFavorite}
@@ -437,7 +437,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             >
               <Star
                 size={20}
-                className={isFavorite ? "text-amber-400 fill-amber-400" : "text-gray-300 dark:text-[#444444] hover:text-amber-300"}
+                className={isFavorite ? "text-amber-400 fill-amber-400" : "text-gray-300 dark:text-[#4a443c] hover:text-amber-300"}
               />
             </button>
             {recipe.link && (
@@ -460,13 +460,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             </span>
           )}
           {recipe.difficulty && (
-            <span className="px-3 py-1 bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-[#b8b8b8] rounded-full text-sm font-medium">
+            <span className="px-3 py-1 bg-gray-100 dark:bg-[#2a2620] text-gray-700 dark:text-[#bab2a6] rounded-full text-sm font-medium">
               {recipe.difficulty}
             </span>
           )}
           {recipe.time && (
-            <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#9a9a9a] font-medium">
-              <Clock size={14} className="text-gray-500 dark:text-[#787878]" /> {recipe.time} min
+            <span className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] font-medium">
+              <Clock size={14} className="text-gray-500 dark:text-[#7c756a]" /> {recipe.time} min
             </span>
           )}
         </div>
@@ -474,22 +474,22 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       </div>
 
       {/* Servings control */}
-      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100 dark:border-[#2e2e2e] flex-wrap">
-        <Users size={15} className="text-gray-500 dark:text-[#787878]" />
-        <span className="text-sm font-medium text-gray-700 dark:text-[#b8b8b8]">Servings</span>
+      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100 dark:border-[#2e2a24] flex-wrap">
+        <Users size={15} className="text-gray-500 dark:text-[#7c756a]" />
+        <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Servings</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setServings((s) => Math.max(1, s - 1))}
-            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#4a4a4a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-700 dark:text-[#b8b8b8] transition-colors"
+            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Minus size={12} />
           </button>
-          <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-[#e3e3e3]">
+          <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-[#eae5de]">
             {servings}
           </span>
           <button
             onClick={() => setServings((s) => s + 1)}
-            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#4a4a4a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-700 dark:text-[#b8b8b8] transition-colors"
+            className="w-7 h-7 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Plus size={12} />
           </button>
@@ -497,7 +497,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         {servings !== defaultServings && (
           <button
             onClick={() => setServings(defaultServings)}
-            className="text-xs text-gray-500 dark:text-[#787878] hover:text-gray-700 dark:hover:text-[#b8b8b8] underline"
+            className="text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] underline"
           >
             reset
           </button>
@@ -532,13 +532,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         {/* Ingredients */}
         <div className="lg:col-span-2">
           {sortedGroups.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-[#787878]">No ingredients listed</p>
+            <p className="text-sm text-gray-500 dark:text-[#7c756a]">No ingredients listed</p>
           ) : (
             <div className="space-y-5">
               {sortedGroups.map(([groupOrder, group]) => (
                 <div key={groupOrder}>
                   {(sortedGroups.length > 1 || group.name) && (
-                    <h2 className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] mb-2">
+                    <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de] mb-2">
                       {group.name ?? `Part ${groupOrder}`}
                     </h2>
                   )}
@@ -551,7 +551,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                           className="flex items-start gap-3 text-sm cursor-pointer select-none"
                           onClick={() => toggleIngredient(ing.id)}
                         >
-                          <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#555]"}`}>
+                          <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
                             {checked && (
                               <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
                                 <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -560,16 +560,16 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                           </span>
                           <span className={checked ? "line-through text-gray-400 dark:text-[#ffffff]" : ""}>
                             {ing.quantity != null && (
-                              <span className={`font-semibold ${checked ? "" : "text-gray-900 dark:text-[#e3e3e3]"}`}>
+                              <span className={`font-semibold ${checked ? "" : "text-gray-900 dark:text-[#eae5de]"}`}>
                                 {formatQty(ing.quantity, scale)}
                                 {ing.unit ? ` ${ing.unit}` : ""}
                               </span>
                             )}{" "}
-                            <span className={checked ? "" : "text-gray-800 dark:text-[#d4d4d4]"}>
+                            <span className={checked ? "" : "text-gray-800 dark:text-[#d8d0c4]"}>
                               {ing.groceryItem?.name ?? "—"}
                             </span>
                             {ing.notes && (
-                              <span className="text-gray-400 dark:text-[#555]">, {ing.notes}</span>
+                              <span className="text-gray-400 dark:text-[#5c554b]">, {ing.notes}</span>
                             )}
                           </span>
                         </li>
@@ -583,8 +583,8 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
           {/* Nutrition */}
           {hasNutrition && (
-            <div className="mt-6 p-4 bg-gray-50 dark:bg-[#2a2a2a] rounded-xl border border-gray-100 dark:border-[#2e2e2e]">
-              <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-[#b8b8b8] mb-3">
+            <div className="mt-6 p-4 bg-gray-50 dark:bg-[#2a2620] rounded-xl border border-gray-100 dark:border-[#2e2a24]">
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-[#bab2a6] mb-3">
                 <Flame size={14} className="text-orange-500" />
                 Nutrition · {servings} serving{servings !== 1 ? "s" : ""}
               </div>
@@ -596,15 +596,15 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                   { label: "protein", value: `${Math.round(totalProtein)}g` },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <div className="font-bold text-gray-900 dark:text-[#e3e3e3] text-sm">{value}</div>
-                    <div className="text-xs text-gray-500 dark:text-[#787878] mt-0.5">{label}</div>
+                    <div className="font-bold text-gray-900 dark:text-[#eae5de] text-sm">{value}</div>
+                    <div className="text-xs text-gray-500 dark:text-[#7c756a] mt-0.5">{label}</div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          <p className="mt-4 text-[11px] text-gray-400 dark:text-[#555]">
+          <p className="mt-4 text-[11px] text-gray-400 dark:text-[#5c554b]">
             Adăugată {new Date(recipe.createdAt).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
@@ -612,7 +612,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         {/* Instructions */}
         <div className="lg:col-span-3">
           {recipe.instructions.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-[#787878]">No instructions yet</p>
+            <p className="text-sm text-gray-500 dark:text-[#7c756a]">No instructions yet</p>
           ) : (
             <div className="space-y-4">
               {(() => {
@@ -623,7 +623,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                     // Skip section headers already used as ingredient group names
                     if (sectionHeaders.includes(inst.text)) return null;
                     return (
-                      <h3 key={i} className="text-base font-semibold text-gray-900 dark:text-[#e3e3e3] pt-2">
+                      <h3 key={i} className="text-base font-semibold text-gray-900 dark:text-[#eae5de] pt-2">
                         {inst.text}
                       </h3>
                     );
@@ -632,14 +632,14 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                   if (type === "bullet") {
                     return (
                       <div key={i} className="flex gap-3 items-start">
-                        <span className="flex-shrink-0 w-6 text-center text-gray-400 dark:text-[#555] font-bold mt-0.5">•</span>
-                        <p className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                        <span className="flex-shrink-0 w-6 text-center text-gray-400 dark:text-[#5c554b] font-bold mt-0.5">•</span>
+                        <p className="text-sm text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
                       </div>
                     );
                   }
                   if (type === "plain") {
                     return (
-                      <p key={i} className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                      <p key={i} className="text-sm text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
                     );
                   }
                   // numbered (default)
@@ -649,7 +649,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
                         {numCounter}
                       </span>
-                      <p className="text-sm text-gray-800 dark:text-[#d4d4d4] leading-relaxed">{inst.text}</p>
+                      <p className="text-sm text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
                     </div>
                   );
                 });

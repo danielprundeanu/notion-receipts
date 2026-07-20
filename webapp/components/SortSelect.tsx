@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Grid2X2, List } from "lucide-react";
+import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Grid2X2, List, ListChecks } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SORT_OPTIONS = [
@@ -50,6 +50,23 @@ export default function SortSelect({
     return () => window.removeEventListener("viewchange", onViewChange);
   }, []);
 
+  // ── Multi-select mode (coordinated with RecipesGrid via a window event,
+  //    same pattern as viewchange — works across all SortSelect instances) ──
+  const [selectMode, setSelectMode] = useState(false);
+  useEffect(() => {
+    function onSel(e: Event) {
+      const v = (e as CustomEvent<boolean>).detail;
+      setSelectMode((prev) => (prev === v ? prev : v));
+    }
+    window.addEventListener("selectmodechange", onSel);
+    return () => window.removeEventListener("selectmodechange", onSel);
+  }, []);
+  function toggleSelect() {
+    const v = !selectMode;
+    setSelectMode(v);
+    window.dispatchEvent(new CustomEvent("selectmodechange", { detail: v }));
+  }
+
   function cycleSort() {
     const idx = SORT_OPTIONS.findIndex((o) => o.value === current);
     const next = SORT_OPTIONS[(idx + 1) % SORT_OPTIONS.length];
@@ -75,7 +92,7 @@ export default function SortSelect({
           className={`p-1.5 rounded transition-colors ${
             view === value
               ? "text-orange-500 dark:text-orange-400"
-              : "text-gray-400 dark:text-[#555] hover:text-gray-700 dark:hover:text-[#b8b8b8]"
+              : "text-gray-400 dark:text-[#5c554b] hover:text-gray-700 dark:hover:text-[#bab2a6]"
           }`}
         >
           <Icon size={17} />
@@ -83,10 +100,22 @@ export default function SortSelect({
       ))}
       <button
         onClick={cycleSort}
-        className="p-1.5 text-gray-400 dark:text-[#555] hover:text-gray-700 dark:hover:text-[#b8b8b8] transition-colors"
+        className="p-1.5 text-gray-400 dark:text-[#5c554b] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
         title={active.label}
       >
         <SortIcon size={17} />
+      </button>
+      <button
+        onClick={toggleSelect}
+        aria-pressed={selectMode}
+        className={`p-1.5 rounded transition-colors ${
+          selectMode
+            ? "text-orange-500 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30"
+            : "text-gray-400 dark:text-[#5c554b] hover:text-gray-700 dark:hover:text-[#bab2a6]"
+        }`}
+        title={selectMode ? "Ieși din selecție" : "Selectează"}
+      >
+        <ListChecks size={17} />
       </button>
     </div>
   );

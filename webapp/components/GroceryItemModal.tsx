@@ -185,18 +185,18 @@ export default function GroceryItemModal({
   }
 
   const inputCls =
-    "w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+    "w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
   const labelCls =
-    "text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5";
+    "text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5";
 
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
             {isEdit ? "Edit ingredient" : "Ingredient nou"}
           </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 p-1">
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 p-1">
             <X size={18} />
           </button>
         </div>
@@ -320,12 +320,12 @@ export default function GroceryItemModal({
                   { label: "protein g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
-                    <span className="text-xs text-gray-400 dark:text-[#555555] block mb-1">{label}</span>
+                    <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
                     <input
                       type="number" step="0.1" min="0"
                       value={value}
                       onChange={(e) => set(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
                 ))}
@@ -338,16 +338,16 @@ export default function GroceryItemModal({
                   Folosit în{usedIn ? ` (${usedIn.length})` : ""}
                 </span>
                 {usedIn === null ? (
-                  <p className="text-xs text-gray-400 dark:text-[#555555]">Se încarcă…</p>
+                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Se încarcă…</p>
                 ) : usedIn.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-[#555555]">Nefolosit în nicio rețetă.</p>
+                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Nefolosit în nicio rețetă.</p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                     {usedIn.map((r) => (
                       <Link
                         key={r.id}
                         href={`/recipes/${r.id}`}
-                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c8c8c8] hover:bg-gray-200 dark:hover:bg-[#333333] transition-colors"
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-[#2a2620] text-gray-700 dark:text-[#ccc4b8] hover:bg-gray-200 dark:hover:bg-[#322e28] transition-colors"
                       >
                         {r.name}
                       </Link>
@@ -377,7 +377,7 @@ export default function GroceryItemModal({
               <button
                 type="button"
                 onClick={() => setConfirmDelete(false)}
-                className="px-4 py-2 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-100 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+                className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
               >
                 Anulează
               </button>
@@ -400,7 +400,7 @@ export default function GroceryItemModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+              className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
             >
               Anulează
             </button>

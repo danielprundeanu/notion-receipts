@@ -18,13 +18,13 @@ export default async function RecipesPage({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#e3e3e3]">Recipes</h1>
-          <p className="text-sm text-gray-600 dark:text-[#9a9a9a] mt-0.5">{recipes.length} recipes</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-[#eae5de]">Recipes</h1>
+          <p className="text-sm text-gray-600 dark:text-[#a49c90] mt-0.5">{recipes.length} recipes</p>
         </div>
         <div className="flex items-center gap-2">
           <Link
             href="/recipes/import"
-            className="p-2 text-gray-500 dark:text-[#787878] hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+            className="p-2 text-gray-500 dark:text-[#7c756a] hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
             title="Import rețete"
           >
             <Download size={18} />
@@ -47,7 +47,7 @@ export default async function RecipesPage({
 
       {/* Content */}
       {recipes.length === 0 ? (
-        <div className="text-center py-20 text-gray-500 dark:text-[#787878]">
+        <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
           <p className="text-lg font-semibold">No recipes found</p>
           <p className="text-sm mt-1">
             {q || cat ? "Try a different search" : "Add your first recipe"}

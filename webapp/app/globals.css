@@ -1,5 +1,25 @@
 @import "tailwindcss";
 
+/* ════════════════════════════════════════════════
+   Warm neutral palette — remap Tailwind's `gray`
+   scale to a warm "Sand" ramp so all hardcoded
+   gray-* utilities pick up the retheme centrally.
+   (Brand orange + teal secondary stay as Tailwind
+   defaults: orange-500 / teal-600 already match.)
+   ════════════════════════════════════════════════ */
+@theme {
+  --color-gray-50:  #fbfaf8;
+  --color-gray-100: #f3f1ec;
+  --color-gray-200: #e9e4dd;
+  --color-gray-300: #d9d3ca;
+  --color-gray-400: #ada598;
+  --color-gray-500: #8b837a;
+  --color-gray-600: #6b645b;
+  --color-gray-700: #57514a;
+  --color-gray-800: #3a342d;
+  --color-gray-900: #1b1917;
+}
+
 body {
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
 }
@@ -34,28 +54,28 @@ h1 {
 }
 
 /* ════════════════════════════════════════════════
-   DESIGN TOKENS — Light Theme
+   DESIGN TOKENS — Light Theme (warm Sand neutrals)
    ════════════════════════════════════════════════ */
 :root {
   /* Backgrounds */
-  --color-bg-base:        #f9fafb; /* gray-50  — page background         */
+  --color-bg-base:        #fbfaf8; /* warm off-white — page background     */
   --color-bg-card:        #ffffff; /* white    — card / panel             */
-  --color-bg-card-hover:  #f9fafb; /* gray-50  — card hover               */
+  --color-bg-card-hover:  #f5f3ef; /* warm     — card hover               */
   --color-bg-input:       #ffffff; /* white    — input / select           */
   --color-bg-sidebar:     #ffffff; /* white    — sidebar                  */
   --color-bg-nav:         #ffffff; /* white    — bottom nav               */
-  --color-bg-muted:       #f3f4f6; /* gray-100 — subtle surface           */
+  --color-bg-muted:       #f3f1ec; /* warm     — subtle surface           */
 
   /* Borders */
-  --color-border:         #f3f4f6; /* gray-100 — subtle dividers          */
-  --color-border-input:   #e5e7eb; /* gray-200 — input / card borders     */
-  --color-border-strong:  #d1d5db; /* gray-300 — stronger borders         */
+  --color-border:         #f0ede7; /* subtle dividers                     */
+  --color-border-input:   #e9e4dd; /* input / card borders                */
+  --color-border-strong:  #d9d3ca; /* stronger borders                    */
 
-  /* Text */
-  --color-text-primary:   #111827; /* gray-900 — headings, body           */
-  --color-text-secondary: #374151; /* gray-700 — secondary labels         */
-  --color-text-muted:     #6b7280; /* gray-500 — hints, meta              */
-  --color-text-faint:     #9ca3af; /* gray-400 — placeholders, disabled   */
+  /* Text — warm near-black */
+  --color-text-primary:   #1b1917; /* headings, body                      */
+  --color-text-secondary: #57514a; /* secondary labels                    */
+  --color-text-muted:     #8b837a; /* hints, meta                         */
+  --color-text-faint:     #ada598; /* placeholders, disabled              */
 
   /* Brand — Orange */
   --color-brand:          #f97316; /* orange-500 — primary action         */
@@ -64,6 +84,10 @@ h1 {
   --color-brand-soft-2:   #ffedd5; /* orange-100 — slightly stronger soft */
   --color-brand-text:     #c2410c; /* orange-700 — brand text on soft bg  */
   --color-brand-mid:      #fed7aa; /* orange-200 — mid-weight accent      */
+
+  /* Secondary — Teal (links, info, secondary actions) */
+  --color-secondary:      #0d9488; /* teal-600                            */
+  --color-secondary-soft: #e6f5f3; /* teal-50-ish                         */
 
   /* Semantic */
   --color-success:        #16a34a; /* green-600  */
@@ -75,28 +99,28 @@ h1 {
 }
 
 /* ════════════════════════════════════════════════
-   DESIGN TOKENS — Dark Theme
+   DESIGN TOKENS — Dark Theme (warm near-black)
    ════════════════════════════════════════════════ */
 .dark {
-  /* Backgrounds — Notion-inspired warm near-black */
-  --color-bg-base:        #191919; /* page background                     */
-  --color-bg-card:        #252525; /* card / panel                        */
-  --color-bg-card-hover:  #2f2f2f; /* card hover                          */
-  --color-bg-input:       #252525; /* input / select                      */
-  --color-bg-sidebar:     #1f1f1f; /* sidebar                             */
-  --color-bg-nav:         #1f1f1f; /* bottom nav                          */
-  --color-bg-muted:       #2a2a2a; /* subtle surface (table header, etc.) */
+  /* Backgrounds — warm near-black */
+  --color-bg-base:        #1a1714; /* page background                     */
+  --color-bg-card:        #24211c; /* card / panel                        */
+  --color-bg-card-hover:  #2c2822; /* card hover                          */
+  --color-bg-input:       #24211c; /* input / select                      */
+  --color-bg-sidebar:     #201c18; /* sidebar                             */
+  --color-bg-nav:         #201c18; /* bottom nav                          */
+  --color-bg-muted:       #2a2620; /* subtle surface (table header, etc.) */
 
-  /* Borders — very subtle, Notion-style */
-  --color-border:         #2e2e2e; /* subtle dividers                     */
-  --color-border-input:   #3a3a3a; /* input / card borders                */
-  --color-border-strong:  #4a4a4a; /* stronger borders                    */
+  /* Borders — very subtle, warm */
+  --color-border:         #2e2a24; /* subtle dividers                     */
+  --color-border-input:   #3a352e; /* input / card borders                */
+  --color-border-strong:  #46403a; /* stronger borders                    */
 
-  /* Text — off-white, not harsh pure white */
-  --color-text-primary:   #e3e3e3; /* headings, body                      */
-  --color-text-secondary: #aaaaaa; /* secondary labels                    */
-  --color-text-muted:     #787878; /* hints, meta                         */
-  --color-text-faint:     #555555; /* placeholders, disabled              */
+  /* Text — warm off-white */
+  --color-text-primary:   #eae5de; /* headings, body                      */
+  --color-text-secondary: #aba398; /* secondary labels                    */
+  --color-text-muted:     #7c756a; /* hints, meta                         */
+  --color-text-faint:     #5c554b; /* placeholders, disabled              */
 
   /* Brand — Orange (stays vibrant on dark) */
   --color-brand:          #f97316; /* orange-500 — primary action         */
@@ -105,6 +129,10 @@ h1 {
   --color-brand-soft-2:   #7c2d12; /* orange-900 — slightly lighter soft  */
   --color-brand-text:     #fdba74; /* orange-300 — brand text (readable on dark) */
   --color-brand-mid:      #9a3412; /* orange-800 — mid-weight accent      */
+
+  /* Secondary — Teal (lighter on dark) */
+  --color-secondary:      #2dd4bf; /* teal-400                            */
+  --color-secondary-soft: #12312d; /* deep teal tint                      */
 
   /* Semantic */
   --color-success:        #4ade80; /* green-400  */

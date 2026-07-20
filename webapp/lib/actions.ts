@@ -10,6 +10,7 @@ import { revalidatePath } from "next/cache";
 
 export type RecipeFormInput = {
   name: string;
+  nameRo?: string | null;
   categories: string[];
   servings: number | null;
   time: number | null;
@@ -133,7 +134,7 @@ async function translateTitleAlt(title: string): Promise<string | null> {
 }
 
 export async function createRecipe(data: RecipeFormInput): Promise<string> {
-  const nameRo = await translateTitleAlt(data.name);
+  const nameRo = data.nameRo?.trim() || (await translateTitleAlt(data.name));
   const recipe = await prisma.recipe.create({
     data: {
       name: data.name,
@@ -157,10 +158,14 @@ export async function updateRecipe(
   id: string,
   data: RecipeFormInput
 ): Promise<void> {
-  const existing = await prisma.recipe.findUnique({ where: { id }, select: { name: true, nameRo: true } });
-  let nameRo = existing?.nameRo ?? null;
-  if (!existing || existing.name !== data.name || !nameRo) {
-    nameRo = await translateTitleAlt(data.name);
+  let nameRo: string | null = data.nameRo?.trim() || null;
+  if (!nameRo) {
+    // no manual value from the form — reuse the stored one, or (re)translate on title change
+    const existing = await prisma.recipe.findUnique({ where: { id }, select: { name: true, nameRo: true } });
+    nameRo = existing?.nameRo ?? null;
+    if (!existing || existing.name !== data.name || !nameRo) {
+      nameRo = await translateTitleAlt(data.name);
+    }
   }
   await prisma.recipe.update({
     where: { id },

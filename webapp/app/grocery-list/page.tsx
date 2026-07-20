@@ -87,9 +87,9 @@ export default function GroceryListPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Grocery List</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Grocery List</h1>
           {totalCount > 0 && (
-            <p className="text-sm text-gray-500 dark:text-[#787878] mt-0.5">
+            <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
               {checkedCount}/{totalCount} items checked
             </p>
           )}
@@ -97,16 +97,16 @@ export default function GroceryListPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="text-sm font-medium text-gray-700 dark:text-[#b8b8b8] text-center">
+          <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] text-center">
             {formatWeekRange(weekStart)}
           </span>
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
-            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronRight size={18} />
           </button>
@@ -122,7 +122,7 @@ export default function GroceryListPage() {
           <div className="sticky-safe-top z-10 -mx-4 md:-mx-8 mb-4" style={{ backgroundColor: "var(--color-bg-base)" }}>
             {/* Progress bar — rounded above chips when not stuck */}
             {!isStuck && (
-              <div className="mx-4 md:mx-8 mt-2 mb-2 h-1.5 bg-gray-100 dark:bg-[#2a2a2a] rounded-full overflow-hidden">
+              <div className="mx-4 md:mx-8 mt-2 mb-2 h-1.5 bg-gray-100 dark:bg-[#2a2620] rounded-full overflow-hidden">
                 <div className="h-full bg-orange-500 transition-all duration-300"
                   style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
               </div>
@@ -140,8 +140,8 @@ export default function GroceryListPage() {
                     onClick={() => document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
                     className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
                       allCatChecked
-                        ? "border-gray-100 dark:border-[#2e2e2e] text-gray-300 dark:text-[#444444]"
-                        : "border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#252525]"
+                        ? "border-gray-100 dark:border-[#2e2a24] text-gray-300 dark:text-[#4a443c]"
+                        : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#24211c]"
                     }`}
                   >
                     <span>{icon}</span>
@@ -153,7 +153,7 @@ export default function GroceryListPage() {
 
             {/* Progress bar — thin full-width under chips when stuck */}
             {isStuck && (
-              <div className="h-[3px] bg-gray-100 dark:bg-[#2a2a2a]">
+              <div className="h-[3px] bg-gray-100 dark:bg-[#2a2620]">
                 <div className="h-full bg-orange-500 transition-all duration-300"
                   style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
               </div>
@@ -167,7 +167,7 @@ export default function GroceryListPage() {
           <Loader2 size={20} className="animate-spin text-gray-400" />
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-20 text-gray-400 dark:text-[#555555]">
+        <div className="text-center py-20 text-gray-400 dark:text-[#5c554b]">
           <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
           <p className="font-medium">No items this week</p>
           <p className="text-sm mt-1">Add recipes to your planner to generate a list</p>
@@ -184,10 +184,10 @@ export default function GroceryListPage() {
               <div key={cat} id={`cat-${cat}`}>
                 <div className="flex items-center gap-2 mb-2">
                   <span>{icon}</span>
-                  <h2 className={`text-sm font-semibold ${allCatChecked ? "text-gray-300 dark:text-[#444444]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
+                  <h2 className={`text-sm font-semibold ${allCatChecked ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
                     {catName}
                   </h2>
-                  <span className="text-xs text-gray-400 dark:text-[#555555]">({items.length})</span>
+                  <span className="text-xs text-gray-400 dark:text-[#5c554b]">({items.length})</span>
                 </div>
 
                 <ul className="space-y-1">
@@ -198,23 +198,23 @@ export default function GroceryListPage() {
                         <button
                           onClick={() => toggleCheck(item.id)}
                           className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
-                            done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                            done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                           }`}
                         >
                           <div
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
                               done
                                 ? "bg-orange-500 border-orange-500"
-                                : "border-gray-300 dark:border-[#4a4a4a]"
+                                : "border-gray-300 dark:border-[#46403a]"
                             }`}
                           >
                             {done && <Check size={10} className="text-white" strokeWidth={3} />}
                           </div>
-                          <span className={`flex-1 text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#555555]" : "text-gray-700 dark:text-[#b8b8b8]"}`}>
+                          <span className={`flex-1 text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#5c554b]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
                             {item.name}
                           </span>
                           {item.quantity > 0 && (
-                            <span className={`text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#444444]" : "text-gray-900 dark:text-[#e3e3e3]"}`}>
+                            <span className={`text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-900 dark:text-[#eae5de]"}`}>
                               {item.quantity}
                               {item.unit && ` ${item.unit}`}
                             </span>

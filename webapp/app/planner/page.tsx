@@ -319,11 +319,11 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`bg-white dark:bg-[#252525] rounded-xl border border-gray-100 dark:border-[#2e2e2e] overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800/50 transition-all select-none ${
+      className={`bg-white dark:bg-[#24211c] rounded-xl border border-gray-100 dark:border-[#2e2a24] overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800/50 transition-all select-none ${
         isDragging ? "opacity-30" : ""
       }`}
     >
-      <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+      <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
         {recipe.imageUrl ? (
           <Image
             src={recipe.imageUrl}
@@ -341,7 +341,7 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
         {cats.length > 0 && (
           <div className="absolute top-1.5 right-1.5 flex gap-1">
             {cats.map((c) => {
-              const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2e2e] dark:text-[#b8b8b8]";
+              const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
               return (
                 <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
                   {c}
@@ -352,7 +352,7 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
         )}
       </div>
       <div className="p-2.5 flex items-start justify-between gap-1">
-        <p className="text-xs font-semibold text-gray-900 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+        <p className="text-xs font-semibold text-gray-900 dark:text-[#eae5de] leading-snug line-clamp-2">
           {recipe.name}
         </p>
         {recipe.favorite && (
@@ -367,8 +367,8 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
 
 function DragOverlayCard({ recipe }: { recipe: RecipeRef }) {
   return (
-    <div className="bg-white dark:bg-[#252525] rounded-xl border border-orange-300 shadow-2xl w-44 overflow-hidden rotate-1 opacity-95">
-      <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+    <div className="bg-white dark:bg-[#24211c] rounded-xl border border-orange-300 shadow-2xl w-44 overflow-hidden rotate-1 opacity-95">
+      <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
         {recipe.imageUrl ? (
           <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="176px" className="object-cover" />
         ) : (
@@ -378,7 +378,7 @@ function DragOverlayCard({ recipe }: { recipe: RecipeRef }) {
         )}
       </div>
       <div className="p-2">
-        <p className="text-xs font-semibold text-gray-800 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+        <p className="text-xs font-semibold text-gray-800 dark:text-[#eae5de] leading-snug line-clamp-2">
           {recipe.name}
         </p>
       </div>
@@ -424,7 +424,7 @@ function DroppableMealSlot({
       ))}
       <button
         onClick={onAddClick}
-        className="flex-1 min-h-[40px] w-full bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
+        className="flex-1 min-h-[40px] w-full bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
       >
         <Plus
           size={16}
@@ -464,22 +464,22 @@ function RecipePanel() {
   }, [search, activeCategory, favOnly]);
 
   return (
-    <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0">
+    <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2a24] shrink-0">
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-gray-700 dark:text-[#e3e3e3] shrink-0">
+        <span className="text-sm font-semibold text-gray-700 dark:text-[#eae5de] shrink-0">
           Recipes
         </span>
         <div className="relative">
           <Search
             size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555555]"
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]"
           />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search…"
-            className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
         <button
@@ -487,7 +487,7 @@ function RecipePanel() {
           className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
             favOnly
               ? "bg-amber-400 text-white border-amber-400"
-              : "bg-white dark:bg-[#252525] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:border-amber-300 dark:hover:border-amber-700"
+              : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-amber-300 dark:hover:border-amber-700"
           }`}
         >
           <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
@@ -499,7 +499,7 @@ function RecipePanel() {
             className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
               activeCategory === null
                 ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] border-gray-200 dark:border-[#3a3a3a] hover:border-orange-300 dark:hover:border-orange-700"
+                : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
             }`}
           >
             All
@@ -513,7 +513,7 @@ function RecipePanel() {
               className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 activeCategory === cat
                   ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] border-gray-200 dark:border-[#3a3a3a] hover:border-orange-300 dark:hover:border-orange-700"
+                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
               }`}
             >
               {cat}
@@ -537,7 +537,7 @@ function RecipePanel() {
         </div>
       )}
 
-      <p className="text-xs text-gray-400 dark:text-[#555555]">
+      <p className="text-xs text-gray-400 dark:text-[#5c554b]">
         Drag a recipe onto a day / meal slot above to add it to the plan.
       </p>
     </div>
@@ -606,14 +606,14 @@ function RecipeSelectorModal({
       className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col h-[88svh] sm:h-auto sm:max-h-[80vh]">
+      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col h-[88svh] sm:h-auto sm:max-h-[80vh]">
 
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
-          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
             {DAYS[day]} · {mealType}
           </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1">
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
           </button>
         </div>
@@ -621,13 +621,13 @@ function RecipeSelectorModal({
         {/* Search — 16px font prevents iOS zoom */}
         <div className="px-4 pb-2 shrink-0">
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#555555]" />
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
               placeholder="Search recipe…"
               style={{ fontSize: "16px" }}
-              className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
         </div>
@@ -640,7 +640,7 @@ function RecipeSelectorModal({
               className={`flex items-center gap-1 shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 favOnly
                   ? "bg-amber-400 text-white border-amber-400"
-                  : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+                  : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
               }`}
             >
               <Star size={10} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
@@ -651,7 +651,7 @@ function RecipeSelectorModal({
               className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                 activeCategory === null
                   ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+                  : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
               }`}
             >
               All
@@ -663,7 +663,7 @@ function RecipeSelectorModal({
                 className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
                   activeCategory === cat
                     ? "bg-orange-500 text-white border-orange-500"
-                    : "bg-white dark:bg-[#2a2a2a] border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+                    : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
                 {cat}
@@ -689,10 +689,10 @@ function RecipeSelectorModal({
                   className={`flex flex-col rounded-xl overflow-hidden border text-left transition-all ${
                     selected?.id === r.id
                       ? "border-orange-400 ring-2 ring-orange-400/40"
-                      : "border-gray-100 dark:border-[#2e2e2e] hover:border-orange-200 dark:hover:border-orange-800/50"
+                      : "border-gray-100 dark:border-[#2e2a24] hover:border-orange-200 dark:hover:border-orange-800/50"
                   }`}
                 >
-                  <div className="h-20 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2a2a] dark:to-[#252525] overflow-hidden">
+                  <div className="h-20 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
                     {r.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={r.imageUrl} alt="" className="w-full h-full object-cover" />
@@ -702,12 +702,12 @@ function RecipeSelectorModal({
                       </div>
                     )}
                   </div>
-                  <div className="px-2 py-1.5 bg-white dark:bg-[#252525]">
-                    <p className="text-xs font-medium text-gray-800 dark:text-[#e3e3e3] leading-snug line-clamp-2">
+                  <div className="px-2 py-1.5 bg-white dark:bg-[#24211c]">
+                    <p className="text-xs font-medium text-gray-800 dark:text-[#eae5de] leading-snug line-clamp-2">
                       {r.name}
                     </p>
                     {r.category && (
-                      <p className="text-[10px] text-gray-400 dark:text-[#555555] mt-0.5 truncate">
+                      <p className="text-[10px] text-gray-400 dark:text-[#5c554b] mt-0.5 truncate">
                         {r.category.split(",")[0]}
                       </p>
                     )}
@@ -719,25 +719,25 @@ function RecipeSelectorModal({
         </div>
 
         {/* Footer — servings + add */}
-        <div className="px-4 pt-3 border-t border-gray-100 dark:border-[#2e2e2e] shrink-0 flex items-center gap-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
+        <div className="px-4 pt-3 border-t border-gray-100 dark:border-[#2e2a24] shrink-0 flex items-center gap-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
           {selected && (
             <div className="flex items-center gap-1.5 mr-auto min-w-0">
               <RecipeThumb recipe={selected} size="sm" />
-              <span className="text-xs font-medium text-gray-700 dark:text-[#b8b8b8] truncate">{selected.name}</span>
+              <span className="text-xs font-medium text-gray-700 dark:text-[#bab2a6] truncate">{selected.name}</span>
             </div>
           )}
           {!selected && (
-            <span className="text-xs text-gray-400 dark:text-[#555555] mr-auto">Select a recipe above</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Select a recipe above</span>
           )}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={() => setServings((s) => Math.max(1, s - 1))}
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center text-sm"
+              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
             >−</button>
-            <span className="w-5 text-center text-sm font-semibold text-gray-800 dark:text-[#e3e3e3]">{servings}</span>
+            <span className="w-5 text-center text-sm font-semibold text-gray-800 dark:text-[#eae5de]">{servings}</span>
             <button
               onClick={() => setServings((s) => s + 1)}
-              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] flex items-center justify-center text-sm"
+              className="w-7 h-7 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
             >+</button>
           </div>
           <button
@@ -857,7 +857,7 @@ export default function PlannerPage() {
       {!isThisWeek(weekStart) && (
         <button
           onClick={() => setWeekStart(getMondayOf(new Date()))}
-          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2f2f2f] text-gray-600 dark:text-[#9a9a9a]"
+          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
         >
           Today
         </button>
@@ -870,11 +870,11 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
+        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronLeft size={18} />
       </button>
-      <span className="text-sm font-medium text-gray-700 dark:text-[#b8b8b8] hidden sm:block w-44 text-center">
+      <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] hidden sm:block w-44 text-center">
         {formatWeekRange(weekStart)}
       </span>
       <button
@@ -885,7 +885,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] rounded-lg text-gray-500 dark:text-[#787878]"
+        className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronRight size={18} />
       </button>
@@ -902,14 +902,14 @@ export default function PlannerPage() {
       <div className="p-4 md:p-6 h-full flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">
+          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">
             Planner
           </h1>
           {weekNav}
         </div>
 
         {/* Week label on mobile */}
-        <p className="sm:hidden text-xs text-gray-400 dark:text-[#555555] text-center mb-3">
+        <p className="sm:hidden text-xs text-gray-400 dark:text-[#5c554b] text-center mb-3">
           {formatWeekRange(weekStart)}
         </p>
 
@@ -940,7 +940,7 @@ export default function PlannerPage() {
                           ? "bg-orange-500 text-white"
                           : isToday
                           ? "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50"
-                          : "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a]"
+                          : "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                       }`}
                     >
                       <span className="uppercase tracking-wide text-[10px]">
@@ -965,7 +965,7 @@ export default function PlannerPage() {
                   const entries = getEntries(mobileDay, meal);
                   return (
                     <div key={meal}>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#555555] mb-2">
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b] mb-2">
                         {meal}
                       </h3>
                       <div className="space-y-2">
@@ -981,7 +981,7 @@ export default function PlannerPage() {
                         ))}
                         <button
                           onClick={() => setModal({ day: mobileDay, meal })}
-                          className="w-full py-2.5 bg-white dark:bg-[#252525] border border-dashed border-gray-200 dark:border-[#3a3a3a] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
+                          className="w-full py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
                         >
                           <Plus
                             size={15}
@@ -1013,24 +1013,24 @@ export default function PlannerPage() {
                       <div key={day} className="text-center">
                         <span
                           className={`text-xs font-semibold uppercase tracking-wide ${
-                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-400 dark:text-[#555555]"
+                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-400 dark:text-[#5c554b]"
                           }`}
                         >
                           {day}
                         </span>
                         <div
                           className={`text-sm font-medium mt-0.5 ${
-                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-600 dark:text-[#9a9a9a]"
+                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-600 dark:text-[#a49c90]"
                           }`}
                         >
                           {date.getDate()}
                         </div>
                         {nut && (
                           <div className="mt-1 space-y-0.5">
-                            <div className="text-[10px] font-semibold text-gray-500 dark:text-[#787878]">
+                            <div className="text-[10px] font-semibold text-gray-500 dark:text-[#7c756a]">
                               {Math.round(nut.kcal)} kcal
                             </div>
-                            <div className="text-[9px] text-gray-400 dark:text-[#555555] leading-tight">
+                            <div className="text-[9px] text-gray-400 dark:text-[#5c554b] leading-tight">
                               P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · F {Math.round(nut.fat)}g
                             </div>
                           </div>
@@ -1047,7 +1047,7 @@ export default function PlannerPage() {
                     className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2 items-stretch"
                   >
                     <div className="flex items-start pt-2">
-                      <span className="text-xs font-medium text-gray-400 dark:text-[#555555] uppercase tracking-wide">
+                      <span className="text-xs font-medium text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">
                         {meal}
                       </span>
                     </div>

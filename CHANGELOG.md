@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.19.0] — 2026-07-20
+
+### ✨ Features
+- **Retheme „Orange & Teal"** — neutrele au trecut de la gri pur la un gri **cald („Sand")**, mai apetisant și mai coerent cu portocaliul, plus un accent secundar **teal** (linkuri/acțiuni secundare). Aplicat central: remap al scalei `gray` din Tailwind (`@theme`) + tokenuri light/dark actualizate în `globals.css`; portocaliul rămâne brand.
+- **Selecție multiplă pe pagina Recipes** — buton „Select" pe bara de filtrare (mobil + desktop) care activează checkbox-urile pe fiecare rețetă (înainte apăreau doar la hover, deci invizibile pe mobil); selectare totală + ștergere în bloc.
+- **Filtrele Recipes rămân setate** — căutarea/categoria/favorite/sortarea se rețin (sessionStorage) și se restaurează când revii pe `/recipes` din back, sidebar sau „înapoi la rețete".
+- **Sugestie AI pentru conversie** — la introducerea unei a 2-a unități, un buton „✨ Sugestie AI" estimează factorul de conversie (ex. 1 cup ≈ 123 g). Disponibil în cardul de ingredient, în editorul de rețetă și în ecranul Audit unități.
+- **Upload imagine rețetă cu drag-and-drop** — tragi imaginea direct în chenar (sau peste preview pentru înlocuire), cu validare de tip/mărime și mesaje clare.
+
+### 🐛 Fixes
+- **Upload imagine rețetă pe producție** — pe Vercel filesystemul e read-only, deci scrierea în `public/` eșua tăcut (500). Mutat pe **Vercel Blob** (persistent), cu fallback pe filesystem în dev și erori clare în client.
+- **Ingredients** — X pentru golirea căutării; categoria editabilă ca dropdown și în tabel (nu doar în card); iconița de edit mutată pe prima coloană (mai ușor pe mobil).
+
+### 🎨 UI / UX
+- Footer-ul cardului de ingredient rearanjat: **Șterge** izolat în stânga, **Anulează + Save** grupate în dreapta (mai puțin mis-tap pe mobil).
+
+### ⚙️ Internals
+- `next.config`: `images.remotePatterns` pentru `*.public.blob.vercel-storage.com`; dependință nouă `@vercel/blob` (necesită `BLOB_READ_WRITE_TOKEN` pe Vercel).
+- `globals.css`: scala `gray` remapată la „Sand" via `@theme` + token nou `--color-secondary` (teal, light/dark).
+
 ## [0.18.0] — 2026-07-20
 
 ### ✨ Features

@@ -15,13 +15,13 @@ export default function LoginPage() {
           <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center mb-3">
             <LogIn size={22} />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-[#e3e3e3]">Meal Planner</h1>
-          <p className="text-sm text-gray-500 dark:text-[#787878] mt-1">Autentifică-te pentru a continua</p>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Meal Planner</h1>
+          <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">Autentifică-te pentru a continua</p>
         </div>
 
         <form action={formAction} className="space-y-3">
           <div>
-            <label htmlFor="email" className="block text-xs font-medium text-gray-600 dark:text-[#9a9a9a] mb-1">
+            <label htmlFor="email" className="block text-xs font-medium text-gray-600 dark:text-[#a49c90] mb-1">
               Email
             </label>
             <input
@@ -30,12 +30,12 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3]"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de]"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-xs font-medium text-gray-600 dark:text-[#9a9a9a] mb-1">
+            <label htmlFor="password" className="block text-xs font-medium text-gray-600 dark:text-[#a49c90] mb-1">
               Parolă
             </label>
             <input
@@ -44,7 +44,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3]"
+              className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de]"
             />
           </div>
 

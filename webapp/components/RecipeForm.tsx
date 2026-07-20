@@ -41,6 +41,7 @@ type IngredientGroup = {
 export type InitialRecipeData = {
   id: string;
   name: string;
+  nameRo: string;
   categories: string[];
   servings: string;
   time: string;
@@ -110,10 +111,10 @@ function GroceryItemInput({
         value={value}
         onChange={(e) => { hasTouched.current = true; onChange(e.target.value); setOpen(true); }}
         placeholder="Ingredient name"
-        className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+        className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
       />
       {showDropdown && (
-        <div className="absolute z-30 top-full mt-0.5 left-0 right-0 bg-white dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] rounded-lg shadow-lg overflow-hidden">
+        <div className="absolute z-30 top-full mt-0.5 left-0 right-0 bg-white dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg shadow-lg overflow-hidden">
           {results.map((r) => (
             <button
               key={r.id}
@@ -126,14 +127,14 @@ function GroceryItemInput({
               }}
               className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-between"
             >
-              <span className="text-gray-800 dark:text-[#d4d4d4]">
+              <span className="text-gray-800 dark:text-[#d8d0c4]">
                 {r.name}
                 {r.nameRo && (
-                  <span className="text-xs text-gray-400 dark:text-[#555555] ml-1.5">({r.nameRo})</span>
+                  <span className="text-xs text-gray-400 dark:text-[#5c554b] ml-1.5">({r.nameRo})</span>
                 )}
               </span>
               {r.unit && (
-                <span className="text-xs text-gray-500 dark:text-[#787878] ml-2 shrink-0">
+                <span className="text-xs text-gray-500 dark:text-[#7c756a] ml-2 shrink-0">
                   {r.unit}{r.unit2 ? ` / ${r.unit2}` : ""}
                 </span>
               )}
@@ -147,7 +148,7 @@ function GroceryItemInput({
                 setOpen(false);
                 onCreateRequest(value);
               }}
-              className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a3a3a]"
+              className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a352e]"
             >
               <Plus size={13} /> Add &ldquo;{value}&rdquo; as new ingredient
             </button>
@@ -259,12 +260,12 @@ function GroceryItemEditModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#252525] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
+      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#e3e3e3]">
+          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
             {item ? item.name : "Loading…"}
           </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#555555] hover:text-gray-600 dark:hover:text-[#9a9a9a] p-1">
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
           </button>
         </div>
@@ -275,25 +276,25 @@ function GroceryItemEditModal({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">Primary unit</span>
-                <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2a2a] border border-gray-200 dark:border-[#3a3a3a] rounded-lg text-gray-500 dark:text-[#787878]">
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Primary unit</span>
+                <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg text-gray-500 dark:text-[#7c756a]">
                   {item.unit ?? "—"}
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide block mb-1.5">2nd unit</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">2nd unit</span>
                 <input
                   value={unit2}
                   onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
                   placeholder="cup, tbsp…"
-                  className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                 />
               </div>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
                   Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
                 </span>
                 <button
@@ -312,7 +313,7 @@ function GroceryItemEditModal({
                 value={conversion}
                 onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
                 placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
               {aiConvNote != null && (
                 <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
@@ -326,7 +327,7 @@ function GroceryItemEditModal({
 
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#787878] uppercase tracking-wide">
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
                   Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
                 </span>
                 <button
@@ -353,12 +354,12 @@ function GroceryItemEditModal({
                   { label: "protein g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
-                    <span className="text-xs text-gray-400 dark:text-[#555555] block mb-1">{label}</span>
+                    <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
                     <input
                       type="number" step="0.1" min="0"
                       value={value}
                       onChange={(e) => set(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                     />
                   </div>
                 ))}
@@ -380,7 +381,7 @@ function GroceryItemEditModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+            className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
           >
             Cancel
           </button>
@@ -410,7 +411,7 @@ function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: 
       onFocus={autoResize}
       placeholder={"## Steps\n1. First step\n2. Second step\n\n## Tips\n- Use cold butter\n- Or plain text"}
       rows={8}
-      className="w-full px-4 py-3 text-sm bg-white dark:bg-[#1f1f1f] border border-gray-200 dark:border-[#3a3a3a] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c0c0c0] placeholder:text-gray-300 dark:placeholder:text-[#444] leading-relaxed font-mono"
+      className="w-full px-4 py-3 text-sm bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#3a352e] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c4bcb0] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] leading-relaxed font-mono"
     />
   );
 }
@@ -419,7 +420,7 @@ function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: 
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <label className="text-xs font-semibold text-gray-600 dark:text-[#9a9a9a] uppercase tracking-wide block mb-1.5">
+    <label className="text-xs font-semibold text-gray-600 dark:text-[#a49c90] uppercase tracking-wide block mb-1.5">
       {children}
     </label>
   );
@@ -481,7 +482,7 @@ function IngredientReorder({
         onClick={onUp}
         disabled={upDisabled}
         aria-label="mută mai sus"
-        className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
+        className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
       >
         <ChevronUp size={12} />
       </button>
@@ -490,7 +491,7 @@ function IngredientReorder({
         onClick={onDown}
         disabled={downDisabled}
         aria-label="mută mai jos"
-        className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
+        className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
       >
         <ChevronDown size={12} />
       </button>
@@ -507,6 +508,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(initial?.name ?? "");
+  const [nameRo, setNameRo] = useState(initial?.nameRo ?? "");
   const [categories, setCategories] = useState<string[]>(initial?.categories ?? []);
   const [newTag, setNewTag] = useState("");
   const [addingTag, setAddingTag] = useState(false);
@@ -517,6 +519,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const [link, setLink] = useState(initial?.link ?? "");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
   const [imageUploading, setImageUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
 
   const [groups, setGroups] = useState<IngredientGroup[]>(
     initial?.groups?.length ? initial.groups : [defaultGroup()]
@@ -608,19 +611,41 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   // ── Image upload ──────────────────────────────────────────────────────────
 
   async function handleImageFile(file: File) {
+    setError(null);
+    if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Format acceptat: JPG, PNG sau WebP.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Imaginea e prea mare (max 10MB).");
+      return;
+    }
     setImageUploading(true);
     const fd = new FormData();
     fd.append("file", file);
     try {
       const res = await fetch("/api/upload-recipe-image", { method: "POST", body: fd });
-      const data = await res.json();
-      if (data.path) setImageUrl(data.path);
-      else setError(data.error ?? "Upload failed");
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.path) setImageUrl(data.path);
+      else setError(data.error ?? `Upload eșuat (${res.status}).`);
     } catch {
-      setError("Image upload failed");
+      setError("Eroare la conexiune. Încearcă din nou.");
     }
     setImageUploading(false);
   }
+
+  // Shared drag-and-drop handlers for the cover-image box.
+  const imageDragProps = {
+    onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragActive(true); },
+    onDragEnter: (e: React.DragEvent) => { e.preventDefault(); setDragActive(true); },
+    onDragLeave: (e: React.DragEvent) => { e.preventDefault(); setDragActive(false); },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      setDragActive(false);
+      const f = e.dataTransfer.files?.[0];
+      if (f) handleImageFile(f);
+    },
+  };
 
   // ── Group operations ──────────────────────────────────────────────────────
 
@@ -759,6 +784,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
     const payload = {
       name: name.trim(),
+      nameRo: nameRo.trim() || null,
       categories,
       servings: servings ? parseInt(servings) : null,
       time: time ? parseInt(time) : null,
@@ -794,8 +820,8 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     router.refresh();
   }
 
-  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
-  const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]";
+  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+  const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]";
 
   return (
     <form onSubmit={handleSubmit} className={noWrapper ? "space-y-7" : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"}>
@@ -806,7 +832,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           onChange={(e) => setName(e.target.value)}
           placeholder="Recipe name…"
           required
-          className="w-full text-2xl font-bold text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-300 dark:placeholder:text-[#444444] bg-transparent border-0 border-b-2 border-gray-200 dark:border-[#3a3a3a] focus:border-orange-500 focus:outline-none pb-2 transition-colors"
+          className="w-full text-2xl font-bold text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] bg-transparent border-0 border-b-2 border-gray-200 dark:border-[#3a352e] focus:border-orange-500 focus:outline-none pb-2 transition-colors"
+        />
+        <input
+          value={nameRo}
+          onChange={(e) => setNameRo(e.target.value)}
+          placeholder="Traducere pentru căutare (RO/EN) — auto la salvare dacă lași gol"
+          className="w-full mt-2 text-sm text-gray-600 dark:text-[#bab2a6] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] bg-transparent border-0 border-b border-gray-100 dark:border-[#2e2a24] focus:border-orange-400 focus:outline-none pb-1 transition-colors"
+          title="Titlul în cealaltă limbă, folosit doar pentru căutare"
         />
       </div>
 
@@ -824,8 +857,16 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           }}
         />
         {imageUrl ? (
-          <div className="relative w-full h-48 rounded-xl overflow-hidden bg-gray-100 dark:bg-[#2a2a2a] group">
+          <div
+            {...imageDragProps}
+            className={`relative w-full h-48 rounded-xl overflow-hidden bg-gray-100 dark:bg-[#2a2620] group ${dragActive ? "ring-2 ring-orange-400" : ""}`}
+          >
             <img src={imageUrl} alt="" className="w-full h-full object-cover" />
+            {dragActive && (
+              <div className="absolute inset-0 bg-orange-500/30 flex items-center justify-center text-white text-sm font-medium">
+                Eliberează pentru a înlocui
+              </div>
+            )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
               <button
                 type="button"
@@ -848,14 +889,21 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             type="button"
             onClick={() => imageInputRef.current?.click()}
             disabled={imageUploading}
-            className="w-full h-32 rounded-xl border-2 border-dashed border-gray-200 dark:border-[#3a3a3a] flex flex-col items-center justify-center gap-2 hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group disabled:opacity-50"
+            {...imageDragProps}
+            className={`w-full h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors group disabled:opacity-50 ${
+              dragActive
+                ? "border-orange-400 bg-orange-50 dark:bg-orange-950/30"
+                : "border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+            }`}
           >
             {imageUploading ? (
               <Loader2 size={20} className="animate-spin text-gray-400" />
             ) : (
               <>
-                <ImageIcon size={20} className="text-gray-300 dark:text-[#444444] group-hover:text-orange-400" />
-                <span className="text-sm text-gray-400 dark:text-[#555555] group-hover:text-orange-500">Upload cover image</span>
+                <ImageIcon size={20} className={dragActive ? "text-orange-400" : "text-gray-300 dark:text-[#4a443c] group-hover:text-orange-400"} />
+                <span className={`text-sm ${dragActive ? "text-orange-500" : "text-gray-400 dark:text-[#5c554b] group-hover:text-orange-500"}`}>
+                  {dragActive ? "Eliberează pentru a încărca" : "Trage o imagine aici sau click"}
+                </span>
               </>
             )}
           </button>
@@ -879,7 +927,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
           >
             <option value="">—</option>
             {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
@@ -896,7 +944,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             className={`flex-1 px-3 py-2 text-sm border rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
               favorite
                 ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 font-medium"
-                : "border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
             }`}
           >
             <Star size={13} className={favorite ? "fill-amber-400 text-amber-400" : "text-gray-400"} />
@@ -917,7 +965,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                 categories.includes(cat)
                   ? "bg-orange-500 text-white"
-                  : "bg-gray-100 dark:bg-[#2a2a2a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-200 dark:hover:bg-[#333333]"
+                  : "bg-gray-100 dark:bg-[#2a2620] text-gray-600 dark:text-[#a49c90] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
               {cat}
@@ -937,14 +985,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               onBlur={() => { addNewTag(); setAddingTag(false); }}
               placeholder="Tag nou…"
               maxLength={30}
-              className="w-28 px-3 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#252525] border border-orange-400 dark:border-orange-800/60 text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-28 px-3 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#24211c] border border-orange-400 dark:border-orange-800/60 text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           ) : (
             <button
               type="button"
               onClick={() => setAddingTag(true)}
               title="Adaugă tag nou"
-              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 dark:border-[#3a3a3a] text-gray-500 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] hover:text-gray-700 dark:hover:text-[#c8c8c8] inline-flex items-center gap-1 transition-colors"
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 dark:border-[#3a352e] text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] hover:text-gray-700 dark:hover:text-[#ccc4b8] inline-flex items-center gap-1 transition-colors"
             >
               <Plus size={12} /> Tag
             </button>
@@ -971,14 +1019,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         <Label>Porții</Label>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {/* mode toggle */}
-          <div className="inline-flex rounded-lg border border-gray-200 dark:border-[#3a3a3a] overflow-hidden text-sm">
+          <div className="inline-flex rounded-lg border border-gray-200 dark:border-[#3a352e] overflow-hidden text-sm">
             <button
               type="button"
               onClick={goBatch}
               className={`px-3 py-2 font-medium transition-colors ${
                 mode === "batch"
                   ? "bg-orange-500 text-white"
-                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
               }`}
             >
               Batch{mode === "batch" ? ` — ${curServings} porții` : ""}
@@ -986,10 +1034,10 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             <button
               type="button"
               onClick={goPerServing}
-              className={`px-3 py-2 font-medium border-l border-gray-200 dark:border-[#3a3a3a] transition-colors ${
+              className={`px-3 py-2 font-medium border-l border-gray-200 dark:border-[#3a352e] transition-colors ${
                 mode === "single"
                   ? "bg-orange-500 text-white"
-                  : "bg-white dark:bg-[#252525] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
               }`}
             >
               1 porție
@@ -1002,7 +1050,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               <button
                 type="button"
                 onClick={() => applyServings(curServings - 1, curServings)}
-                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                 aria-label="minus o porție"
               >
                 −
@@ -1015,22 +1063,22 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 onChange={(e) => setServings(e.target.value)}
                 onBlur={(e) => commitServingsInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-                className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
               <button
                 type="button"
                 onClick={() => applyServings(curServings + 1, curServings)}
-                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                 aria-label="plus o porție"
               >
                 +
               </button>
-              <span className="text-sm text-gray-500 dark:text-[#787878] ml-1">porții</span>
+              <span className="text-sm text-gray-500 dark:text-[#7c756a] ml-1">porții</span>
             </div>
           )}
 
           {/* scale switch */}
-          <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#787878] cursor-pointer">
+          <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#7c756a] cursor-pointer">
             <input
               type="checkbox"
               checked={scaleQty}
@@ -1040,7 +1088,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             Scalează cantitățile la schimbare
           </label>
         </div>
-        <p className="mt-1.5 text-xs text-gray-400 dark:text-[#666]">
+        <p className="mt-1.5 text-xs text-gray-400 dark:text-[#6e675c]">
           {mode === "batch"
             ? `Cantitățile ingredientelor sunt pentru ${curServings} porții.`
             : "Cantitățile ingredientelor sunt pentru 1 porție."}
@@ -1053,7 +1101,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           <button
             type="button"
             onClick={addGroup}
-            className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#9a9a9a] hover:text-gray-900 dark:hover:text-[#e3e3e3] border border-gray-200 dark:border-[#3a3a3a] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2f2f2f] transition-colors"
+            className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] border border-gray-200 dark:border-[#3a352e] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
             <Plus size={13} /> Add group
           </button>
@@ -1061,27 +1109,27 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
         <div className="space-y-4">
           {groups.map((group, groupIdx) => (
-            <div key={group.id} className="border border-gray-200 dark:border-[#3a3a3a] rounded-xl">
+            <div key={group.id} className="border border-gray-200 dark:border-[#3a352e] rounded-xl">
               {/* Group header */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2a2a2a] border-b border-gray-200 dark:border-[#3a3a3a] rounded-t-xl">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2a2620] border-b border-gray-200 dark:border-[#3a352e] rounded-t-xl">
                 <input
                   value={group.name}
                   onChange={(e) => updateGroupName(group.id, e.target.value)}
                   placeholder="Group name"
-                  className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#b8b8b8] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#555555]"
+                  className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#bab2a6] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#5c554b]"
                 />
                 <div className="flex items-center gap-0.5 shrink-0">
                   <button type="button" onClick={() => moveGroup(group.id, -1)} disabled={groupIdx === 0}
-                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors">
+                    className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors">
                     <ChevronUp size={13} />
                   </button>
                   <button type="button" onClick={() => moveGroup(group.id, 1)} disabled={groupIdx === groups.length - 1}
-                    className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors">
+                    className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors">
                     <ChevronDown size={13} />
                   </button>
                   {groups.length > 1 && (
                     <button type="button" onClick={() => removeGroup(group.id)}
-                      className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors ml-1">
+                      className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors ml-1">
                       <Trash2 size={13} />
                     </button>
                   )}
@@ -1107,7 +1155,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Qty"
-                          className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
                           value={ing.unit}
@@ -1115,7 +1163,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           groceryItemId={ing.groceryItemId}
                           onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
                           onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                          className="w-24 px-1.5 py-2 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4]"
+                          className="w-24 px-1.5 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
                         />
                         <GroceryItemInput
                           value={ing.groceryItemName}
@@ -1132,12 +1180,12 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                         {ing.groceryItemId && (
                           <button type="button" aria-label="editează produsul (unități, nutriție)"
                             onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                            className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-orange-500 transition-colors shrink-0">
+                            className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors shrink-0">
                             <Pencil size={14} />
                           </button>
                         )}
                         <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                          className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors shrink-0">
+                          className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors shrink-0">
                           <Trash2 size={15} />
                         </button>
                       </div>
@@ -1146,7 +1194,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                         value={ing.notes}
                         onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
                         placeholder="obs. (ex: roughly chopped)"
-                        className="w-full px-2 py-1 text-xs bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] placeholder:text-gray-300 dark:placeholder:text-[#444] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
+                        className="w-full px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                       />
                     </div>
 
@@ -1158,7 +1206,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Qty"
-                          className="px-2 py-1.5 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                          className="px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
                           value={ing.unit}
@@ -1184,12 +1232,12 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           {ing.groceryItemId && (
                             <button type="button" aria-label="editează produsul (unități, nutriție)"
                               onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                              className="p-1 text-gray-300 dark:text-[#444444] hover:text-orange-500 transition-colors">
+                              className="p-1 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors">
                               <Pencil size={14} />
                             </button>
                           )}
                           <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                            className="p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
+                            className="p-1 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors">
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -1201,7 +1249,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           value={ing.notes}
                           onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
                           placeholder="obs. (ex: roughly chopped)"
-                          className="px-2 py-1 text-xs bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-600 dark:text-[#9a9a9a] placeholder:text-gray-300 dark:placeholder:text-[#444] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
+                          className="px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                         />
                         <div />
                       </div>
@@ -1235,7 +1283,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e2e2e]">
+      <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e2a24]">
         <button
           type="submit"
           disabled={saving}
@@ -1247,7 +1295,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:text-gray-900 dark:hover:text-[#e3e3e3] transition-colors"
+          className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
           Cancel
         </button>

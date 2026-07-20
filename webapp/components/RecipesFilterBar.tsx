@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Star, X } from "lucide-react";
 import SortSelect from "./SortSelect";
 
@@ -17,6 +18,70 @@ export default function RecipesFilterBar({
   const [searchOpen, setSearchOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const favOnly = fav === "1";
+  const router = useRouter();
+
+  // Search as you type (debounced), like the planner's add-recipe panel.
+  const [value, setValue] = useState(q ?? "");
+  const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [pending, setPending] = useState<string | null>(null); // q value WE last requested
+  const [prevQ, setPrevQ] = useState(q);
+
+  // Adjust the box when q changes from outside our own typing (persistence
+  // restore / shared ?q= link). setState-during-render is the React pattern.
+  if (q !== prevQ) {
+    setPrevQ(q);
+    if ((q ?? "") !== (pending ?? "")) setValue(q ?? "");
+  }
+
+  function pushQ(next: string) {
+    const params = new URLSearchParams();
+    const t = next.trim();
+    setPending(t);
+    if (t) params.set("q", t);
+    if (cat) params.set("cat", cat);
+    if (fav) params.set("fav", fav);
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+    if (qs) {
+      router.replace(`/recipes?${qs}`, { scroll: false });
+    } else {
+      // fully cleared — mark it so the saved-filters restore doesn't bring it back
+      sessionStorage.setItem("recipesFiltersCleared", "1");
+      router.replace("/recipes", { scroll: false });
+    }
+  }
+
+  function onSearchInput(next: string) {
+    setValue(next);
+    if (debRef.current) clearTimeout(debRef.current);
+    debRef.current = setTimeout(() => pushQ(next), 250);
+  }
+
+  // Remember the last-used filters and restore them when landing on a bare
+  // /recipes (e.g. via the nav/sidebar or a "back to recipes" link), so a
+  // selected filter isn't lost when leaving and returning to the page.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (cat) params.set("cat", cat);
+    if (fav) params.set("fav", fav);
+    if (sort) params.set("sort", sort);
+    const qs = params.toString();
+
+    if (qs) {
+      sessionStorage.setItem("recipesFilters", qs);
+      sessionStorage.removeItem("recipesFiltersCleared");
+      return;
+    }
+    // Bare /recipes. If the user explicitly cleared (clicked "All"), honour it.
+    if (sessionStorage.getItem("recipesFiltersCleared")) {
+      sessionStorage.removeItem("recipesFiltersCleared");
+      sessionStorage.removeItem("recipesFilters");
+      return;
+    }
+    const saved = sessionStorage.getItem("recipesFilters");
+    if (saved) router.replace(`/recipes?${saved}`, { scroll: false });
+  }, [q, cat, fav, sort, router]);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -44,7 +109,7 @@ export default function RecipesFilterBar({
   }, [cat, fav, q]);
 
   const chip = "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors";
-  const off  = "bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-700 dark:text-[#b8b8b8]";
+  const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
   const on   = "bg-orange-500 text-white";
 
   // Bar is ALWAYS sticky + opaque (page-bg colour, so invisible at rest and it
@@ -54,7 +119,7 @@ export default function RecipesFilterBar({
     "sticky top-0 z-30 -mx-4 px-4 py-2",
     "bg-[var(--color-bg-base)]",
     "border-b transition-[border-color,box-shadow] duration-200 ease-out",
-    stuck ? "border-gray-100 dark:border-[#2e2e2e] shadow-sm" : "border-transparent shadow-none",
+    stuck ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
     // desktop: plain static row, no sticky chrome; add a gap before the grid
     "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:mb-4 md:bg-transparent md:border-none md:shadow-none",
   ].join(" ");
@@ -62,15 +127,14 @@ export default function RecipesFilterBar({
   return (
     <>
       {/* ── Search input (always in flow — scrolls away, never removed) ── */}
-      <form className="relative mb-3">
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#787878]" />
+      <form className="relative mb-3" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
         <input
-          name="q"
-          defaultValue={q}
+          value={value}
+          onChange={(e) => onSearchInput(e.target.value)}
           placeholder="Search recipes…"
-          className="w-full md:max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
+          className="w-full md:max-w-sm pl-9 pr-4 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
         />
-        {cat && <input type="hidden" name="cat" value={cat} />}
       </form>
 
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
@@ -78,21 +142,20 @@ export default function RecipesFilterBar({
 
       {/* ── Expanded search overlay (mobile, sticky mode) — fixed so it never shifts flow ── */}
       {stuck && searchOpen && (
-        <div className="fixed inset-x-0 top-0 z-40 px-4 py-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#2e2e2e] shadow-sm md:hidden">
-          <form className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#787878]" />
+        <div className="fixed inset-x-0 top-0 z-40 px-4 py-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#2e2a24] shadow-sm md:hidden">
+          <form className="relative" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
             <input
               autoFocus
-              name="q"
-              defaultValue={q}
+              value={value}
+              onChange={(e) => onSearchInput(e.target.value)}
               placeholder="Search recipes…"
-              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555]"
+              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
             />
-            {cat && <input type="hidden" name="cat" value={cat} />}
             <button
               type="button"
               onClick={() => setSearchOpen(false)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#b8b8b8]"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
             >
               <X size={14} />
             </button>
@@ -118,7 +181,12 @@ export default function RecipesFilterBar({
 
           {/* Scrolling chips */}
           <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center">
-            <Link scroll={false} href={q ? `?q=${q}` : "/recipes"} className={`${chip} ${!cat && !favOnly ? on : off}`}>
+            <Link
+              scroll={false}
+              href={q ? `?q=${q}` : "/recipes"}
+              onClick={() => sessionStorage.setItem("recipesFiltersCleared", "1")}
+              className={`${chip} ${!cat && !favOnly ? on : off}`}
+            >
               All
             </Link>
 

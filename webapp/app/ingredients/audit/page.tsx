@@ -80,7 +80,7 @@ function FixInput({
         onKeyDown={(e) => { if (e.key === "Enter") save(); }}
         placeholder={placeholder}
         disabled={saving}
-        className="w-24 px-2 py-1.5 text-sm text-right bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-300 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+        className="w-24 px-2 py-1.5 text-sm text-right bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
       />
       <button
         type="button"
@@ -122,12 +122,12 @@ export default function UnitAuditPage() {
       <div className="mb-6">
         <Link
           href="/ingredients"
-          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:text-gray-900 dark:hover:text-[#e3e3e3] transition-colors mb-3"
+          className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors mb-3"
         >
           <ArrowLeft size={15} /> Înapoi la ingrediente
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Audit unități</h1>
-        <p className="text-sm text-gray-500 dark:text-[#787878] mt-1">
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Audit unități</h1>
+        <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">
           Probleme sistematice de import care strică nutriția. Fix-ul se aplică o singură dată pe produs
           și se propagă automat în toate rețetele care-l folosesc.
         </p>
@@ -141,28 +141,28 @@ export default function UnitAuditPage() {
         <div className="space-y-8">
           {/* ── Non-convertible units ──────────────────────────── */}
           <section>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d4d4d4] mb-1">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-1">
               <TriangleAlert size={15} className="text-orange-500" />
               Unități care nu se pot transforma în grame
-              <span className="text-xs font-normal text-gray-400 dark:text-[#666]">
+              <span className="text-xs font-normal text-gray-400 dark:text-[#6e675c]">
                 ({missing.length})
               </span>
             </h2>
-            <p className="text-xs text-gray-400 dark:text-[#666] mb-3">
+            <p className="text-xs text-gray-400 dark:text-[#6e675c] mb-3">
               Cantitatea nu poate fi convertită în grame, deci nutriția iese 0. Pentru unități de volum
               (cup, tbsp) completează <strong>conversia</strong> (1 cup = ? g); pentru bucăți,
               <strong> greutatea pe bucată</strong>. Doar produsele cu nutriție sunt listate.
             </p>
 
             {missing.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-[#787878] bg-gray-50 dark:bg-[#232323] border border-gray-200 dark:border-[#2e2e2e] rounded-xl px-4 py-6 text-center">
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] bg-gray-50 dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl px-4 py-6 text-center">
                 {savedCount > 0 ? "Gata — toate se pot converti acum 🎉" : "Nimic de reparat aici 🎉"}
               </p>
             ) : (
-              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2e2e]">
+              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-[#2a2a2a] text-left text-xs text-gray-500 dark:text-[#787878]">
+                    <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
                       <th className="px-3 py-2 font-medium">Produs</th>
                       <th className="px-3 py-2 font-medium">Unități</th>
                       <th className="px-3 py-2 font-medium text-right">Folosiri</th>
@@ -182,33 +182,33 @@ export default function UnitAuditPage() {
                         : `? g / ${badUnit}`;
                       const ph = convCase ? `g/${r.unit2}` : `g/${badUnit}`;
                       return (
-                        <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2a2a]">
+                        <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2620]">
                           <td className="px-3 py-2">
                             <Link
                               href={`/ingredients?edit=${r.id}`}
-                              className="text-orange-600 dark:text-orange-400 hover:underline"
+                              className="text-teal-700 dark:text-teal-400 hover:underline"
                             >
                               {r.name}
                             </Link>
                             {r.nameRo && (
-                              <span className="text-xs text-gray-400 dark:text-[#666] ml-1.5">({r.nameRo})</span>
+                              <span className="text-xs text-gray-400 dark:text-[#6e675c] ml-1.5">({r.nameRo})</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-gray-500 dark:text-[#9a9a9a]">
+                          <td className="px-3 py-2 text-gray-500 dark:text-[#a49c90]">
                             {r.unit ?? "—"}{r.unit2 ? ` / ${r.unit2}` : ""}
                             <span className="block text-[11px] text-orange-500/80">
                               folosit ca: {offending.join(", ")}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-500 dark:text-[#9a9a9a]">
-                            {r.uses} <span className="text-gray-400 dark:text-[#666]">({r.recipes} rețete)</span>
+                          <td className="px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
+                            {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} rețete)</span>
                           </td>
-                          <td className="px-3 py-2 text-gray-500 dark:text-[#787878] text-xs">
+                          <td className="px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
                             {r.sampleRecipes.join(", ")}
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex flex-col items-end gap-1">
-                              <span className="text-[11px] text-gray-400 dark:text-[#666]">{hint}</span>
+                              <span className="text-[11px] text-gray-400 dark:text-[#6e675c]">{hint}</span>
                               <FixInput
                                 placeholder={ph}
                                 aiParams={{
@@ -231,27 +231,27 @@ export default function UnitAuditPage() {
 
           {/* ── Unit mismatches ────────────────────────────────── */}
           <section>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d4d4d4] mb-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-3">
               <TriangleAlert size={15} className="text-gray-400" />
               Nepotriviri de unitate
-              <span className="text-xs font-normal text-gray-400 dark:text-[#666]">
+              <span className="text-xs font-normal text-gray-400 dark:text-[#6e675c]">
                 ({mismatches.length})
               </span>
             </h2>
-            <p className="text-xs text-gray-400 dark:text-[#666] mb-3">
+            <p className="text-xs text-gray-400 dark:text-[#6e675c] mb-3">
               Ingrediente a căror unitate stocată nu e printre unitățile produsului. Deschide rețeta
               și corectează unitatea, sau adaugă unitatea pe produs.
             </p>
 
             {mismatches.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-[#787878] bg-gray-50 dark:bg-[#232323] border border-gray-200 dark:border-[#2e2e2e] rounded-xl px-4 py-6 text-center">
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] bg-gray-50 dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl px-4 py-6 text-center">
                 Nicio nepotrivire 🎉
               </p>
             ) : (
-              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2e2e]">
+              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 dark:bg-[#2a2a2a] text-left text-xs text-gray-500 dark:text-[#787878]">
+                    <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
                       <th className="px-3 py-2 font-medium">Rețetă</th>
                       <th className="px-3 py-2 font-medium">Produs</th>
                       <th className="px-3 py-2 font-medium">Unitate stocată</th>
@@ -260,11 +260,11 @@ export default function UnitAuditPage() {
                   </thead>
                   <tbody>
                     {mismatches.map((m) => (
-                      <tr key={m.ingredientId} className="border-t border-gray-100 dark:border-[#2a2a2a]">
+                      <tr key={m.ingredientId} className="border-t border-gray-100 dark:border-[#2a2620]">
                         <td className="px-3 py-2">
                           <Link
                             href={`/recipes/${m.recipeId}/edit`}
-                            className="text-orange-600 dark:text-orange-400 hover:underline"
+                            className="text-teal-700 dark:text-teal-400 hover:underline"
                           >
                             {m.recipeName}
                           </Link>
@@ -272,13 +272,13 @@ export default function UnitAuditPage() {
                         <td className="px-3 py-2">
                           <Link
                             href={`/ingredients?edit=${m.groceryItemId}`}
-                            className="text-gray-700 dark:text-[#c0c0c0] hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+                            className="text-gray-700 dark:text-[#c4bcb0] hover:text-teal-700 dark:hover:text-teal-400 hover:underline"
                           >
                             {m.itemName}
                           </Link>
                         </td>
                         <td className="px-3 py-2 text-red-600 dark:text-red-400">{m.ingUnit ?? "—"}</td>
-                        <td className="px-3 py-2 text-gray-500 dark:text-[#9a9a9a]">
+                        <td className="px-3 py-2 text-gray-500 dark:text-[#a49c90]">
                           {m.itemUnit ?? "—"}{m.itemUnit2 ? ` / ${m.itemUnit2}` : ""}
                         </td>
                       </tr>
