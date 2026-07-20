@@ -1056,6 +1056,8 @@ export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof User
 export const RecipeScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  nameRo: 'nameRo',
+  searchText: 'searchText',
   servings: 'servings',
   time: 'time',
   difficulty: 'difficulty',

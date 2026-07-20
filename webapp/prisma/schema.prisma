@@ -20,6 +20,8 @@ model User {
 model Recipe {
   id           String        @id @default(cuid())
   name         String
+  nameRo       String?       // RO translation of the title (search-only for now)
+  searchText   String?       // normalized name + nameRo (lowercased, diacritics stripped) for matching
   servings     Int?
   time         Int?
   difficulty   String?

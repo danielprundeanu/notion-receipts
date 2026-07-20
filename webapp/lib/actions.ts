@@ -2,6 +2,8 @@
 
 import { prisma } from "./db";
 import { ingredientGrams } from "./nutrition";
+import { buildRecipeSearchText, normalizeSearch } from "./search";
+import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 
 // ─── Recipe Form Types ────────────────────────────────────────────────────────
@@ -107,10 +109,36 @@ async function buildIngredientsAndInstructions(
   }
 }
 
+// Best-effort translation of a recipe title into the other language (RO↔EN) for search.
+// Returns null if no API key or on any error — searchText then falls back to the original title.
+async function translateTitleAlt(title: string): Promise<string | null> {
+  if (!process.env.ANTHROPIC_API_KEY || !title.trim()) return null;
+  try {
+    const anthropic = new Anthropic();
+    const res = await anthropic.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 80,
+      system:
+        "You translate a single recipe title between Romanian and English. " +
+        "If the title is in English, translate it to Romanian; if it is in Romanian, translate it to English. " +
+        "Reply with ONLY the translated title — no quotes, no explanation. Keep brand/proper names as-is.",
+      messages: [{ role: "user", content: title.trim() }],
+    });
+    const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
+    return text || null;
+  } catch (e) {
+    console.error("translateTitleAlt:", e);
+    return null;
+  }
+}
+
 export async function createRecipe(data: RecipeFormInput): Promise<string> {
+  const nameRo = await translateTitleAlt(data.name);
   const recipe = await prisma.recipe.create({
     data: {
       name: data.name,
+      nameRo,
+      searchText: buildRecipeSearchText(data.name, nameRo),
       category: data.categories.length > 0 ? data.categories.join(", ") : null,
       servings: data.servings,
       time: data.time,
@@ -129,10 +157,17 @@ export async function updateRecipe(
   id: string,
   data: RecipeFormInput
 ): Promise<void> {
+  const existing = await prisma.recipe.findUnique({ where: { id }, select: { name: true, nameRo: true } });
+  let nameRo = existing?.nameRo ?? null;
+  if (!existing || existing.name !== data.name || !nameRo) {
+    nameRo = await translateTitleAlt(data.name);
+  }
   await prisma.recipe.update({
     where: { id },
     data: {
       name: data.name,
+      nameRo,
+      searchText: buildRecipeSearchText(data.name, nameRo),
       category: data.categories.length > 0 ? data.categories.join(", ") : null,
       servings: data.servings,
       time: data.time,
@@ -179,6 +214,7 @@ export async function getRecipes(search?: string, category?: string, favorites?:
         search
           ? {
               OR: [
+                { searchText: { contains: normalizeSearch(search) } },
                 { name: { contains: search, mode: "insensitive" } },
                 { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
                 { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },
@@ -231,6 +267,7 @@ export async function searchRecipesForPlanner(query: string) {
   return prisma.recipe.findMany({
     where: {
       OR: [
+        { searchText: { contains: normalizeSearch(query) } },
         { name: { contains: query, mode: "insensitive" } },
         { ingredients: { some: { groceryItem: { name:   { contains: query, mode: "insensitive" } } } } },
         { ingredients: { some: { groceryItem: { nameRo: { contains: query, mode: "insensitive" } } } } },
@@ -249,6 +286,7 @@ export async function getRecipesPanel(search?: string, category?: string, favori
         search
           ? {
               OR: [
+                { searchText: { contains: normalizeSearch(search) } },
                 { name: { contains: search, mode: "insensitive" } },
                 { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
                 { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },

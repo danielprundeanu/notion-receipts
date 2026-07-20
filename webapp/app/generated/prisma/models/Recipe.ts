@@ -39,6 +39,8 @@ export type RecipeSumAggregateOutputType = {
 export type RecipeMinAggregateOutputType = {
   id: string | null
   name: string | null
+  nameRo: string | null
+  searchText: string | null
   servings: number | null
   time: number | null
   difficulty: string | null
@@ -55,6 +57,8 @@ export type RecipeMinAggregateOutputType = {
 export type RecipeMaxAggregateOutputType = {
   id: string | null
   name: string | null
+  nameRo: string | null
+  searchText: string | null
   servings: number | null
   time: number | null
   difficulty: string | null
@@ -71,6 +75,8 @@ export type RecipeMaxAggregateOutputType = {
 export type RecipeCountAggregateOutputType = {
   id: number
   name: number
+  nameRo: number
+  searchText: number
   servings: number
   time: number
   difficulty: number
@@ -99,6 +105,8 @@ export type RecipeSumAggregateInputType = {
 export type RecipeMinAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
+  searchText?: true
   servings?: true
   time?: true
   difficulty?: true
@@ -115,6 +123,8 @@ export type RecipeMinAggregateInputType = {
 export type RecipeMaxAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
+  searchText?: true
   servings?: true
   time?: true
   difficulty?: true
@@ -131,6 +141,8 @@ export type RecipeMaxAggregateInputType = {
 export type RecipeCountAggregateInputType = {
   id?: true
   name?: true
+  nameRo?: true
+  searchText?: true
   servings?: true
   time?: true
   difficulty?: true
@@ -234,6 +246,8 @@ export type RecipeGroupByArgs<ExtArgs extends runtime.Types.Extensions.InternalA
 export type RecipeGroupByOutputType = {
   id: string
   name: string
+  nameRo: string | null
+  searchText: string | null
   servings: number | null
   time: number | null
   difficulty: string | null
@@ -273,6 +287,8 @@ export type RecipeWhereInput = {
   NOT?: Prisma.RecipeWhereInput | Prisma.RecipeWhereInput[]
   id?: Prisma.StringFilter<"Recipe"> | string
   name?: Prisma.StringFilter<"Recipe"> | string
+  nameRo?: Prisma.StringNullableFilter<"Recipe"> | string | null
+  searchText?: Prisma.StringNullableFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableFilter<"Recipe"> | string | null
@@ -292,6 +308,8 @@ export type RecipeWhereInput = {
 export type RecipeOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrderInput | Prisma.SortOrder
+  searchText?: Prisma.SortOrderInput | Prisma.SortOrder
   servings?: Prisma.SortOrderInput | Prisma.SortOrder
   time?: Prisma.SortOrderInput | Prisma.SortOrder
   difficulty?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -315,6 +333,8 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.RecipeWhereInput[]
   NOT?: Prisma.RecipeWhereInput | Prisma.RecipeWhereInput[]
   name?: Prisma.StringFilter<"Recipe"> | string
+  nameRo?: Prisma.StringNullableFilter<"Recipe"> | string | null
+  searchText?: Prisma.StringNullableFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableFilter<"Recipe"> | string | null
@@ -333,6 +353,8 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
 export type RecipeOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrderInput | Prisma.SortOrder
+  searchText?: Prisma.SortOrderInput | Prisma.SortOrder
   servings?: Prisma.SortOrderInput | Prisma.SortOrder
   time?: Prisma.SortOrderInput | Prisma.SortOrder
   difficulty?: Prisma.SortOrderInput | Prisma.SortOrder
@@ -357,6 +379,8 @@ export type RecipeScalarWhereWithAggregatesInput = {
   NOT?: Prisma.RecipeScalarWhereWithAggregatesInput | Prisma.RecipeScalarWhereWithAggregatesInput[]
   id?: Prisma.StringWithAggregatesFilter<"Recipe"> | string
   name?: Prisma.StringWithAggregatesFilter<"Recipe"> | string
+  nameRo?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
+  searchText?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableWithAggregatesFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableWithAggregatesFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
@@ -373,6 +397,8 @@ export type RecipeScalarWhereWithAggregatesInput = {
 export type RecipeCreateInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -392,6 +418,8 @@ export type RecipeCreateInput = {
 export type RecipeUncheckedCreateInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -411,6 +439,8 @@ export type RecipeUncheckedCreateInput = {
 export type RecipeUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -430,6 +460,8 @@ export type RecipeUpdateInput = {
 export type RecipeUncheckedUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -449,6 +481,8 @@ export type RecipeUncheckedUpdateInput = {
 export type RecipeCreateManyInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -465,6 +499,8 @@ export type RecipeCreateManyInput = {
 export type RecipeUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -481,6 +517,8 @@ export type RecipeUpdateManyMutationInput = {
 export type RecipeUncheckedUpdateManyInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -497,6 +535,8 @@ export type RecipeUncheckedUpdateManyInput = {
 export type RecipeCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
+  searchText?: Prisma.SortOrder
   servings?: Prisma.SortOrder
   time?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -518,6 +558,8 @@ export type RecipeAvgOrderByAggregateInput = {
 export type RecipeMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
+  searchText?: Prisma.SortOrder
   servings?: Prisma.SortOrder
   time?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -534,6 +576,8 @@ export type RecipeMaxOrderByAggregateInput = {
 export type RecipeMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  nameRo?: Prisma.SortOrder
+  searchText?: Prisma.SortOrder
   servings?: Prisma.SortOrder
   time?: Prisma.SortOrder
   difficulty?: Prisma.SortOrder
@@ -614,6 +658,8 @@ export type RecipeUpdateOneRequiredWithoutWeekPlansNestedInput = {
 export type RecipeCreateWithoutIngredientsInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -632,6 +678,8 @@ export type RecipeCreateWithoutIngredientsInput = {
 export type RecipeUncheckedCreateWithoutIngredientsInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -666,6 +714,8 @@ export type RecipeUpdateToOneWithWhereWithoutIngredientsInput = {
 export type RecipeUpdateWithoutIngredientsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -684,6 +734,8 @@ export type RecipeUpdateWithoutIngredientsInput = {
 export type RecipeUncheckedUpdateWithoutIngredientsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -702,6 +754,8 @@ export type RecipeUncheckedUpdateWithoutIngredientsInput = {
 export type RecipeCreateWithoutInstructionsInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -720,6 +774,8 @@ export type RecipeCreateWithoutInstructionsInput = {
 export type RecipeUncheckedCreateWithoutInstructionsInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -754,6 +810,8 @@ export type RecipeUpdateToOneWithWhereWithoutInstructionsInput = {
 export type RecipeUpdateWithoutInstructionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -772,6 +830,8 @@ export type RecipeUpdateWithoutInstructionsInput = {
 export type RecipeUncheckedUpdateWithoutInstructionsInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -790,6 +850,8 @@ export type RecipeUncheckedUpdateWithoutInstructionsInput = {
 export type RecipeCreateWithoutWeekPlansInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -808,6 +870,8 @@ export type RecipeCreateWithoutWeekPlansInput = {
 export type RecipeUncheckedCreateWithoutWeekPlansInput = {
   id?: string
   name: string
+  nameRo?: string | null
+  searchText?: string | null
   servings?: number | null
   time?: number | null
   difficulty?: string | null
@@ -842,6 +906,8 @@ export type RecipeUpdateToOneWithWhereWithoutWeekPlansInput = {
 export type RecipeUpdateWithoutWeekPlansInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -860,6 +926,8 @@ export type RecipeUpdateWithoutWeekPlansInput = {
 export type RecipeUncheckedUpdateWithoutWeekPlansInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -927,6 +995,8 @@ export type RecipeCountOutputTypeCountWeekPlansArgs<ExtArgs extends runtime.Type
 export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
+  searchText?: boolean
   servings?: boolean
   time?: boolean
   difficulty?: boolean
@@ -947,6 +1017,8 @@ export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
 export type RecipeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
+  searchText?: boolean
   servings?: boolean
   time?: boolean
   difficulty?: boolean
@@ -963,6 +1035,8 @@ export type RecipeSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extens
 export type RecipeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  nameRo?: boolean
+  searchText?: boolean
   servings?: boolean
   time?: boolean
   difficulty?: boolean
@@ -979,6 +1053,8 @@ export type RecipeSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extens
 export type RecipeSelectScalar = {
   id?: boolean
   name?: boolean
+  nameRo?: boolean
+  searchText?: boolean
   servings?: boolean
   time?: boolean
   difficulty?: boolean
@@ -992,7 +1068,7 @@ export type RecipeSelectScalar = {
   updatedAt?: boolean
 }
 
-export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "servings" | "time" | "difficulty" | "category" | "favorite" | "link" | "imageUrl" | "notionId" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["recipe"]>
+export type RecipeOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameRo" | "searchText" | "servings" | "time" | "difficulty" | "category" | "favorite" | "link" | "imageUrl" | "notionId" | "notes" | "createdAt" | "updatedAt", ExtArgs["result"]["recipe"]>
 export type RecipeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | Prisma.Recipe$ingredientsArgs<ExtArgs>
   instructions?: boolean | Prisma.Recipe$instructionsArgs<ExtArgs>
@@ -1012,6 +1088,8 @@ export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     name: string
+    nameRo: string | null
+    searchText: string | null
     servings: number | null
     time: number | null
     difficulty: string | null
@@ -1451,6 +1529,8 @@ export interface Prisma__RecipeClient<T, Null = never, ExtArgs extends runtime.T
 export interface RecipeFieldRefs {
   readonly id: Prisma.FieldRef<"Recipe", 'String'>
   readonly name: Prisma.FieldRef<"Recipe", 'String'>
+  readonly nameRo: Prisma.FieldRef<"Recipe", 'String'>
+  readonly searchText: Prisma.FieldRef<"Recipe", 'String'>
   readonly servings: Prisma.FieldRef<"Recipe", 'Int'>
   readonly time: Prisma.FieldRef<"Recipe", 'Int'>
   readonly difficulty: Prisma.FieldRef<"Recipe", 'String'>
