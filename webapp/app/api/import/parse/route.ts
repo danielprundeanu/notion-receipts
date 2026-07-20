@@ -187,6 +187,10 @@ async function matchIngredient(name: string, nameMappings: Record<string, Ingred
   };
 }
 
+// Count-style units: a bare quantity ("2 eggs", "1 chicken breast") maps directly to
+// one of these with no numeric conversion. Anything else (g, ml, cup, …) is a measure.
+const COUNT_UNITS = new Set(["piece", "clove", "slice", "can", "stalk", "bunch", "head", "handful"]);
+
 function resolveUnitConflict(
   ingName: string,
   foreignUnit: string,
@@ -234,18 +238,30 @@ export async function POST(req: NextRequest) {
         r.ingredients.map(async (ing, idx) => {
           const match = ing.name ? await matchIngredient(ing.name, nameMappings) : { status: "new" as const };
 
+          // Resolve the ingredient's effective unit + any conflict against the matched item.
+          let effectiveUnit = ing.unit;
           let unitConflict: UnitConflict | undefined;
-          if (ing.unit && match.groceryItemId) {
+          if (match.groceryItemId) {
             const allowed = [match.groceryItemUnit, match.groceryItemUnit2].filter(Boolean) as string[];
-            if (allowed.length > 0 && !allowed.includes(ing.unit)) {
-              unitConflict = resolveUnitConflict(ing.name, ing.unit, allowed, unitChoices);
+
+            // Bare count with no unit word ("1 chicken breast"): if the item is sold by a
+            // count unit use that; otherwise it's measured by weight/volume (g, ml, …) so a
+            // bare "1" is ambiguous — treat it as "piece" so it flows through the normal
+            // resolve path (prompting "1 piece = ? g") instead of silently importing unit=null.
+            // Only when there IS a quantity — a qty-less "salt to taste" needs no unit.
+            if (!effectiveUnit && ing.qty != null && allowed.length > 0) {
+              effectiveUnit = allowed.find((u) => COUNT_UNITS.has(u)) ?? "piece";
+            }
+
+            if (effectiveUnit && allowed.length > 0 && !allowed.includes(effectiveUnit)) {
+              unitConflict = resolveUnitConflict(ing.name, effectiveUnit, allowed, unitChoices);
             }
           }
 
           return {
             name: ing.name,
             qty: ing.qty,
-            unit: ing.unit,
+            unit: effectiveUnit,
             obs: (ing as { obs?: string | null }).obs ?? null,
             groupName: ing.groupName,
             groupOrder: ing.groupOrder,
