@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Check, TriangleAlert } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TriangleAlert, Sparkles } from "lucide-react";
 import {
   getUnitAudit,
   updateGroceryItem,
@@ -10,24 +10,67 @@ import {
   type UnitMismatchRow,
 } from "@/lib/actions";
 
-// Inline editor for a single grocery item's unitWeight (g per piece).
-function UnitWeightInput({
-  onSaved,
+// Inline numeric fix (grams-per-unit conversion, or grams-per-piece weight),
+// with an optional AI estimate button (fills the draft, user reviews then saves).
+function FixInput({
+  placeholder,
+  aiParams,
+  onSave,
 }: {
-  onSaved: (grams: number) => void;
+  placeholder: string;
+  aiParams?: { ingredientName: string; fromUnit: string; toUnit: string };
+  onSave: (value: number) => void;
 }) {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiErr, setAiErr] = useState(false);
 
-  async function save() {
+  async function suggest() {
+    if (!aiParams || !aiParams.fromUnit || !aiParams.toUnit) return;
+    setAiLoading(true);
+    setAiErr(false);
+    try {
+      const res = await fetch("/api/import/suggest-conversion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(aiParams),
+      });
+      const data = await res.json();
+      if (res.ok && data.factor != null) setDraft(String(data.factor));
+      else setAiErr(true);
+    } catch {
+      setAiErr(true);
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
+  function save() {
     const g = parseFloat(draft);
     if (!draft.trim() || isNaN(g) || g < 0) return;
     setSaving(true);
-    onSaved(g);
+    onSave(g);
   }
 
   return (
     <div className="flex items-center gap-1.5 justify-end">
+      {aiParams && (
+        <button
+          type="button"
+          onClick={suggest}
+          disabled={aiLoading}
+          title={aiErr ? "AI n-a putut estima — încearcă din nou sau completează manual" : "Estimează cu AI"}
+          aria-label="Sugestie AI"
+          className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${
+            aiErr
+              ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
+              : "text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30"
+          }`}
+        >
+          {aiLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+        </button>
+      )}
       <input
         type="number"
         min="0"
@@ -35,16 +78,16 @@ function UnitWeightInput({
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter") save(); }}
-        placeholder="g/buc"
+        placeholder={placeholder}
         disabled={saving}
-        className="w-20 px-2 py-1.5 text-sm text-right bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-300 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+        className="w-24 px-2 py-1.5 text-sm text-right bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-300 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
       />
       <button
         type="button"
         onClick={save}
         disabled={saving || !draft.trim()}
         className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-40 transition-colors"
-        aria-label="salvează greutatea"
+        aria-label="salvează"
       >
         {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
       </button>
@@ -66,11 +109,11 @@ export default function UnitAuditPage() {
     });
   }, []);
 
-  async function handleSaveWeight(id: string, grams: number) {
-    // Optimistically drop the row — once unitWeight is set it no longer qualifies.
+  async function handleFix(id: string, field: "conversion" | "unitWeight", value: number) {
+    // Optimistically drop — the fix resolves the flag for this item.
     setMissing((prev) => prev.filter((r) => r.id !== id));
     setSavedCount((c) => c + 1);
-    await updateGroceryItem(id, { unitWeight: grams });
+    await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
   }
 
   return (
@@ -85,8 +128,8 @@ export default function UnitAuditPage() {
         </Link>
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#e3e3e3]">Audit unități</h1>
         <p className="text-sm text-gray-500 dark:text-[#787878] mt-1">
-          Probleme sistematice de import care strică nutriția. Completează greutatea pe bucată
-          (g/buc) o singură dată — se aplică automat în toate rețetele care folosesc produsul.
+          Probleme sistematice de import care strică nutriția. Fix-ul se aplică o singură dată pe produs
+          și se propagă automat în toate rețetele care-l folosesc.
         </p>
       </div>
 
@@ -96,19 +139,24 @@ export default function UnitAuditPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* ── Missing unitWeight ─────────────────────────────── */}
+          {/* ── Non-convertible units ──────────────────────────── */}
           <section>
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d4d4d4] mb-3">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d4d4d4] mb-1">
               <TriangleAlert size={15} className="text-orange-500" />
-              Produse folosite ca bucată, fără greutate
+              Unități care nu se pot transforma în grame
               <span className="text-xs font-normal text-gray-400 dark:text-[#666]">
                 ({missing.length})
               </span>
             </h2>
+            <p className="text-xs text-gray-400 dark:text-[#666] mb-3">
+              Cantitatea nu poate fi convertită în grame, deci nutriția iese 0. Pentru unități de volum
+              (cup, tbsp) completează <strong>conversia</strong> (1 cup = ? g); pentru bucăți,
+              <strong> greutatea pe bucată</strong>. Doar produsele cu nutriție sunt listate.
+            </p>
 
             {missing.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-[#787878] bg-gray-50 dark:bg-[#232323] border border-gray-200 dark:border-[#2e2e2e] rounded-xl px-4 py-6 text-center">
-                {savedCount > 0 ? "Gata — toate au greutate acum 🎉" : "Nimic de reparat aici 🎉"}
+                {savedCount > 0 ? "Gata — toate se pot converti acum 🎉" : "Nimic de reparat aici 🎉"}
               </p>
             ) : (
               <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2e2e]">
@@ -119,32 +167,62 @@ export default function UnitAuditPage() {
                       <th className="px-3 py-2 font-medium">Unități</th>
                       <th className="px-3 py-2 font-medium text-right">Folosiri</th>
                       <th className="px-3 py-2 font-medium">Exemple rețete</th>
-                      <th className="px-3 py-2 font-medium text-right">g / bucată</th>
+                      <th className="px-3 py-2 font-medium text-right">Fix</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {missing.map((r) => (
-                      <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2a2a]">
-                        <td className="px-3 py-2">
-                          <span className="text-gray-900 dark:text-[#e3e3e3]">{r.name}</span>
-                          {r.nameRo && (
-                            <span className="text-xs text-gray-400 dark:text-[#666] ml-1.5">({r.nameRo})</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-gray-500 dark:text-[#9a9a9a]">
-                          {r.unit ?? "—"}{r.unit2 ? ` / ${r.unit2}` : ""}
-                        </td>
-                        <td className="px-3 py-2 text-right text-gray-500 dark:text-[#9a9a9a]">
-                          {r.uses} <span className="text-gray-400 dark:text-[#666]">({r.recipes} rețete)</span>
-                        </td>
-                        <td className="px-3 py-2 text-gray-500 dark:text-[#787878] text-xs">
-                          {r.sampleRecipes.join(", ")}
-                        </td>
-                        <td className="px-3 py-2">
-                          <UnitWeightInput onSaved={(g) => handleSaveWeight(r.id, g)} />
-                        </td>
-                      </tr>
-                    ))}
+                    {missing.map((r) => {
+                      const offending = (r.badUnits ?? []).filter(Boolean);
+                      const unit2Lower = r.unit2?.toLowerCase();
+                      const convCase = !!unit2Lower && offending.some((u) => u.toLowerCase() === unit2Lower);
+                      const field: "conversion" | "unitWeight" = convCase ? "conversion" : "unitWeight";
+                      const badUnit = offending[0] ?? "buc";
+                      const hint = convCase
+                        ? `1 ${r.unit2} = ? ${r.unit ?? "g"}`
+                        : `? g / ${badUnit}`;
+                      const ph = convCase ? `g/${r.unit2}` : `g/${badUnit}`;
+                      return (
+                        <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2a2a]">
+                          <td className="px-3 py-2">
+                            <Link
+                              href={`/ingredients?edit=${r.id}`}
+                              className="text-orange-600 dark:text-orange-400 hover:underline"
+                            >
+                              {r.name}
+                            </Link>
+                            {r.nameRo && (
+                              <span className="text-xs text-gray-400 dark:text-[#666] ml-1.5">({r.nameRo})</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-gray-500 dark:text-[#9a9a9a]">
+                            {r.unit ?? "—"}{r.unit2 ? ` / ${r.unit2}` : ""}
+                            <span className="block text-[11px] text-orange-500/80">
+                              folosit ca: {offending.join(", ")}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-500 dark:text-[#9a9a9a]">
+                            {r.uses} <span className="text-gray-400 dark:text-[#666]">({r.recipes} rețete)</span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-500 dark:text-[#787878] text-xs">
+                            {r.sampleRecipes.join(", ")}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex flex-col items-end gap-1">
+                              <span className="text-[11px] text-gray-400 dark:text-[#666]">{hint}</span>
+                              <FixInput
+                                placeholder={ph}
+                                aiParams={{
+                                  ingredientName: r.name,
+                                  fromUnit: convCase ? (r.unit2 ?? "") : badUnit,
+                                  toUnit: convCase ? (r.unit ?? "g") : "g",
+                                }}
+                                onSave={(v) => handleFix(r.id, field, v)}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -191,7 +269,14 @@ export default function UnitAuditPage() {
                             {m.recipeName}
                           </Link>
                         </td>
-                        <td className="px-3 py-2 text-gray-700 dark:text-[#c0c0c0]">{m.itemName}</td>
+                        <td className="px-3 py-2">
+                          <Link
+                            href={`/ingredients?edit=${m.groceryItemId}`}
+                            className="text-gray-700 dark:text-[#c0c0c0] hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+                          >
+                            {m.itemName}
+                          </Link>
+                        </td>
                         <td className="px-3 py-2 text-red-600 dark:text-red-400">{m.ingUnit ?? "—"}</td>
                         <td className="px-3 py-2 text-gray-500 dark:text-[#9a9a9a]">
                           {m.itemUnit ?? "—"}{m.itemUnit2 ? ` / ${m.itemUnit2}` : ""}

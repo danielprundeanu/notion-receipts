@@ -2,9 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { getGroceryItems, updateGroceryItem } from "@/lib/actions";
-import { Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch } from "lucide-react";
+import {
+  getGroceryItems,
+  updateGroceryItem,
+  deleteGroceryItems,
+  setGroceryItemsCategory,
+} from "@/lib/actions";
+import {
+  Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch,
+  X, Trash2, Sparkles, ListChecks, Loader2,
+} from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
+import { GROCERY_CATEGORIES } from "@/lib/constants";
 
 type GroceryItem = {
   id: string;
@@ -40,7 +49,7 @@ function displayNum(n: number | null): string {
   return (Math.round(n * 10) / 10).toString();
 }
 
-// ─── Editable Cell ────────────────────────────────────────────────────────────
+// ─── Editable Cell (text / number) ─────────────────────────────────────────────
 
 function EditableCell({
   value,
@@ -111,6 +120,58 @@ function EditableCell({
   );
 }
 
+// ─── Select Cell (dropdown, e.g. category) ─────────────────────────────────────
+// Same click-to-edit behaviour as EditableCell, but commits from a <select>.
+// Preserves the current value if it isn't in `options` (nothing gets lost).
+
+function SelectCell({
+  value,
+  options,
+  onSave,
+  placeholder = "—",
+}: {
+  value: string | null;
+  options: string[];
+  onSave: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const ref = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (editing) ref.current?.focus();
+  }, [editing]);
+
+  const opts = value && !options.includes(value) ? [value, ...options] : options;
+
+  if (editing) {
+    return (
+      <select
+        ref={ref}
+        value={value ?? ""}
+        onChange={(e) => { setEditing(false); onSave(e.target.value); }}
+        onBlur={() => setEditing(false)}
+        className="w-full px-1.5 py-0.5 text-sm border border-orange-400 rounded focus:outline-none bg-white dark:bg-[#2a2a2a] text-gray-900 dark:text-[#e3e3e3]"
+      >
+        <option value="">{placeholder}</option>
+        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    );
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      title="Click to edit"
+      className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
+        !value ? "text-gray-300" : ""
+      }`}
+    >
+      {value ?? placeholder}
+    </span>
+  );
+}
+
 // ─── Sort Header ──────────────────────────────────────────────────────────────
 
 function SortTh({
@@ -173,10 +234,24 @@ export default function IngredientsPage() {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
 
+  // Multi-select
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+
   useEffect(() => {
     getGroceryItems().then((data) => {
       setItems(data as GroceryItem[]);
       setLoading(false);
+      // Deep link from the audit page (/ingredients?edit=<id>) opens that item's editor.
+      const editId = new URLSearchParams(window.location.search).get("edit");
+      if (editId) {
+        setEditingId(editId);
+        window.history.replaceState(null, "", "/ingredients");
+      }
     });
   }, []);
 
@@ -232,7 +307,100 @@ export default function IngredientsPage() {
     await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
   }
 
+  // ── Multi-select helpers ──────────────────────────────────────────────────
+  function toggleSelectMode() {
+    setSelectMode((on) => {
+      if (on) { setSelectedIds(new Set()); setConfirmBulkDelete(false); setBulkMsg(null); }
+      return !on;
+    });
+  }
+
+  function toggleOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+    setConfirmBulkDelete(false);
+  }
+
+  const allVisibleSelected = sorted.length > 0 && sorted.every((i) => selectedIds.has(i.id));
+  function toggleSelectAllVisible() {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) sorted.forEach((i) => next.delete(i.id));
+      else sorted.forEach((i) => next.add(i.id));
+      return next;
+    });
+    setConfirmBulkDelete(false);
+  }
+
+  const selectedCount = selectedIds.size;
+
+  async function handleBulkCategory(cat: string) {
+    if (!cat || selectedCount === 0) return;
+    const ids = [...selectedIds];
+    setBulkBusy(true);
+    setBulkMsg(null);
+    await setGroceryItemsCategory(ids, cat);
+    setItems((prev) => prev.map((it) => selectedIds.has(it.id) ? { ...it, category: cat } : it));
+    setBulkBusy(false);
+    setBulkMsg(`Categorie setată pentru ${ids.length} produse.`);
+  }
+
+  async function handleBulkDelete() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    setBulkMsg(null);
+    await deleteGroceryItems(ids);
+    setItems((prev) => prev.filter((it) => !selectedIds.has(it.id)));
+    setSelectedIds(new Set());
+    setConfirmBulkDelete(false);
+    setBulkBusy(false);
+    setBulkMsg(`${ids.length} produse șterse.`);
+  }
+
+  // Autofill nutrition for selected items — fills only currently-empty macros.
+  async function handleBulkAutofill() {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setBulkBusy(true);
+    setBulkMsg(null);
+    let filled = 0, skipped = 0;
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      setBulkProgress({ done: i, total: ids.length });
+      const item = items.find((it) => it.id === id);
+      if (!item) { skipped++; continue; }
+      const q = item.name?.trim() || item.nameRo?.trim();
+      if (!q) { skipped++; continue; }
+      try {
+        const res = await fetch(`/api/nutrition?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!res.ok || (data.kcal == null && data.protein == null)) { skipped++; continue; }
+        // only fill fields that are currently empty
+        const patch: Partial<GroceryItem> = {};
+        if (item.kcal == null && data.kcal != null) patch.kcal = data.kcal;
+        if (item.carbs == null && data.carbs != null) patch.carbs = data.carbs;
+        if (item.fat == null && data.fat != null) patch.fat = data.fat;
+        if (item.protein == null && data.protein != null) patch.protein = data.protein;
+        if (Object.keys(patch).length === 0) { skipped++; continue; }
+        await updateGroceryItem(id, patch as Parameters<typeof updateGroceryItem>[1]);
+        setItems((prev) => prev.map((it) => it.id === id ? { ...it, ...patch } : it));
+        filled++;
+      } catch {
+        skipped++;
+      }
+    }
+    setBulkProgress(null);
+    setBulkBusy(false);
+    setBulkMsg(`Autofill: ${filled} completate, ${skipped} sărite (doar valorile goale).`);
+  }
+
   const sharedThProps = { sortField, sortDir, onSort: handleSort };
+  const leadingCols = 1 + (selectMode ? 1 : 0); // edit icon (+ checkbox in select mode)
+  const totalCols = leadingCols + 12;
 
   return (
     <div className="p-4 md:p-6">
@@ -264,8 +432,18 @@ export default function IngredientsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search ingredient…"
-            className="w-full pl-9 pr-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#3a3a3a] text-gray-900 dark:text-[#e3e3e3] placeholder:text-gray-400 dark:placeholder:text-[#555555] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              title="Șterge căutarea"
+              aria-label="Șterge căutarea"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-[#666] hover:text-gray-600 dark:hover:text-[#9a9a9a] rounded transition-colors"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
         <select
           value={category}
@@ -277,7 +455,89 @@ export default function IngredientsPage() {
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
+        <button
+          onClick={toggleSelectMode}
+          className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+            selectMode
+              ? "bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
+              : "text-gray-700 dark:text-[#b8b8b8] border-gray-200 dark:border-[#3a3a3a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f]"
+          }`}
+        >
+          <ListChecks size={15} /> Select
+        </button>
       </div>
+
+      {/* Bulk action bar */}
+      {selectMode && (
+        <div className="flex flex-wrap items-center gap-3 mb-4 px-3 py-2.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-xl">
+          <span className="text-sm font-medium text-gray-700 dark:text-[#c0c0c0]">
+            {selectedCount > 0 ? `${selectedCount} selectate` : "Selectează rânduri…"}
+          </span>
+
+          {selectedCount > 0 && (
+            <>
+              <select
+                value=""
+                disabled={bulkBusy}
+                onChange={(e) => handleBulkCategory(e.target.value)}
+                className="px-2.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a3a3a] rounded-lg bg-white dark:bg-[#252525] text-gray-800 dark:text-[#d4d4d4] focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
+              >
+                <option value="">Setează categoria…</option>
+                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+
+              <button
+                onClick={handleBulkAutofill}
+                disabled={bulkBusy}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-[#b8b8b8] border border-gray-200 dark:border-[#3a3a3a] rounded-lg hover:bg-white dark:hover:bg-[#2f2f2f] disabled:opacity-50 transition-colors"
+              >
+                {bulkBusy && bulkProgress
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <Sparkles size={14} />}
+                {bulkBusy && bulkProgress ? `Autofill ${bulkProgress.done}/${bulkProgress.total}…` : "Autofill nutriție"}
+              </button>
+
+              {confirmBulkDelete ? (
+                <span className="flex items-center gap-2">
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={bulkBusy}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {bulkBusy && <Loader2 size={14} className="animate-spin" />}
+                    Confirmă ștergerea ({selectedCount})
+                  </button>
+                  <button
+                    onClick={() => setConfirmBulkDelete(false)}
+                    className="px-2 py-1.5 text-sm text-gray-500 dark:text-[#9a9a9a] hover:text-gray-700"
+                  >
+                    Anulează
+                  </button>
+                </span>
+              ) : (
+                <button
+                  onClick={() => setConfirmBulkDelete(true)}
+                  disabled={bulkBusy}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 size={14} /> Șterge
+                </button>
+              )}
+
+              <button
+                onClick={() => { setSelectedIds(new Set()); setConfirmBulkDelete(false); }}
+                className="ml-auto text-sm text-gray-500 dark:text-[#9a9a9a] hover:text-gray-700 dark:hover:text-[#c0c0c0]"
+              >
+                Deselectează
+              </button>
+            </>
+          )}
+
+          {bulkMsg && (
+            <span className="text-xs text-gray-500 dark:text-[#787878] w-full">{bulkMsg}</span>
+          )}
+        </div>
+      )}
 
       {/* Table */}
       {loading ? (
@@ -289,6 +549,18 @@ export default function IngredientsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-[#2a2a2a] text-left">
+                {selectMode && (
+                  <th className="px-3 py-2.5 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      className="accent-orange-500 cursor-pointer"
+                      aria-label="Selectează tot"
+                    />
+                  </th>
+                )}
+                <th className="px-2 py-2.5 w-10" />
                 <SortTh label="Name (EN)"  field="name"       {...sharedThProps} />
                 <SortTh label="Name (RO)"  field="nameRo"     {...sharedThProps} />
                 <SortTh label="Category"   field="category"   {...sharedThProps} />
@@ -301,66 +573,86 @@ export default function IngredientsPage() {
                 <SortTh label="Fat g"      field="fat"        align="right" {...sharedThProps} />
                 <SortTh label="Protein g"  field="protein"    align="right" {...sharedThProps} />
                 <SortTh label="Created"    field="createdAt"  {...sharedThProps} />
-                <th className="px-2 py-2.5" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-[#2e2e2e]">
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={totalCols} className="px-4 py-8 text-center text-gray-400">
                     No ingredients found
                   </td>
                 </tr>
               ) : (
-                sorted.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50/50 dark:hover:bg-[#252525] transition-colors">
-                    <td className="px-4 py-2 font-medium text-gray-900 dark:text-[#e3e3e3]">
-                      <EditableCell value={item.name} onSave={(v) => v && handleSave(item.id, "name", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.nameRo} onSave={(v) => handleSave(item.id, "nameRo", v)} placeholder="—" />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.category} onSave={(v) => handleSave(item.id, "category", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.unit} onSave={(v) => handleSave(item.id, "unit", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.unit2} onSave={(v) => handleSave(item.id, "unit2", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.conversion} isNumber align="right" onSave={(v) => handleSave(item.id, "conversion", v)} placeholder="—" />
-                    </td>
-                    <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
-                      <EditableCell value={item.unitWeight != null ? fmt(item.unitWeight) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "unitWeight", v)} placeholder="—" />
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8] font-medium">
-                      <EditableCell value={item.kcal} isNumber align="right" onSave={(v) => handleSave(item.id, "kcal", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
-                      <EditableCell value={item.carbs != null ? fmt(item.carbs) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "carbs", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
-                      <EditableCell value={item.fat != null ? fmt(item.fat) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "fat", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
-                      <EditableCell value={item.protein != null ? fmt(item.protein) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "protein", v)} />
-                    </td>
-                    <td className="px-4 py-2 text-gray-400 dark:text-[#666666] whitespace-nowrap text-xs">
-                      {new Date(item.createdAt).toLocaleDateString("ro-RO", { day: "2-digit", month: "short", year: "numeric" })}
-                    </td>
-                    <td className="px-2 py-2">
-                      <button
-                        onClick={() => setEditingId(item.id)}
-                        title="Edit ingredient"
-                        className="p-1.5 text-gray-300 dark:text-[#444444] hover:text-orange-500 dark:hover:text-orange-400 transition-colors rounded"
-                      >
-                        <Pencil size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                sorted.map((item) => {
+                  const isSelected = selectedIds.has(item.id);
+                  return (
+                    <tr
+                      key={item.id}
+                      className={`transition-colors ${
+                        isSelected
+                          ? "bg-orange-50/60 dark:bg-orange-950/20"
+                          : "hover:bg-gray-50/50 dark:hover:bg-[#252525]"
+                      }`}
+                    >
+                      {selectMode && (
+                        <td className="px-3 py-2">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleOne(item.id)}
+                            className="accent-orange-500 cursor-pointer"
+                            aria-label={`Selectează ${item.name}`}
+                          />
+                        </td>
+                      )}
+                      <td className="px-2 py-2">
+                        <button
+                          onClick={() => setEditingId(item.id)}
+                          title="Edit ingredient"
+                          className="p-1.5 text-gray-400 dark:text-[#666] hover:text-orange-500 dark:hover:text-orange-400 transition-colors rounded"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
+                      <td className="px-4 py-2 font-medium text-gray-900 dark:text-[#e3e3e3]">
+                        <EditableCell value={item.name} onSave={(v) => v && handleSave(item.id, "name", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                        <EditableCell value={item.nameRo} onSave={(v) => handleSave(item.id, "nameRo", v)} placeholder="—" />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a] min-w-[9rem]">
+                        <SelectCell value={item.category} options={GROCERY_CATEGORIES} onSave={(v) => handleSave(item.id, "category", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                        <EditableCell value={item.unit} onSave={(v) => handleSave(item.id, "unit", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                        <EditableCell value={item.unit2} onSave={(v) => handleSave(item.id, "unit2", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                        <EditableCell value={item.conversion} isNumber align="right" onSave={(v) => handleSave(item.id, "conversion", v)} placeholder="—" />
+                      </td>
+                      <td className="px-4 py-2 text-gray-600 dark:text-[#9a9a9a]">
+                        <EditableCell value={item.unitWeight != null ? fmt(item.unitWeight) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "unitWeight", v)} placeholder="—" />
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8] font-medium">
+                        <EditableCell value={item.kcal} isNumber align="right" onSave={(v) => handleSave(item.id, "kcal", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
+                        <EditableCell value={item.carbs != null ? fmt(item.carbs) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "carbs", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
+                        <EditableCell value={item.fat != null ? fmt(item.fat) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "fat", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-700 dark:text-[#b8b8b8]">
+                        <EditableCell value={item.protein != null ? fmt(item.protein) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "protein", v)} />
+                      </td>
+                      <td className="px-4 py-2 text-gray-400 dark:text-[#666666] whitespace-nowrap text-xs">
+                        {new Date(item.createdAt).toLocaleDateString("ro-RO", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

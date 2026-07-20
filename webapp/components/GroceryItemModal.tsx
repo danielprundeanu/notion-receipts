@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Trash2, X } from "lucide-react";
-import { createGroceryItem, updateGroceryItem, deleteGroceryItem, getGroceryItemDetails } from "@/lib/actions";
+import Link from "next/link";
+import { Loader2, Trash2, X, Sparkles } from "lucide-react";
+import { createGroceryItem, updateGroceryItem, deleteGroceryItem, getGroceryItemDetails, getRecipesUsingGroceryItem } from "@/lib/actions";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
 
 export type GroceryItemResult = {
@@ -54,6 +55,36 @@ export default function GroceryItemModal({
   const [saving, setSaving] = useState(false);
   const [fetchingNutrition, setFetchingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
+  const [aiConvLoading, setAiConvLoading] = useState(false);
+  const [aiConvNote, setAiConvNote] = useState<string | null>(null);
+  const [aiConvError, setAiConvError] = useState<string | null>(null);
+  const [usedIn, setUsedIn] = useState<Array<{ id: string; name: string }> | null>(null);
+
+  async function handleSuggestConversion() {
+    const ingredientName = name.trim() || nameRo.trim();
+    if (!ingredientName || !unit.trim() || !unit2.trim()) return;
+    setAiConvLoading(true);
+    setAiConvNote(null);
+    setAiConvError(null);
+    try {
+      const res = await fetch("/api/import/suggest-conversion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // factor = câte `toUnit` (unit) reprezintă 1 `fromUnit` (unit2) = valoarea `conversion`.
+        body: JSON.stringify({ ingredientName, fromUnit: unit2.trim(), toUnit: unit.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setAiConvError(data.error ?? "Nu s-a putut genera sugestia"); return; }
+      if (data.factor != null) {
+        setConversion(String(data.factor));
+        setAiConvNote(data.note || "");
+      }
+    } catch {
+      setAiConvError("Eroare la conexiune");
+    } finally {
+      setAiConvLoading(false);
+    }
+  }
 
   async function handleFetchNutrition() {
     const query = name.trim() || nameRo.trim();
@@ -91,6 +122,16 @@ export default function GroceryItemModal({
       setProtein(data.protein?.toString() ?? "");
       setLoading(false);
     });
+  }, [itemId]);
+
+  // Recipes that use this ingredient (reverse references).
+  useEffect(() => {
+    if (!itemId) { setUsedIn(null); return; }
+    let cancelled = false;
+    getRecipesUsingGroceryItem(itemId)
+      .then((rs) => { if (!cancelled) setUsedIn(rs.map((r) => ({ id: r.id, name: r.name }))); })
+      .catch(() => { if (!cancelled) setUsedIn([]); });
+    return () => { cancelled = true; };
   }, [itemId]);
 
   async function handleDelete() {
@@ -212,7 +253,7 @@ export default function GroceryItemModal({
                 <label className={labelCls}>Unitate secundară</label>
                 <input
                   value={unit2}
-                  onChange={(e) => setUnit2(e.target.value)}
+                  onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
                   placeholder="cup, tbsp…"
                   className={inputCls}
                 />
@@ -221,14 +262,34 @@ export default function GroceryItemModal({
 
             {unit2 && (
               <div>
-                <label className={labelCls}>Conversie (1 {unit2} = ? {unit || "unit"})</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className={labelCls + " mb-0"}>Conversie (1 {unit2} = ? {unit || "unit"})</span>
+                  <button
+                    type="button"
+                    onClick={handleSuggestConversion}
+                    disabled={aiConvLoading || !unit.trim() || (!name.trim() && !nameRo.trim())}
+                    className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
+                    title="Estimează cu AI (valori uzuale de gătit)"
+                  >
+                    {aiConvLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                    {aiConvLoading ? "Se caută..." : "Sugestie AI"}
+                  </button>
+                </div>
                 <input
                   type="number" step="0.001" min="0"
                   value={conversion}
-                  onChange={(e) => setConversion(e.target.value)}
+                  onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
                   placeholder="ex: 240"
                   className={inputCls}
                 />
+                {aiConvNote != null && (
+                  <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
+                    Sugerat de AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Verifică și ajustează dacă nu e corect.
+                  </p>
+                )}
+                {aiConvError && (
+                  <p className="text-xs text-red-500 dark:text-red-400 mt-1">{aiConvError}</p>
+                )}
               </div>
             )}
 
@@ -270,6 +331,31 @@ export default function GroceryItemModal({
                 ))}
               </div>
             </div>
+
+            {isEdit && (
+              <div>
+                <span className={labelCls}>
+                  Folosit în{usedIn ? ` (${usedIn.length})` : ""}
+                </span>
+                {usedIn === null ? (
+                  <p className="text-xs text-gray-400 dark:text-[#555555]">Se încarcă…</p>
+                ) : usedIn.length === 0 ? (
+                  <p className="text-xs text-gray-400 dark:text-[#555555]">Nefolosit în nicio rețetă.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {usedIn.map((r) => (
+                      <Link
+                        key={r.id}
+                        href={`/recipes/${r.id}`}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs bg-gray-100 dark:bg-[#2a2a2a] text-gray-700 dark:text-[#c8c8c8] hover:bg-gray-200 dark:hover:bg-[#333333] transition-colors"
+                      >
+                        {r.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -299,33 +385,35 @@ export default function GroceryItemModal({
           </div>
         )}
 
-        <div className="flex gap-3 mt-4">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || loading || !name.trim() || !unit.trim()}
-            className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
-          >
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            {isEdit ? "Save" : "Creează ingredient"}
-          </button>
+        <div className="flex items-center gap-3 mt-4">
           {isEdit && !confirmDelete && (
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="px-3 py-2.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
               title="Șterge ingredient"
             >
-              <Trash2 size={16} />
+              <Trash2 size={15} /> Șterge
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
-          >
-            Anulează
-          </button>
+          <div className="flex gap-3 ml-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] rounded-lg transition-colors"
+            >
+              Anulează
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || loading || !name.trim() || !unit.trim()}
+              className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+            >
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              {isEdit ? "Save" : "Creează ingredient"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

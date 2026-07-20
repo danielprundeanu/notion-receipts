@@ -218,6 +218,15 @@ export async function getRecipe(id: string) {
   });
 }
 
+// Recipes that reference a given grocery item (reverse lookup for the ingredient card).
+export async function getRecipesUsingGroceryItem(groceryItemId: string) {
+  return prisma.recipe.findMany({
+    where: { ingredients: { some: { groceryItemId } } },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, imageUrl: true },
+  });
+}
+
 export async function searchRecipesForPlanner(query: string) {
   return prisma.recipe.findMany({
     where: {
@@ -491,6 +500,19 @@ export async function deleteGroceryItem(id: string): Promise<void> {
   revalidatePath("/recipes");
 }
 
+export async function deleteGroceryItems(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  await prisma.groceryItem.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath("/ingredients");
+  revalidatePath("/recipes");
+}
+
+export async function setGroceryItemsCategory(ids: string[], category: string | null): Promise<void> {
+  if (ids.length === 0) return;
+  await prisma.groceryItem.updateMany({ where: { id: { in: ids } }, data: { category } });
+  revalidatePath("/ingredients");
+}
+
 export async function getGroceryCategories(): Promise<string[]> {
   const items = await prisma.groceryItem.findMany({
     select: { category: true },
@@ -534,13 +556,16 @@ export type MissingUnitWeightRow = {
   nameRo: string | null;
   unit: string | null;
   unit2: string | null;
+  conversion: number | null;
   uses: number;
   recipes: number;
   sampleRecipes: string[];
+  badUnits: string[]; // the ingredient units that can't be converted to grams
 };
 
 export type UnitMismatchRow = {
   ingredientId: string;
+  groceryItemId: string;
   recipeId: string;
   recipeName: string;
   itemName: string;
@@ -555,26 +580,29 @@ export async function getUnitAudit(): Promise<{
 }> {
   const missingUnitWeight = await prisma.$queryRawUnsafe<MissingUnitWeightRow[]>(`
     SELECT g.id, g.name, g."nameRo",
-           g.unit, g.unit2,
+           g.unit, g.unit2, g.conversion,
            COUNT(*)::int AS uses,
            COUNT(DISTINCT i."recipeId")::int AS recipes,
-           (ARRAY_AGG(DISTINCT r.name))[1:3] AS "sampleRecipes"
+           (ARRAY_AGG(DISTINCT r.name))[1:3] AS "sampleRecipes",
+           ARRAY_AGG(DISTINCT COALESCE(i.unit, g.unit)) AS "badUnits"
     FROM "Ingredient" i
     JOIN "GroceryItem" g ON g.id = i."groceryItemId"
     JOIN "Recipe" r ON r.id = i."recipeId"
     WHERE g."unitWeight" IS NULL
       AND i.quantity IS NOT NULL
+      -- only items whose nutrition actually matters (mirrors the nutrition skip)
+      AND (COALESCE(g.kcal, 0) <> 0 OR COALESCE(g.protein, 0) <> 0)
       AND lower(COALESCE(i.unit, g.unit, '')) NOT IN ('g', 'ml')
       AND NOT (
         g.unit2 IS NOT NULL AND lower(COALESCE(i.unit, '')) = lower(g.unit2)
         AND g.conversion IS NOT NULL AND lower(COALESCE(g.unit, '')) IN ('g', 'ml')
       )
-    GROUP BY g.id, g.name, g."nameRo", g.unit, g.unit2
+    GROUP BY g.id, g.name, g."nameRo", g.unit, g.unit2, g.conversion
     ORDER BY uses DESC, g.name ASC
   `);
 
   const mismatches = await prisma.$queryRawUnsafe<UnitMismatchRow[]>(`
-    SELECT i.id AS "ingredientId", i."recipeId", r.name AS "recipeName",
+    SELECT i.id AS "ingredientId", g.id AS "groceryItemId", i."recipeId", r.name AS "recipeName",
            g.name AS "itemName", i.unit AS "ingUnit",
            g.unit AS "itemUnit", g.unit2 AS "itemUnit2"
     FROM "Ingredient" i
