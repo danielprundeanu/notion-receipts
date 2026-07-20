@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon } from "lucide-react";
+import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil } from "lucide-react";
 import {
   createRecipe,
   updateRecipe,
@@ -18,7 +18,7 @@ const CATEGORIES = [
   "Smoothie", "Smoothie Bowl", "Soup", "High Protein", "Receipt", "Extra",
 ];
 const ALL_UNITS = ["g", "ml", "piece", "tsp", "tbsp", "cup", "slice", "handful", "pinch", "scoop", "bottle", "pint"];
-const DIFFICULTIES = ["Easy", "Moderate"];
+const DIFFICULTIES = ["Easy", "Moderate", "Hard"];
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -416,6 +416,43 @@ function UnitSelect({
   );
 }
 
+// ─── Ingredient reorder controls ───────────────────────────────────────────────
+
+function IngredientReorder({
+  onUp,
+  onDown,
+  upDisabled,
+  downDisabled,
+}: {
+  onUp: () => void;
+  onDown: () => void;
+  upDisabled: boolean;
+  downDisabled: boolean;
+}) {
+  return (
+    <div className="flex flex-col shrink-0">
+      <button
+        type="button"
+        onClick={onUp}
+        disabled={upDisabled}
+        aria-label="mută mai sus"
+        className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
+      >
+        <ChevronUp size={12} />
+      </button>
+      <button
+        type="button"
+        onClick={onDown}
+        disabled={downDisabled}
+        aria-label="mută mai jos"
+        className="p-0.5 text-gray-300 dark:text-[#444444] hover:text-gray-600 dark:hover:text-[#9a9a9a] disabled:opacity-30 transition-colors"
+      >
+        <ChevronDown size={12} />
+      </button>
+    </div>
+  );
+}
+
 // ─── Main Form ────────────────────────────────────────────────────────────────
 
 export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRecipeData; noWrapper?: boolean }) {
@@ -426,6 +463,8 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
   const [name, setName] = useState(initial?.name ?? "");
   const [categories, setCategories] = useState<string[]>(initial?.categories ?? []);
+  const [newTag, setNewTag] = useState("");
+  const [addingTag, setAddingTag] = useState(false);
   const [servings, setServings] = useState(initial?.servings ?? "");
   const [time, setTime] = useState(initial?.time ?? "");
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? "");
@@ -466,6 +505,16 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     setCategories((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
+  }
+
+  // Add a free-form tag. Commas are stripped — they're the delimiter categories
+  // are stored with (join(", ") / split(",")), so a tag can't contain one.
+  function addNewTag() {
+    const t = newTag.replace(/,/g, "").trim();
+    setNewTag("");
+    if (!t) return;
+    const exists = [...CATEGORIES, ...categories].some((c) => c.toLowerCase() === t.toLowerCase());
+    if (!exists) setCategories((prev) => [...prev, t]);
   }
 
   // ── Servings scaler (batch ↔ per-serving) ──────────────────────────
@@ -573,6 +622,21 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           ? { ...g, ingredients: g.ingredients.filter((i) => i.id !== ingId) }
           : g
       )
+    );
+  }
+
+  function moveIngredient(groupId: string, ingId: string, dir: -1 | 1) {
+    setGroups((gs) =>
+      gs.map((g) => {
+        if (g.id !== groupId) return g;
+        const idx = g.ingredients.findIndex((i) => i.id === ingId);
+        if (idx < 0) return g;
+        const next = idx + dir;
+        if (next < 0 || next >= g.ingredients.length) return g;
+        const arr = [...g.ingredients];
+        [arr[idx], arr[next]] = [arr[next], arr[idx]];
+        return { ...g, ingredients: arr };
+      })
     );
   }
 
@@ -774,6 +838,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           >
             <option value="">—</option>
             {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+            {difficulty && !DIFFICULTIES.includes(difficulty) && (
+              <option value={difficulty}>{difficulty}</option>
+            )}
           </select>
         </div>
         <div className="flex flex-col">
@@ -797,7 +864,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       <div>
         <Label>Categories</Label>
         <div className="flex flex-wrap gap-1.5">
-          {CATEGORIES.map((cat) => (
+          {[...CATEGORIES, ...categories.filter((c) => !CATEGORIES.includes(c))].map((cat) => (
             <button
               key={cat}
               type="button"
@@ -811,6 +878,32 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               {cat}
             </button>
           ))}
+
+          {/* Add a new free-form tag — chip with a + at the tail of the list */}
+          {addingTag ? (
+            <input
+              autoFocus
+              value={newTag}
+              onChange={(e) => setNewTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); addNewTag(); }
+                else if (e.key === "Escape") { setNewTag(""); setAddingTag(false); }
+              }}
+              onBlur={() => { addNewTag(); setAddingTag(false); }}
+              placeholder="Tag nou…"
+              maxLength={30}
+              className="w-28 px-3 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#252525] border border-orange-400 dark:border-orange-800/60 text-gray-900 dark:text-[#e3e3e3] focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => setAddingTag(true)}
+              title="Adaugă tag nou"
+              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 dark:border-[#3a3a3a] text-gray-500 dark:text-[#9a9a9a] hover:bg-gray-50 dark:hover:bg-[#2f2f2f] hover:text-gray-700 dark:hover:text-[#c8c8c8] inline-flex items-center gap-1 transition-colors"
+            >
+              <Plus size={12} /> Tag
+            </button>
+          )}
         </div>
       </div>
 
@@ -953,13 +1046,13 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               {/* Ingredient rows */}
               <div className="p-3 space-y-3">
                 {/* Column headers — desktop only */}
-                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_28px] gap-2 mb-1 px-0.5">
+                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_64px] gap-2 mb-1 px-0.5">
                   {["Qty", "Unit", "Ingredient", ""].map((h) => (
                     <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
                   ))}
                 </div>
 
-                {group.ingredients.map((ing) => (
+                {group.ingredients.map((ing, ingIdx) => (
                   <div key={ing.id}>
                     {/* Mobile layout */}
                     <div className="sm:hidden space-y-1.5">
@@ -985,6 +1078,19 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
                           onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
                         />
+                        <IngredientReorder
+                          onUp={() => moveIngredient(group.id, ing.id, -1)}
+                          onDown={() => moveIngredient(group.id, ing.id, 1)}
+                          upDisabled={ingIdx === 0}
+                          downDisabled={ingIdx === group.ingredients.length - 1}
+                        />
+                        {ing.groceryItemId && (
+                          <button type="button" aria-label="editează produsul (unități, nutriție)"
+                            onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
+                            className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-orange-500 transition-colors shrink-0">
+                            <Pencil size={14} />
+                          </button>
+                        )}
                         <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
                           className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors shrink-0">
                           <Trash2 size={15} />
@@ -1001,7 +1107,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
                     {/* Desktop layout */}
                     <div className="hidden sm:block space-y-1">
-                      <div className="grid grid-cols-[64px_80px_1fr_28px] gap-2 items-center">
+                      <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2 items-center">
                         <input
                           type="number" min="0" step="0.001"
                           value={ing.quantity}
@@ -1023,12 +1129,27 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
                           onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
                         />
-                        <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                          className="flex items-center justify-center p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="flex items-center justify-end gap-0.5">
+                          <IngredientReorder
+                            onUp={() => moveIngredient(group.id, ing.id, -1)}
+                            onDown={() => moveIngredient(group.id, ing.id, 1)}
+                            upDisabled={ingIdx === 0}
+                            downDisabled={ingIdx === group.ingredients.length - 1}
+                          />
+                          {ing.groceryItemId && (
+                            <button type="button" aria-label="editează produsul (unități, nutriție)"
+                              onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
+                              className="p-1 text-gray-300 dark:text-[#444444] hover:text-orange-500 transition-colors">
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
+                            className="p-1 text-gray-300 dark:text-[#444444] hover:text-red-500 transition-colors">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </div>
-                      <div className="grid grid-cols-[64px_80px_1fr_28px] gap-2">
+                      <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2">
                         <div className="col-span-2" />
                         <input
                           type="text"
@@ -1105,9 +1226,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           onClose={() => setEditingUnit(null)}
           onSaved={(unit, unit2) => {
             const newUnits = [unit, unit2].filter(Boolean) as string[];
+            const grp = groups.find((g) => g.id === editingUnit.groupId);
+            const ing = grp?.ingredients.find((i) => i.id === editingUnit.ingId);
+            // Keep the currently-selected unit if it's still valid (e.g. when only
+            // nutrition was edited); otherwise fall back to the newly-added unit.
+            const keepCurrent = ing?.unit && newUnits.includes(ing.unit) ? ing.unit : null;
             updateIngredient(editingUnit.groupId, editingUnit.ingId, {
               availableUnits: newUnits.length > 0 ? newUnits : null,
-              unit: unit2 ?? unit ?? "",
+              unit: keepCurrent ?? unit2 ?? unit ?? "",
             });
             setEditingUnit(null);
           }}
