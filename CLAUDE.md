@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 Meal-planner web app that imports recipes & grocery items from Notion and manages
-recipes, a weekly planner, a grocery list, and ingredient nutrition. **UI copy is in Romanian.**
+recipes, a weekly planner, a grocery list, and ingredient nutrition. **UI copy is in English.**
+(Historically the UI was Romanian; it was fully translated to English in v0.26.0. Ignore older
+notes that say the UI is Romanian.)
 
 ## Repository layout
 
@@ -75,13 +77,20 @@ npx tsx scripts/<name>.ts   # one-off DB scripts
   request time — image writes won't persist. Use blob storage for uploads instead.
 
 ## Conventions
-- **UX & i18n rules: read `webapp/UX_CONVENTIONS.md` before any UI change.** It's the source of
-  truth for mobile touch targets, silent-failure/error-handling rules, the i18n display-label maps
-  in `lib/labels.ts` (never translate DB values like `mealType`/`category`/`difficulty` — only
-  their shown label), the theme anti-flash, and image/blob handling. Non-obvious highlights:
+- **UX rules: read `webapp/UX_CONVENTIONS.md` before any UI change.** It's the source of
+  truth for mobile touch targets, silent-failure/error-handling rules, the display-label helpers
+  in `lib/labels.ts`, the theme anti-flash, and image/blob handling. Non-obvious highlights:
   mobile-first (≥40–44px touch targets); every mutation needs try/catch + rollback + visible error
-  (no silent failures on shared data); **never edit i18n files with `perl -CSD`** (mojibake).
-- UI copy: Romanian. Match the surrounding component's Tailwind classes & dark-mode tokens
-  (`dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text, orange-500 accent).
+  (no silent failures on shared data).
+- **Display labels vs DB values:** some English strings are DB values / filter keys, NOT free copy —
+  `WeekPlan.mealType` (`Breakfast`/…), `Recipe.category`/`difficulty`, `GroceryItem.category`
+  (emoji-prefixed). Keep the stored value untouched (filters, `?cat=`, `<option value>`, comparisons);
+  render via `lib/labels.ts` (`mealLabel`/`categoryLabel`/`difficultyLabel`/`groceryCategoryLabel`).
+  Now that the UI is English these helpers are near-identity (they just return the value, and
+  `groceryCategoryLabel` strips the emoji prefix) — but keep using them so display stays decoupled
+  from storage.
+- UI copy: English (`toLocaleDateString("en-US", …)` for dates). Match the surrounding component's
+  Tailwind classes & dark-mode tokens (`dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text,
+  orange-500 accent).
 - Releases: `/release <version>` bumps root `CHANGELOG.md` + `webapp/package.json` and commits.
   **Root `CHANGELOG.md` is canonical**; `webapp/CHANGELOG.md` is stale — ignore it.

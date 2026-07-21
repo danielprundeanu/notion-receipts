@@ -5,17 +5,17 @@ import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Grid2X
 import { useEffect, useState } from "react";
 
 const SORT_OPTIONS = [
-  { value: "date_desc", icon: ArrowDownWideNarrow, label: "Cele mai noi" },
-  { value: "date_asc",  icon: ArrowUpNarrowWide,  label: "Cele mai vechi" },
+  { value: "date_desc", icon: ArrowDownWideNarrow, label: "Newest" },
+  { value: "date_asc",  icon: ArrowUpNarrowWide,  label: "Oldest" },
   { value: "name_asc",  icon: ArrowDownAZ,         label: "A–Z" },
 ] as const;
 
 type ViewMode = "grid" | "grid2" | "list";
 
 const VIEW_OPTIONS: { value: ViewMode; icon: React.ElementType; title: string }[] = [
-  { value: "grid",  icon: LayoutGrid, title: "Grid (1 coloană mobile)" },
-  { value: "grid2", icon: Grid2X2,    title: "Grid (2 coloane mobile)" },
-  { value: "list",  icon: List,        title: "Listă" },
+  { value: "grid",  icon: LayoutGrid, title: "Grid (1 column on mobile)" },
+  { value: "grid2", icon: Grid2X2,    title: "Grid (2 columns on mobile)" },
+  { value: "list",  icon: List,        title: "List" },
 ];
 
 export default function SortSelect({
@@ -113,7 +113,7 @@ export default function SortSelect({
             ? "text-orange-500 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30"
             : "text-gray-400 dark:text-[#5c554b] hover:text-gray-700 dark:hover:text-[#bab2a6]"
         }`}
-        title={selectMode ? "Ieși din selecție" : "Selectează"}
+        title={selectMode ? "Exit selection" : "Select"}
       >
         <ListChecks size={17} />
       </button>

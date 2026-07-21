@@ -156,14 +156,14 @@ export default function RecipesFilterBar({
         <input
           value={value}
           onChange={(e) => onSearchInput(e.target.value)}
-          placeholder="Caută rețete…"
+          placeholder="Search recipes…"
           className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
         />
         {value && (
           <button
             type="button"
             onClick={clearSearch}
-            title="Golește căutarea"
+            title="Clear search"
             className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
           >
             <X size={14} />
@@ -184,13 +184,13 @@ export default function RecipesFilterBar({
               autoFocus
               value={value}
               onChange={(e) => onSearchInput(e.target.value)}
-              placeholder="Caută rețete…"
+              placeholder="Search recipes…"
               className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
             />
             <button
               type="button"
               onClick={() => { clearSearch(); setSearchOpen(false); }}
-              title="Închide"
+              title="Close"
               className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
             >
               <X size={14} />
@@ -205,7 +205,7 @@ export default function RecipesFilterBar({
           {/* Search chip — mobile only; pinned left, stays fixed while chips scroll */}
           <button
             onClick={() => setSearchOpen(true)}
-            title="Caută"
+            title="Search"
             aria-hidden={!stuck}
             tabIndex={stuck ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
@@ -223,7 +223,7 @@ export default function RecipesFilterBar({
               onClick={() => sessionStorage.setItem("recipesFiltersCleared", "1")}
               className={`${chip} ${!cat && !favOnly ? on : off}`}
             >
-              Toate
+              All
             </Link>
 
             <Link
@@ -232,7 +232,7 @@ export default function RecipesFilterBar({
               className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
             >
               <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-              Favorite
+              Favorites
             </Link>
 
             {CATEGORIES.map((c) => (

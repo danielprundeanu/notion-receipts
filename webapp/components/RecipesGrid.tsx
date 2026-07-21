@@ -115,9 +115,9 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
               onClick={toggleAll}
               className="text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
             >
-              {selected.size === recipes.length && recipes.length > 0 ? "Deselectează tot" : `Selectează tot (${recipes.length})`}
+              {selected.size === recipes.length && recipes.length > 0 ? "Deselect all" : `Select all (${recipes.length})`}
             </button>
-            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{selected.size} selectate</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{selected.size} selected</span>
           </div>
           <div className="flex items-center gap-2">
             {selected.size > 0 && !confirmDelete && (
@@ -125,31 +125,31 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 onClick={() => setConfirmDelete(true)}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg transition-colors"
               >
-                <Trash2 size={13} /> Șterge {selected.size}
+                <Trash2 size={13} /> Delete {selected.size}
               </button>
             )}
             {selected.size > 0 && confirmDelete && (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-[#7c756a]">Ești sigur?</span>
+                <span className="text-xs text-gray-500 dark:text-[#7c756a]">Are you sure?</span>
                 <button
                   onClick={handleDelete}
                   disabled={isPending}
                   className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {isPending ? "Se șterge…" : "Șterge definitiv"}
+                  {isPending ? "Deleting…" : "Delete permanently"}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#bab2a6] transition-colors"
                 >
-                  Anulează
+                  Cancel
                 </button>
               </div>
             )}
             <button
               onClick={() => { setSelected(new Set()); setConfirmDelete(false); window.dispatchEvent(new CustomEvent("selectmodechange", { detail: false })); }}
               className="text-xs text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#7c756a] transition-colors"
-              title="Ieși din selecție"
+              title="Exit selection"
             >
               ✕
             </button>
@@ -296,10 +296,10 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
               </div>
             </button>
             <div />
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Rețetă</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Categorie</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Timp</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Porții</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Recipe</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Category</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Time</span>
+            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Servings</span>
             <div />
           </div>
 
@@ -322,7 +322,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                   </div>
                 </button>
 
-                {/* Thumbnail — vizibil inline între checkbox și nume pe toate ecranele */}
+                {/* Thumbnail — shown inline between the checkbox and the name on all screens */}
                 <div className="block w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2a2620] shrink-0 relative">
                   {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
                     <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="40px" />
@@ -369,7 +369,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
 
                 {/* Servings */}
                 <div className="hidden sm:block text-xs text-gray-500 dark:text-[#7c756a]">
-                  {recipe.servings ? `${recipe.servings} porții` : <span className="text-gray-300 dark:text-[#4a443c]">—</span>}
+                  {recipe.servings ? `${recipe.servings} servings` : <span className="text-gray-300 dark:text-[#4a443c]">—</span>}
                 </div>
 
                 {/* Arrow */}

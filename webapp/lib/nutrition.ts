@@ -32,14 +32,15 @@ export function ingredientGrams(
   // Mass units are grams directly.
   if (u === "g" || u === "ml") return quantity;
 
-  // Second unit with an explicit conversion into a mass primary unit.
-  if (
-    gi.unit2 &&
-    u === gi.unit2.toLowerCase() &&
-    gi.conversion != null &&
-    (gi.unit === "g" || gi.unit === "ml")
-  ) {
-    return quantity * gi.conversion;
+  // Ingredient stored in the item's 2nd unit → it can ONLY become grams via the
+  // explicit conversion into a mass primary unit. If that isn't possible, return
+  // null (skip) — never fall through to unitWeight, which is grams-per-PIECE and
+  // would silently mis-scale a unit2 quantity (e.g. cups) as if it were pieces.
+  if (gi.unit2 && u === gi.unit2.toLowerCase()) {
+    if (gi.conversion != null && (gi.unit === "g" || gi.unit === "ml")) {
+      return quantity * gi.conversion;
+    }
+    return null;
   }
 
   // Piece / count-style unit → grams per piece.

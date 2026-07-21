@@ -504,7 +504,7 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
   if (isUnsupportedHost(url)) {
     return errorRecipe(
       url,
-      "Link video/social (Instagram, YouTube, TikTok etc.) — nu conține o rețetă structurată. Copiază rețeta ca text și folosește importul din text."
+      "Video/social link (Instagram, YouTube, TikTok etc.) — it doesn't contain a structured recipe. Copy the recipe as text and use the text import."
     );
   }
 
@@ -534,22 +534,22 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
     });
     if (!res.ok) {
       if ([401, 403, 429, 503].includes(res.status)) {
-        return errorRecipe(url, `Site-ul blochează accesul automat (HTTP ${res.status}). Site-urile protejate (ex. Cloudflare) nu pot fi importate direct — copiază rețeta ca text.`);
+        return errorRecipe(url, `The site is blocking automated access (HTTP ${res.status}). Protected sites (e.g. Cloudflare) can't be imported directly — copy the recipe as text.`);
       }
-      return errorRecipe(url, `Site-ul a răspuns cu HTTP ${res.status}.`);
+      return errorRecipe(url, `The site responded with HTTP ${res.status}.`);
     }
     html = await res.text();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     const friendly = /timeout|aborted|timed out/i.test(msg)
-      ? "Site-ul nu a răspuns la timp (timeout). Încearcă din nou sau importă rețeta ca text."
-      : `Nu s-a putut accesa site-ul (${msg}).`;
+      ? "The site didn't respond in time (timeout). Try again or import the recipe as text."
+      : `Couldn't reach the site (${msg}).`;
     return errorRecipe(url, friendly);
   }
 
   // Cloudflare / bot-challenge interstitial served instead of the page.
   if (/Just a moment|cf-browser-verification|Attention Required!/i.test(html) && !/application\/ld\+json/i.test(html)) {
-    return errorRecipe(url, "Site-ul e protejat de Cloudflare și blochează importul automat — copiază rețeta ca text.");
+    return errorRecipe(url, "The site is protected by Cloudflare and blocks automated import — copy the recipe as text.");
   }
 
   // Extract all JSON-LD script tags
@@ -583,7 +583,7 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
 
   return errorRecipe(
     url,
-    "Pagina a fost accesată, dar nu conține o rețetă structurată recognoscibilă. Verifică linkul sau importă rețeta ca text."
+    "The page was reached, but it doesn't contain a recognizable structured recipe. Check the link or import the recipe as text."
   );
 }
 

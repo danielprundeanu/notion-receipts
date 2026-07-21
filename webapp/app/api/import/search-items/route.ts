@@ -15,6 +15,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(items);
   } catch (err) {
     console.error("[import/search-items]", err);
-    return NextResponse.json({ error: "Eroare la căutare" }, { status: 500 });
+    return NextResponse.json({ error: "Search error" }, { status: 500 });
   }
 }

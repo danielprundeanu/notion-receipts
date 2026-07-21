@@ -17,7 +17,7 @@ export default function ThemeToggle({ compact = false }: ThemeToggleProps) {
       <button
         onClick={toggleTheme}
         aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        className="flex flex-col items-center gap-0.5 py-2.5 px-2 text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+        className="flex flex-col items-center gap-0.5 py-2.5 px-2 text-gray-400 dark:text-[#8a8175] hover:text-gray-600 dark:hover:text-[#bab2a6] transition-colors"
       >
         {isDark ? <Sun size={21} /> : <Moon size={21} />}
         <span className="text-[10px] font-medium">{isDark ? "Light" : "Dark"}</span>
@@ -27,7 +27,7 @@ export default function ThemeToggle({ compact = false }: ThemeToggleProps) {
 
   return (
     <div className="flex items-center justify-between px-3 py-2">
-      <div className="flex items-center gap-2.5 text-sm font-medium text-gray-600 dark:text-slate-400">
+      <div className="flex items-center gap-2.5 text-sm font-medium text-gray-600 dark:text-[#a49c90]">
         {isDark ? <Moon size={15} /> : <Sun size={15} />}
         <span>{isDark ? "Dark" : "Light"}</span>
       </div>
@@ -38,8 +38,8 @@ export default function ThemeToggle({ compact = false }: ThemeToggleProps) {
         aria-checked={isDark}
         aria-label="Toggle dark mode"
         onClick={toggleTheme}
-        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 before:content-[''] before:absolute before:-inset-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-800 ${
-          isDark ? "bg-orange-500" : "bg-gray-200 dark:bg-slate-600"
+        className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 before:content-[''] before:absolute before:-inset-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-[#201c18] ${
+          isDark ? "bg-orange-500" : "bg-gray-200 dark:bg-[#3a352e]"
         }`}
       >
         <span

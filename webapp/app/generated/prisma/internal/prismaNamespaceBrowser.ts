@@ -58,6 +58,7 @@ export const ModelName = {
   Instruction: 'Instruction',
   WeekPlan: 'WeekPlan',
   IngredientNameMapping: 'IngredientNameMapping',
+  GroceryListItem: 'GroceryListItem',
   UnitRule: 'UnitRule'
 } as const
 
@@ -179,6 +180,19 @@ export const IngredientNameMappingScalarFieldEnum = {
 } as const
 
 export type IngredientNameMappingScalarFieldEnum = (typeof IngredientNameMappingScalarFieldEnum)[keyof typeof IngredientNameMappingScalarFieldEnum]
+
+
+export const GroceryListItemScalarFieldEnum = {
+  id: 'id',
+  weekStart: 'weekStart',
+  name: 'name',
+  quantity: 'quantity',
+  unit: 'unit',
+  category: 'category',
+  createdAt: 'createdAt'
+} as const
+
+export type GroceryListItemScalarFieldEnum = (typeof GroceryListItemScalarFieldEnum)[keyof typeof GroceryListItemScalarFieldEnum]
 
 
 export const UnitRuleScalarFieldEnum = {

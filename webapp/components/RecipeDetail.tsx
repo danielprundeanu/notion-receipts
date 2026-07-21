@@ -59,7 +59,7 @@ export type RecipeData = {
   }>;
 };
 
-const DAYS = ["Lun", "Mar", "Mie", "Joi", "Vin", "Sâm", "Dum"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Stored/compared as WeekPlan.mealType — keep the English values; show mealLabel() for display.
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 type MealType = (typeof MEALS)[number];
@@ -171,7 +171,7 @@ function AddToPlannerModal({
       }
       setDone(true);
     } catch {
-      setAddError("Nu s-a putut adăuga în planner. Încearcă din nou.");
+      setAddError("Couldn't add to the planner. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -181,7 +181,7 @@ function AddToPlannerModal({
     <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">Adaugă în planner</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">Add to planner</h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-3">
             <X size={18} />
           </button>
@@ -192,20 +192,20 @@ function AddToPlannerModal({
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
               <CalendarPlus size={20} className="text-green-600 dark:text-green-400" />
             </div>
-            <p className="font-medium text-gray-900 dark:text-[#eae5de] mb-1">Adăugat!</p>
+            <p className="font-medium text-gray-900 dark:text-[#eae5de] mb-1">Added!</p>
             <p className="text-sm text-gray-500 dark:text-[#7c756a]">
-              {totalEntries} slot(uri) adăugate în{" "}
-              {selectedDays.length} {selectedDays.length !== 1 ? "zile" : "zi"}
+              {totalEntries} slot{totalEntries !== 1 ? "s" : ""} added across{" "}
+              {selectedDays.length} {selectedDays.length !== 1 ? "days" : "day"}
             </p>
             <button onClick={onClose} className="mt-4 text-sm text-orange-600 dark:text-orange-400 hover:underline">
-              Închide
+              Close
             </button>
           </div>
         ) : (
           <>
             {/* Day selector */}
             <div className="mb-5">
-              <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Zile</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Days</p>
               <div className="grid grid-cols-7 gap-1">
                 {DAYS.map((d, i) => {
                   const date = new Date(weekStart);
@@ -256,7 +256,7 @@ function AddToPlannerModal({
             <div className="mb-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Mese și porții
+                  Meals & servings
                 </p>
                 <span className="text-xs text-orange-500 dark:text-orange-400 font-medium">
                   {DAYS[activeDayIdx]}
@@ -321,8 +321,8 @@ function AddToPlannerModal({
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <CalendarPlus size={14} />}
               {totalEntries === 0
-                ? "Selectează cel puțin o masă"
-                : `Adaugă în planner${totalEntries > 1 ? ` (${totalEntries} sloturi)` : ""}`}
+                ? "Select at least one meal"
+                : `Add to planner${totalEntries > 1 ? ` (${totalEntries} slots)` : ""}`}
             </button>
           </>
         )}
@@ -394,7 +394,9 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   for (const ing of recipe.ingredients) {
     if (!ing.groceryItem || !ing.quantity) continue;
     const gi = ing.groceryItem;
-    if (!gi.kcal && !gi.protein) continue;
+    // Skip only items with no macro data at all — an item with just carbs/fat
+    // (no kcal) still contributes and must not be dropped from the totals.
+    if (!gi.kcal && !gi.carbs && !gi.fat && !gi.protein) continue;
     const grams = ingredientGrams(ing.quantity, ing.unit, gi);
     if (grams == null) continue;
     hasNutrition = true;
@@ -413,21 +415,24 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           href="/recipes"
           className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
-          <ArrowLeft size={15} /> Înapoi la rețete
+          <ArrowLeft size={15} /> Back to recipes
         </Link>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPlanner(true)}
-            title="Adaugă în planner"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2.5 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
+            title="Add to planner"
+            aria-label="Add to planner"
+            className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
           >
-            <CalendarPlus size={13} /> Adaugă în planner
+            <CalendarPlus size={17} />
           </button>
           <Link
             href={`/recipes/${recipe.id}/edit`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
+            title="Edit"
+            aria-label="Edit"
+            className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
-            <Pencil size={13} /> Editează
+            <Pencil size={16} />
           </Link>
         </div>
       </div>
@@ -450,7 +455,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={handleToggleFavorite}
-              title={isFavorite ? "Elimină de la favorite" : "Adaugă la favorite"}
+              title={isFavorite ? "Remove from favorites" : "Add to favorites"}
               className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
             >
               <Star
@@ -465,7 +470,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
               >
-                <ExternalLink size={14} /> Sursă
+                <ExternalLink size={14} /> Source
               </a>
             )}
           </div>
@@ -494,7 +499,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       {/* Servings control */}
       <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100 dark:border-[#2e2a24] flex-wrap">
         <Users size={15} className="text-gray-500 dark:text-[#7c756a]" />
-        <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Porții</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Servings</span>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setServings((s) => Math.max(1, s - 1))}
@@ -517,12 +522,12 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             onClick={() => setServings(defaultServings)}
             className="text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] underline"
           >
-            resetează
+            reset
           </button>
         )}
         {scale !== 1 && (
           <span className="text-xs text-orange-600 dark:text-orange-400 font-medium bg-orange-50 dark:bg-orange-950/40 px-2 py-0.5 rounded-full">
-            ×{Math.round(scale * 100) / 100} scalat
+            ×{Math.round(scale * 100) / 100} scaled
           </span>
         )}
         {plannerServings > 0 && (
@@ -530,7 +535,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             onClick={() => setServings(plannerServings)}
             className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50 bg-orange-50 dark:bg-orange-950/30 px-2.5 py-1 rounded-full hover:bg-orange-100 dark:hover:bg-orange-950/50 transition-colors"
           >
-            <CalendarPlus size={11} /> Din planner ({plannerServings})
+            <CalendarPlus size={11} /> From planner ({plannerServings})
           </button>
         )}
       </div>
@@ -540,7 +545,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <div className="flex items-center gap-2.5 px-4 py-3 mb-6 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-100 dark:border-orange-900/50 text-orange-800 dark:text-orange-300">
           <span className="text-base">🍽️</span>
           <span className="text-sm">
-            1 lot = <strong>{defaultServings} porții</strong>
+            1 batch = <strong>{defaultServings} servings</strong>
           </span>
         </div>
       )}
@@ -550,14 +555,14 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         {/* Ingredients */}
         <div className="lg:col-span-2">
           {sortedGroups.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-[#7c756a]">Niciun ingredient</p>
+            <p className="text-sm text-gray-500 dark:text-[#7c756a]">No ingredients</p>
           ) : (
             <div className="space-y-5">
               {sortedGroups.map(([groupOrder, group]) => (
                 <div key={groupOrder}>
                   {(sortedGroups.length > 1 || group.name) && (
                     <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de] mb-2">
-                      {group.name ?? `Partea ${groupOrder}`}
+                      {group.name ?? `Part ${groupOrder}`}
                     </h2>
                   )}
                   <ul className="space-y-3">
@@ -604,14 +609,14 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             <div className="mt-6 p-4 bg-gray-50 dark:bg-[#2a2620] rounded-xl border border-gray-100 dark:border-[#2e2a24]">
               <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-[#bab2a6] mb-3">
                 <Flame size={14} className="text-orange-500" />
-                Nutriție · {servings} porții
+                Nutrition · {servings} servings
               </div>
               <div className="grid grid-cols-4 gap-2 text-center">
                 {[
                   { label: "kcal", value: Math.round(totalKcal) },
-                  { label: "carbo", value: `${Math.round(totalCarbs)}g` },
-                  { label: "grăsimi", value: `${Math.round(totalFat)}g` },
-                  { label: "proteine", value: `${Math.round(totalProtein)}g` },
+                  { label: "carbs", value: `${Math.round(totalCarbs)}g` },
+                  { label: "fat", value: `${Math.round(totalFat)}g` },
+                  { label: "protein", value: `${Math.round(totalProtein)}g` },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <div className="font-bold text-gray-900 dark:text-[#eae5de] text-sm">{value}</div>
@@ -623,14 +628,14 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           )}
 
           <p className="mt-4 text-[11px] text-gray-400 dark:text-[#5c554b]">
-            Adăugată {new Date(recipe.createdAt).toLocaleDateString("ro-RO", { day: "numeric", month: "long", year: "numeric" })}
+            Added {new Date(recipe.createdAt).toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
 
         {/* Instructions */}
         <div className="lg:col-span-3">
           {recipe.instructions.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-[#7c756a]">Nicio instrucțiune încă</p>
+            <p className="text-sm text-gray-500 dark:text-[#7c756a]">No instructions yet</p>
           ) : (
             <div className="space-y-4">
               {(() => {

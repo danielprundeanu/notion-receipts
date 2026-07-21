@@ -27,15 +27,15 @@ export async function POST(req: Request) {
       model: "claude-haiku-4-5",
       max_tokens: 300,
       system:
-        "Ești un asistent culinar care estimează factori de conversie între unități pentru un ingredient anume, " +
-        "folosind valori uzuale de gătit (măsuri US standard). " +
-        "Răspunzi EXCLUSIV cu un obiect JSON, fără text în plus, exact de forma: " +
-        `{"factor": <număr pozitiv>, "note": "<explicație foarte scurtă în română>", "confidence": "high"|"medium"|"low"}. ` +
-        "factor = câte unități toUnit reprezintă 1 unitate fromUnit din acel ingredient.",
+        "You are a culinary assistant that estimates unit-conversion factors for a specific ingredient, " +
+        "using common cooking values (standard US measures). " +
+        "You reply EXCLUSIVELY with a JSON object, no extra text, exactly in the form: " +
+        `{"factor": <positive number>, "note": "<very short explanation in English>", "confidence": "high"|"medium"|"low"}. ` +
+        "factor = how many toUnit units make up 1 fromUnit unit of that ingredient.",
       messages: [
         {
           role: "user",
-          content: `Ingredient: "${ingredientName}". Cât înseamnă 1 ${fromUnit} în ${toUnit}? Întoarce doar JSON-ul.`,
+          content: `Ingredient: "${ingredientName}". How much is 1 ${fromUnit} in ${toUnit}? Return only the JSON.`,
         },
       ],
     });
@@ -43,12 +43,12 @@ export async function POST(req: Request) {
     const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
     const parsed = parseSuggestion(text);
     if (!parsed) {
-      return NextResponse.json({ error: "Răspuns AI invalid." }, { status: 502 });
+      return NextResponse.json({ error: "Invalid AI response." }, { status: 502 });
     }
     return NextResponse.json(parsed);
   } catch (e) {
     console.error("suggest-conversion:", e);
-    return NextResponse.json({ error: "Eroare la generarea sugestiei." }, { status: 500 });
+    return NextResponse.json({ error: "Error generating the suggestion." }, { status: 500 });
   }
 }
 

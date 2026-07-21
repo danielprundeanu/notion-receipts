@@ -15,7 +15,7 @@ export async function login(
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return "Email sau parolă incorectă.";
+      return "Incorrect email or password.";
     }
     // signIn throws a redirect on success — must be re-thrown.
     throw error;

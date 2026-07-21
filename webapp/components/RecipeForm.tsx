@@ -62,7 +62,7 @@ function emptyIngredient(): IngredientRow {
   return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null, notes: "" };
 }
 
-function defaultGroup(name = "Ingrediente"): IngredientGroup {
+function defaultGroup(name = "Ingredients"): IngredientGroup {
   return { id: uid(), name, ingredients: [emptyIngredient()] };
 }
 
@@ -111,7 +111,7 @@ function GroceryItemInput({
       <input
         value={value}
         onChange={(e) => { hasTouched.current = true; onChange(e.target.value); setOpen(true); }}
-        placeholder="Nume ingredient"
+        placeholder="Ingredient name"
         className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
       />
       {showDropdown && (
@@ -151,7 +151,7 @@ function GroceryItemInput({
               }}
               className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a352e]"
             >
-              <Plus size={13} /> Adaugă &ldquo;{value}&rdquo; ca ingredient nou
+              <Plus size={13} /> Add &ldquo;{value}&rdquo; as a new ingredient
             </button>
           )}
         </div>
@@ -218,7 +218,7 @@ function GroceryItemEditModal({
     try {
       const res = await fetch(`/api/nutrition?q=${encodeURIComponent(item.name)}`);
       const data = await res.json();
-      if (!res.ok) { setNutritionError(data.error ?? "Nu s-au găsit date"); return; }
+      if (!res.ok) { setNutritionError(data.error ?? "No data found"); return; }
       if (data.kcal != null) setKcal(String(data.kcal));
       if (data.carbs != null) setCarbs(String(data.carbs));
       if (data.fat != null) setFat(String(data.fat));
@@ -264,7 +264,7 @@ function GroceryItemEditModal({
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {item ? item.name : "Se încarcă…"}
+            {item ? item.name : "Loading…"}
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
@@ -277,13 +277,13 @@ function GroceryItemEditModal({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Unitate principală</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Primary unit</span>
                 <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg text-gray-500 dark:text-[#7c756a]">
                   {item.unit ?? "—"}
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">A 2-a unitate</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Second unit</span>
                 <input
                   value={unit2}
                   onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
@@ -296,29 +296,29 @@ function GroceryItemEditModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Conversie (1 {unit2 || "a 2-a unitate"} = ? {item.unit ?? "principală"})
+                  Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
                 </span>
                 <button
                   type="button"
                   onClick={handleSuggestConversion}
                   disabled={aiConvLoading || !item.unit || !unit2.trim()}
                   className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
-                  title="Estimează cu AI (valori uzuale de gătit)"
+                  title="Estimate with AI (common cooking values)"
                 >
                   {aiConvLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                  {aiConvLoading ? "Se caută..." : "Sugestie AI"}
+                  {aiConvLoading ? "Searching..." : "AI suggestion"}
                 </button>
               </div>
               <input
                 inputMode="decimal" type="number" step="0.001" min="0"
                 value={conversion}
                 onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
-                placeholder={`ex: 240 dacă 1 cup = 240 ${item.unit ?? "g"}`}
+                placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
                 className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
               {aiConvNote != null && (
                 <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
-                  Sugerat de AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Verifică și ajustează.
+                  Suggested by AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Review and adjust.
                 </p>
               )}
               {aiConvError && (
@@ -329,19 +329,19 @@ function GroceryItemEditModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Nutriție (per 100{item.unit === "ml" ? "ml" : "g"})
+                  Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
                 </span>
                 <button
                   type="button"
                   onClick={handleFetchNutrition}
                   disabled={fetchingNutrition}
                   className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-50 transition-colors"
-                  title="Caută automat din Open Food Facts"
+                  title="Auto-search from Open Food Facts"
                 >
                   {fetchingNutrition
                     ? <Loader2 size={11} className="animate-spin" />
                     : <span>↓</span>}
-                  {fetchingNutrition ? "Se caută..." : "Auto-completare"}
+                  {fetchingNutrition ? "Searching..." : "Auto-fill"}
                 </button>
               </div>
               {nutritionError && (
@@ -350,9 +350,9 @@ function GroceryItemEditModal({
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: "kcal", value: kcal, set: setKcal },
-                  { label: "glucide g", value: carbs, set: setCarbs },
-                  { label: "grăsimi g", value: fat, set: setFat },
-                  { label: "proteine g", value: protein, set: setProtein },
+                  { label: "carbs g", value: carbs, set: setCarbs },
+                  { label: "fat g", value: fat, set: setFat },
+                  { label: "protein g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
@@ -377,14 +377,14 @@ function GroceryItemEditModal({
             className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
-            Salvează
+            Save
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
           >
-            Anulează
+            Cancel
           </button>
         </div>
       </div>
@@ -404,13 +404,18 @@ function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: 
     el.style.height = `${el.scrollHeight}px`;
   }
 
+  // Fit height to content on mount and whenever the text changes externally
+  // (e.g. editing an existing recipe) — otherwise a long body stays clipped at
+  // `rows={8}` until the user focuses or types.
+  useEffect(() => { autoResize(); }, [value]);
+
   return (
     <textarea
       ref={ref}
       value={value}
       onChange={(e) => { onChange(e.target.value); autoResize(); }}
       onFocus={autoResize}
-      placeholder={"## Pași\n1. Primul pas\n2. Al doilea pas\n\n## Sfaturi\n- Folosește unt rece\n- Sau text simplu"}
+      placeholder={"## Steps\n1. First step\n2. Second step\n\n## Tips\n- Use cold butter\n- Or plain text"}
       rows={8}
       className="w-full px-4 py-3 text-sm bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#3a352e] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c4bcb0] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] leading-relaxed font-mono"
     />
@@ -458,7 +463,7 @@ function UnitSelect({
     >
       <option value="">—</option>
       {units.map((u) => <option key={u} value={u}>{u}</option>)}
-      {showAddUnit && <option value="__add_unit__">+ Adaugă unitate…</option>}
+      {showAddUnit && <option value="__add_unit__">+ Add unit…</option>}
     </select>
   );
 }
@@ -482,7 +487,7 @@ function IngredientReorder({
         type="button"
         onClick={onUp}
         disabled={upDisabled}
-        aria-label="mută mai sus"
+        aria-label="move up"
         className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
       >
         <ChevronUp size={12} />
@@ -491,7 +496,7 @@ function IngredientReorder({
         type="button"
         onClick={onDown}
         disabled={downDisabled}
-        aria-label="mută mai jos"
+        aria-label="move down"
         className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
       >
         <ChevronDown size={12} />
@@ -622,11 +627,11 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   async function handleImageFile(file: File) {
     setError(null);
     if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
-      setError("Format acceptat: JPG, PNG sau WebP.");
+      setError("Accepted formats: JPG, PNG or WebP.");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      setError("Imaginea e prea mare (max 10MB).");
+      setError("Image is too large (max 10MB).");
       return;
     }
     setImageUploading(true);
@@ -636,9 +641,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       const res = await fetch("/api/upload-recipe-image", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.path) setImageUrl(data.path);
-      else setError(data.error ?? `Upload eșuat (${res.status}).`);
+      else setError(data.error ?? `Upload failed (${res.status}).`);
     } catch {
-      setError("Eroare la conexiune. Încearcă din nou.");
+      setError("Connection error. Please try again.");
     }
     setImageUploading(false);
   }
@@ -659,7 +664,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   // ── Group operations ──────────────────────────────────────────────────────
 
   function addGroup() {
-    setGroups((gs) => [...gs, defaultGroup(`Grup ${gs.length + 1}`)]);
+    setGroups((gs) => [...gs, defaultGroup(`Group ${gs.length + 1}`)]);
   }
 
   function removeGroup(groupId: string) {
@@ -756,7 +761,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError("Numele rețetei este obligatoriu"); return; }
+    if (!name.trim()) { setError("The recipe name is required"); return; }
     setSaving(true);
     setError(null);
 
@@ -815,14 +820,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         router.push(`/recipes/${id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "A apărut o eroare");
+      setError(err instanceof Error ? err.message : "An error occurred");
       setSaving(false);
     }
   }
 
   async function handleDelete() {
     if (!initial?.id) return;
-    if (!confirm(`Ștergi "${name}"? Această acțiune nu poate fi anulată.`)) return;
+    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) return;
     setDeleting(true);
     await deleteRecipe(initial.id);
     router.push("/recipes");
@@ -839,22 +844,22 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nume rețetă…"
+          placeholder="Recipe name…"
           required
           className="w-full text-2xl font-bold text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] bg-transparent border-0 border-b-2 border-gray-200 dark:border-[#3a352e] focus:border-orange-500 focus:outline-none pb-2 transition-colors"
         />
         <input
           value={nameRo}
           onChange={(e) => setNameRo(e.target.value)}
-          placeholder="Traducere pentru căutare (RO/EN) — auto la salvare dacă lași gol"
+          placeholder="Translation for search (RO/EN) — auto-filled on save if left blank"
           className="w-full mt-2 text-sm text-gray-600 dark:text-[#bab2a6] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] bg-transparent border-0 border-b border-gray-100 dark:border-[#2e2a24] focus:border-orange-400 focus:outline-none pb-1 transition-colors"
-          title="Titlul în cealaltă limbă, folosit doar pentru căutare"
+          title="Title in the other language, used only for search"
         />
       </div>
 
-      {/* Imagine copertă */}
+      {/* Cover image */}
       <div>
-        <Label>Imagine copertă</Label>
+        <Label>Cover image</Label>
         <input
           ref={imageInputRef}
           type="file"
@@ -873,7 +878,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             <img src={imageUrl} alt="" className="w-full h-full object-cover" />
             {dragActive && (
               <div className="absolute inset-0 bg-orange-500/30 flex items-center justify-center text-white text-sm font-medium">
-                Eliberează pentru a înlocui
+                Drop to replace
               </div>
             )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
@@ -882,14 +887,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 onClick={() => imageInputRef.current?.click()}
                 className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-800 shadow"
               >
-                Schimbă
+                Change
               </button>
               <button
                 type="button"
                 onClick={() => setImageUrl("")}
                 className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white shadow"
               >
-                Elimină
+                Remove
               </button>
             </div>
           </div>
@@ -911,7 +916,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               <>
                 <ImageIcon size={20} className={dragActive ? "text-orange-400" : "text-gray-300 dark:text-[#4a443c] group-hover:text-orange-400"} />
                 <span className={`text-sm ${dragActive ? "text-orange-500" : "text-gray-400 dark:text-[#5c554b] group-hover:text-orange-500"}`}>
-                  {dragActive ? "Eliberează pentru a încărca" : "Trage o imagine aici sau click"}
+                  {dragActive ? "Drop to upload" : "Drag an image here or click"}
                 </span>
               </>
             )}
@@ -922,7 +927,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       {/* Meta */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div>
-          <Label>Timp (min)</Label>
+          <Label>Time (min)</Label>
           <input
             inputMode="decimal" type="number" min="1"
             value={time}
@@ -932,7 +937,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           />
         </div>
         <div>
-          <Label>Dificultate</Label>
+          <Label>Difficulty</Label>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
@@ -946,7 +951,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           </select>
         </div>
         <div className="flex flex-col">
-          <Label>Favorită</Label>
+          <Label>Favorite</Label>
           <button
             type="button"
             onClick={() => setFavorite((f) => !f)}
@@ -957,14 +962,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             }`}
           >
             <Star size={13} className={favorite ? "fill-amber-400 text-amber-400" : "text-gray-400"} />
-            {favorite ? "Da" : "Nu"}
+            {favorite ? "Yes" : "No"}
           </button>
         </div>
       </div>
 
-      {/* Categorii */}
+      {/* Categories */}
       <div>
-        <Label>Categorii</Label>
+        <Label>Categories</Label>
         <div className="flex flex-wrap gap-1.5">
           {[...CATEGORIES, ...categories.filter((c) => !CATEGORIES.includes(c))].map((cat) => (
             <button
@@ -992,7 +997,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 else if (e.key === "Escape") { setNewTag(""); setAddingTag(false); }
               }}
               onBlur={() => { addNewTag(); setAddingTag(false); }}
-              placeholder="Tag nou…"
+              placeholder="New tag…"
               maxLength={30}
               className="w-28 px-3 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#24211c] border border-orange-400 dark:border-orange-800/60 text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
@@ -1000,7 +1005,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             <button
               type="button"
               onClick={() => setAddingTag(true)}
-              title="Adaugă tag nou"
+              title="Add new tag"
               className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 dark:border-[#3a352e] text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] hover:text-gray-700 dark:hover:text-[#ccc4b8] inline-flex items-center gap-1 transition-colors"
             >
               <Plus size={12} /> Tag
@@ -1012,7 +1017,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       {/* Link + Notes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>URL sursă</Label>
+          <Label>Source URL</Label>
           <input
             type="url"
             value={link}
@@ -1023,9 +1028,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         </div>
       </div>
 
-      {/* ── Porții / batch ──────────────────────────────────────────── */}
+      {/* ── Servings / batch ──────────────────────────────────────────── */}
       <div>
-        <Label>Porții</Label>
+        <Label>Servings</Label>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {/* mode toggle */}
           <div className="inline-flex rounded-lg border border-gray-200 dark:border-[#3a352e] overflow-hidden text-sm">
@@ -1038,7 +1043,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
               }`}
             >
-              Lot{mode === "batch" ? ` — ${curServings} porții` : ""}
+              Batch{mode === "batch" ? ` — ${curServings} servings` : ""}
             </button>
             <button
               type="button"
@@ -1049,7 +1054,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
               }`}
             >
-              1 porție
+              1 serving
             </button>
           </div>
 
@@ -1060,7 +1065,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 type="button"
                 onClick={() => applyServings(curServings - 1, curServings)}
                 className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="minus o porție"
+                aria-label="minus one serving"
               >
                 −
               </button>
@@ -1078,11 +1083,11 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 type="button"
                 onClick={() => applyServings(curServings + 1, curServings)}
                 className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="plus o porție"
+                aria-label="plus one serving"
               >
                 +
               </button>
-              <span className="text-sm text-gray-500 dark:text-[#7c756a] ml-1">porții</span>
+              <span className="text-sm text-gray-500 dark:text-[#7c756a] ml-1">servings</span>
             </div>
           )}
 
@@ -1094,13 +1099,13 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               onChange={(e) => setScaleQty(e.target.checked)}
               className="accent-orange-500"
             />
-            Scalează cantitățile la schimbare
+            Scale quantities on change
           </label>
         </div>
         <p className="mt-1.5 text-xs text-gray-400 dark:text-[#6e675c]">
           {mode === "batch"
-            ? `Cantitățile ingredientelor sunt pentru ${curServings} porții.`
-            : "Cantitățile ingredientelor sunt pentru 1 porție."}
+            ? `Ingredient quantities are for ${curServings} servings.`
+            : "Ingredient quantities are for 1 serving."}
         </p>
       </div>
 
@@ -1112,7 +1117,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             onClick={addGroup}
             className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] border border-gray-200 dark:border-[#3a352e] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
-            <Plus size={13} /> Adaugă grup
+            <Plus size={13} /> Add group
           </button>
         </div>
 
@@ -1124,7 +1129,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 <input
                   value={group.name}
                   onChange={(e) => updateGroupName(group.id, e.target.value)}
-                  placeholder="Nume grup"
+                  placeholder="Group name"
                   className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#bab2a6] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#5c554b]"
                 />
                 <div className="flex items-center gap-0.5 shrink-0">
@@ -1149,7 +1154,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               <div className="p-3 space-y-3">
                 {/* Column headers — desktop only */}
                 <div className="hidden sm:grid grid-cols-[64px_80px_1fr_64px] gap-2 mb-1 px-0.5">
-                  {["Cant.", "Unitate", "Ingredient", ""].map((h) => (
+                  {["Qty", "Unit", "Ingredient", ""].map((h) => (
                     <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
                   ))}
                 </div>
@@ -1163,7 +1168,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           inputMode="decimal" type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Cant."
+                          placeholder="Qty"
                           className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
@@ -1187,7 +1192,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           downDisabled={ingIdx === group.ingredients.length - 1}
                         />
                         {ing.groceryItemId && (
-                          <button type="button" aria-label="editează produsul (unități, nutriție)"
+                          <button type="button" aria-label="edit item (units, nutrition)"
                             onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
                             className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors shrink-0">
                             <Pencil size={14} />
@@ -1202,7 +1207,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                         type="text"
                         value={ing.notes}
                         onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                        placeholder="obs. (ex: tocat grosier)"
+                        placeholder="notes (e.g. roughly chopped)"
                         className="w-full px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                       />
                     </div>
@@ -1214,7 +1219,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           inputMode="decimal" type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Cant."
+                          placeholder="Qty"
                           className="px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
@@ -1239,7 +1244,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                             downDisabled={ingIdx === group.ingredients.length - 1}
                           />
                           {ing.groceryItemId && (
-                            <button type="button" aria-label="editează produsul (unități, nutriție)"
+                            <button type="button" aria-label="edit item (units, nutrition)"
                               onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
                               className="p-1 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors">
                               <Pencil size={14} />
@@ -1257,7 +1262,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           type="text"
                           value={ing.notes}
                           onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                          placeholder="obs. (ex: tocat grosier)"
+                          placeholder="notes (e.g. roughly chopped)"
                           className="px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                         />
                         <div />
@@ -1271,7 +1276,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   onClick={() => addIngredient(group.id)}
                   className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
                 >
-                  <Plus size={12} /> Adaugă ingredient
+                  <Plus size={12} /> Add ingredient
                 </button>
               </div>
             </div>
@@ -1299,17 +1304,17 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
-          {imageUploading ? "Se încarcă imaginea…" : initial?.id ? "Salvează modificările" : "Creează rețeta"}
+          {imageUploading ? "Uploading image…" : initial?.id ? "Save changes" : "Create recipe"}
         </button>
         <button
           type="button"
           onClick={() => {
-            if (dirty && !window.confirm("Ai modificări nesalvate. Sigur ieși fără să salvezi?")) return;
+            if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to leave without saving?")) return;
             router.back();
           }}
           className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
-          Anulează
+          Cancel
         </button>
         {initial?.id && (
           <button
@@ -1319,7 +1324,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             className="ml-auto flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
           >
             {deleting && <Loader2 size={13} className="animate-spin" />}
-            Șterge rețeta
+            Delete recipe
           </button>
         )}
       </div>

@@ -24,16 +24,24 @@
 - Don't delete a `GroceryItem` still referenced by ingredients (it would orphan nameless rows) — the server refuses and the UI explains why.
 - Validate numeric inputs server-side (servings ≥ 1 integer, dayOfWeek 0–6, etc.).
 
-## i18n (UI copy is Romanian)
-- All user-facing copy is **Romanian**. Locale for dates: `toLocaleDateString("ro-RO", …)` (not `en-GB`).
-- **DANGER — some English strings are DB values / filter keys, NOT display text.** Never translate the stored value; translate only the shown **label** via `lib/labels.ts`:
+## i18n (UI copy is English)
+- All user-facing copy is **English**. Locale for dates: `toLocaleDateString("en-US", …)`.
+- The app was Romanian through v0.25.0 and fully translated to English in v0.26.0. If you find a stray
+  Romanian UI string, translate it (grep for the diacritics `ăâîșțĂÂÎȘȚ` — remaining hits should only be
+  code comments or the text-parser regex that matches Romanian `porții` in pasted recipe input).
+- **DANGER — some English strings are DB values / filter keys, NOT free display text.** Never rename the
+  stored value; render it through `lib/labels.ts`:
   - `WeekPlan.mealType` (`Breakfast`/`Lunch`/…) → `mealLabel()`
   - `Recipe.category` (`Soup`/`Dinner`/…) → `categoryLabel()`
   - `Recipe.difficulty` (`Easy`/`Moderate`/`Hard`) → `difficultyLabel()`
-  - `GroceryItem.category` (emoji-prefixed) → `groceryCategoryLabel()`
-  - Keep the English value in the DB, the `?cat=` URL, `<option value>`, and all comparisons. Only `{…Label(v)}` in display.
-- Units (`g`, `ml`, `cup`, `tsp`, …) are **not** translated (they're conventions/values).
-- **Editing i18n safely:** use the `Edit` tool or Python with explicit UTF-8. **Do NOT use `perl -CSD`** on these files — it double-encodes Romanian diacritics (`ț`→`ReÈete` mojibake). After bulk edits, grep for `È|Ä|Ã` to catch mojibake.
+  - `GroceryItem.category` (emoji-prefixed, e.g. `🍎 Fruits`) → `groceryCategoryLabel()` (strips the emoji)
+  - Keep the stored value in the DB, the `?cat=` URL, `<option value>`, and all comparisons. Only `{…Label(v)}` in display.
+- Because the UI is now English and the stored values are already English, these helpers are effectively
+  identity (except `groceryCategoryLabel`, which drops the emoji prefix) — but keep calling them so display
+  stays decoupled from storage if the label mapping ever changes again.
+- `GroceryItem.nameRo` is a **Romanian search alias** (field labelled "Name (RO)"); it may legitimately hold
+  Romanian text and is used only to match search queries, never as primary display copy.
+- Units (`g`, `ml`, `cup`, `tsp`, …) are values/conventions — never "translated".
 
 ## Theme
 - Dark/light via the `.dark` class on `<html>`; localStorage key `"theme"`.

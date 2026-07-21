@@ -12,10 +12,10 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const file = form.get("file") as File | null;
-    if (!file) return NextResponse.json({ error: "Niciun fișier" }, { status: 400 });
+    if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
     if (!ALLOWED.includes(file.type)) {
-      return NextResponse.json({ error: "Tip de fișier nesuportat" }, { status: 400 });
+      return NextResponse.json({ error: "Unsupported file type" }, { status: 400 });
     }
     const MAX_MB = 10;
     if (file.size > MAX_MB * 1024 * 1024) {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[import/upload-image] error:", err);
     return NextResponse.json(
-      { error: "Nu s-a putut salva imaginea. Pe producție e nevoie de un Vercel Blob store (BLOB_READ_WRITE_TOKEN)." },
+      { error: "Couldn't save the image. In production a Vercel Blob store is required (BLOB_READ_WRITE_TOKEN)." },
       { status: 500 }
     );
   }

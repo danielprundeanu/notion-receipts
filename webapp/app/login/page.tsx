@@ -16,7 +16,7 @@ export default function LoginPage() {
             <LogIn size={22} />
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Meal Planner</h1>
-          <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">Autentifică-te pentru a continua</p>
+          <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">Sign in to continue</p>
         </div>
 
         <form action={formAction} className="space-y-3">
@@ -36,7 +36,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-xs font-medium text-gray-600 dark:text-[#a49c90] mb-1">
-              Parolă
+              Password
             </label>
             <input
               id="password"
@@ -58,7 +58,7 @@ export default function LoginPage() {
             className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
           >
             {isPending ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />}
-            Autentificare
+            Sign in
           </button>
         </form>
       </div>

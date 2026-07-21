@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     if (!food) {
       return NextResponse.json(
-        { error: "Nu s-au găsit date nutriționale." },
+        { error: "No nutrition data found." },
         { status: 404 }
       );
     }
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[nutrition]", err);
     return NextResponse.json(
-      { error: "Eroare la căutarea nutriției. Încearcă din nou." },
+      { error: "Error searching nutrition. Please try again." },
       { status: 500 }
     );
   }

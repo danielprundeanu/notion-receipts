@@ -38,7 +38,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-const DAYS = ["Lun", "Mar", "Mie", "Joi", "Vin", "Sâm", "Dum"];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 // Stored/compared as WeekPlan.mealType — keep the English values; show mealLabel() for display.
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 
@@ -83,7 +83,7 @@ function getMondayOf(date: Date): Date {
 function formatWeekRange(monday: Date): string {
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("ro-RO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${monday.toLocaleDateString("en-US", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 function isThisWeek(monday: Date): boolean {
@@ -290,7 +290,7 @@ function RecipeCard({
         {/* Delete — always-visible affordance on mobile (swipe still works as a shortcut) */}
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          aria-label="Șterge din planner"
+          aria-label="Remove from planner"
           className="md:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-orange-300 dark:text-orange-700/70 active:text-red-500 hover:text-red-500 transition-colors"
         >
           <Trash2 size={15} />
@@ -479,7 +479,7 @@ function RecipePanel() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm font-semibold text-gray-700 dark:text-[#eae5de] shrink-0">
-          Rețete
+          Recipes
         </span>
         <div className="relative">
           <Search
@@ -489,7 +489,7 @@ function RecipePanel() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Caută…"
+            placeholder="Search…"
             className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
@@ -502,7 +502,7 @@ function RecipePanel() {
           }`}
         >
           <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-          Favorite
+          Favorites
         </button>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-1">
           <button
@@ -513,7 +513,7 @@ function RecipePanel() {
                 : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
             }`}
           >
-            Toate
+            All
           </button>
           {categories.map((cat) => (
             <button
@@ -539,7 +539,7 @@ function RecipePanel() {
           <Loader2 size={16} className="animate-spin text-gray-400" />
         </div>
       ) : recipes.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4">Nu s-au găsit rețete.</p>
+        <p className="text-sm text-gray-400 py-4">No recipes found.</p>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
           {recipes.map((recipe) => (
@@ -549,7 +549,7 @@ function RecipePanel() {
       )}
 
       <p className="text-xs text-gray-400 dark:text-[#5c554b]">
-        Trage o rețetă pe o zi / masă de mai sus pentru a o adăuga în plan.
+        Drag a recipe onto a day / meal above to add it to the plan.
       </p>
     </div>
   );
@@ -618,7 +618,7 @@ function RecipeSelectorModal({
       });
       onSelect({ id: realId, dayOfWeek: day, mealType, servings, recipe: selected });
     } catch {
-      setAddError("Nu s-a putut adăuga. Încearcă din nou.");
+      setAddError("Couldn't add. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -648,7 +648,7 @@ function RecipeSelectorModal({
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-              placeholder="Caută rețetă…"
+              placeholder="Search recipe…"
               style={{ fontSize: "16px" }}
               className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
@@ -677,7 +677,7 @@ function RecipeSelectorModal({
                   : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
               }`}
             >
-              Toate
+              All
             </button>
             {categories.map((cat) => (
               <button
@@ -702,7 +702,7 @@ function RecipeSelectorModal({
               <Loader2 size={18} className="animate-spin text-gray-400" />
             </div>
           ) : results.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">Nu s-au găsit rețete.</p>
+            <p className="text-sm text-gray-400 text-center py-8">No recipes found.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
               {results.map((r) => (
@@ -753,7 +753,7 @@ function RecipeSelectorModal({
             </div>
           )}
           {!selected && (
-            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Selectează o rețetă de mai sus</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Select a recipe above</span>
           )}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -772,7 +772,7 @@ function RecipeSelectorModal({
             className="px-4 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
           >
             {saving && <Loader2 size={13} className="animate-spin" />}
-            Adaugă
+            Add
           </button>
         </div>
 
@@ -816,7 +816,7 @@ export default function PlannerPage() {
       setPlans(data as PlanEntry[]);
       setDayNutrition(nutrition);
     } catch {
-      showError("Nu s-a putut încărca planner-ul. Reîncarcă pagina.");
+      showError("Couldn't load the planner. Please reload the page.");
     } finally {
       setLoadingPlans(false); // never leave the spinner hanging
     }
@@ -838,7 +838,7 @@ export default function PlannerPage() {
       getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
     } catch {
       setPlans(snapshot); // rollback — the delete didn't persist
-      showError("Nu s-a putut șterge din planner. Încearcă din nou.");
+      showError("Couldn't remove from the planner. Please try again.");
     }
   }
 
@@ -852,7 +852,7 @@ export default function PlannerPage() {
       getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
     } catch {
       setPlans(snapshot); // rollback — the servings change didn't persist
-      showError("Nu s-a putut actualiza porțiile. Încearcă din nou.");
+      showError("Couldn't update servings. Please try again.");
     }
   }
 
@@ -904,7 +904,7 @@ export default function PlannerPage() {
     } catch {
       // Drop the optimistic entry so no dangling `temp-` row lingers in the UI.
       setPlans((prev) => prev.filter((p) => p.id !== tempId));
-      showError("Nu s-a putut adăuga în planner. Încearcă din nou.");
+      showError("Couldn't add to the planner. Please try again.");
     }
   }
 
@@ -915,7 +915,7 @@ export default function PlannerPage() {
           onClick={() => setWeekStart(getMondayOf(new Date()))}
           className="px-3 py-2.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
         >
-          Azi
+          Today
         </button>
       )}
       <button
@@ -926,7 +926,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        aria-label="Săptămâna anterioară"
+        aria-label="Previous week"
         className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronLeft size={18} />
@@ -942,7 +942,7 @@ export default function PlannerPage() {
             return n;
           })
         }
-        aria-label="Săptămâna următoare"
+        aria-label="Next week"
         className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronRight size={18} />
@@ -969,7 +969,7 @@ export default function PlannerPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">
-            Planificator
+            Planner
           </h1>
           {weekNav}
         </div>
@@ -987,7 +987,7 @@ export default function PlannerPage() {
           <>
             {/* ── Mobile view ─────────────────────────────────────── */}
             <div className="md:hidden flex flex-col gap-4">
-              <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+              <div className="grid grid-cols-7 gap-1 pb-1">
                 {DAYS.map((day, i) => {
                   const date = new Date(weekStart);
                   date.setDate(date.getDate() + i);
@@ -1001,7 +1001,7 @@ export default function PlannerPage() {
                     <button
                       key={i}
                       onClick={() => setMobileDay(i)}
-                      className={`flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl text-xs font-medium transition-colors min-w-[44px] relative ${
+                      className={`flex flex-col items-center justify-center px-0.5 py-2 rounded-xl text-xs font-medium transition-colors relative ${
                         mobileDay === i
                           ? "bg-orange-500 text-white"
                           : isToday
@@ -1097,7 +1097,7 @@ export default function PlannerPage() {
                               {Math.round(nut.kcal)} kcal
                             </div>
                             <div className="text-[9px] text-gray-400 dark:text-[#5c554b] leading-tight">
-                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · G {Math.round(nut.fat)}g
+                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · F {Math.round(nut.fat)}g
                             </div>
                           </div>
                         )}

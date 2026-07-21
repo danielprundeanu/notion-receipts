@@ -218,7 +218,7 @@ export async function POST(req: NextRequest) {
     } else if (type === "text") {
       rawRecipes = parseText(body.content ?? "");
     } else {
-      return NextResponse.json({ error: "type trebuie să fie 'urls' sau 'text'" }, { status: 400 });
+      return NextResponse.json({ error: "type must be 'urls' or 'text'" }, { status: 400 });
     }
 
     // For each recipe, match ingredients against DB
@@ -278,7 +278,7 @@ export async function POST(req: NextRequest) {
       const instructions = r.instructions;
 
       reviewRecipes.push({
-        name: r.name || "Rețetă fără nume",
+        name: r.name || "Untitled recipe",
         servings: r.servings,
         batch: r.batch ?? true,
         time: r.time,
@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[import/parse] error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Eroare internă" },
+      { error: err instanceof Error ? err.message : "Internal error" },
       { status: 500 }
     );
   }

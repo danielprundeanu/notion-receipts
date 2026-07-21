@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     const file = formData.get("file") as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: "Niciun fișier trimis." }, { status: 400 });
+      return NextResponse.json({ error: "No file sent." }, { status: 400 });
     }
     if (!ALLOWED_TYPES.includes(file.type)) {
       return NextResponse.json({ error: "Format acceptat: JPG, PNG sau WebP." }, { status: 400 });
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error("[upload-recipe-image]", err);
     return NextResponse.json(
-      { error: "Nu s-a putut salva imaginea. Pe producție e nevoie de un Vercel Blob store (BLOB_READ_WRITE_TOKEN)." },
+      { error: "Couldn't save the image. In production a Vercel Blob store is required (BLOB_READ_WRITE_TOKEN)." },
       { status: 500 }
     );
   }

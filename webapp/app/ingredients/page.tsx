@@ -10,7 +10,7 @@ import {
 } from "@/lib/actions";
 import {
   Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch,
-  X, Trash2, Sparkles, ListChecks, Loader2,
+  X, Trash2, Sparkles, ListChecks, Loader2, List, Table,
 } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
@@ -111,7 +111,7 @@ function EditableCell({
   return (
     <span
       onClick={startEdit}
-      title="Click pentru editare"
+      title="Click to edit"
       className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
         !value && value !== 0 ? "text-gray-300" : ""
       } ${align === "right" ? "text-right" : ""}`}
@@ -163,7 +163,7 @@ function SelectCell({
   return (
     <span
       onClick={() => setEditing(true)}
-      title="Click pentru editare"
+      title="Click to edit"
       className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
         !value ? "text-gray-300" : ""
       }`}
@@ -234,6 +234,9 @@ export default function IngredientsPage() {
   const [creatingNew, setCreatingNew] = useState(false);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>(null);
+  // List (cards) vs. table view. Overrides the responsive default so the table
+  // is reachable on mobile too (it scrolls horizontally there).
+  const [view, setView] = useState<"list" | "table">("list");
 
   // Multi-select
   const [selectMode, setSelectMode] = useState(false);
@@ -261,9 +264,24 @@ export default function IngredientsPage() {
       }
     }).catch(() => {
       setLoading(false); // don't leave the page stuck on "Loading…"
-      showToast("Nu s-a putut încărca lista de ingrediente. Reîncarcă pagina.");
+      showToast("Couldn't load the ingredient list. Please reload the page.");
     });
   }, []);
+
+  // Restore the saved list/table preference; when none, default by viewport
+  // (table on desktop, cards on mobile — matching the old responsive behaviour).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("ingredients-view");
+      if (saved === "list" || saved === "table") { setView(saved); return; }
+    } catch { /* ignore */ }
+    if (window.matchMedia("(min-width: 768px)").matches) setView("table");
+  }, []);
+
+  function changeView(v: "list" | "table") {
+    setView(v);
+    try { localStorage.setItem("ingredients-view", v); } catch { /* non-fatal */ }
+  }
 
   const categories = [...new Set(items.map((i) => i.category).filter(Boolean) as string[])].sort();
 
@@ -323,7 +341,7 @@ export default function IngredientsPage() {
       setItems((prev) =>
         prev.map((item) => (item.id === id ? { ...item, [field]: prevValue } : item))
       );
-      showToast("Nu s-a putut salva modificarea. Încearcă din nou.");
+      showToast("Couldn't save the change. Please try again.");
     }
   }
 
@@ -375,9 +393,9 @@ export default function IngredientsPage() {
     try {
       await setGroceryItemsCategory(ids, cat);
       setItems((prev) => prev.map((it) => selectedIds.has(it.id) ? { ...it, category: cat } : it));
-      setBulkMsg(`Categorie setată pentru ${ids.length} ${ids.length === 1 ? "produs" : "produse"}.`);
+      setBulkMsg(`Category set for ${ids.length} ${ids.length === 1 ? "item" : "items"}.`);
     } catch {
-      setBulkMsg("Nu s-a putut seta categoria. Încearcă din nou.");
+      setBulkMsg("Couldn't set the category. Please try again.");
     } finally {
       setBulkBusy(false);
     }
@@ -396,14 +414,14 @@ export default function IngredientsPage() {
       setSelectedIds(new Set(res.blocked.map((b) => b.id)));
       setConfirmBulkDelete(false);
       if (res.blocked.length === 0) {
-        setBulkMsg(`${res.deleted.length} ${res.deleted.length === 1 ? "produs șters" : "produse șterse"}.`);
+        setBulkMsg(`${res.deleted.length} ${res.deleted.length === 1 ? "item deleted" : "items deleted"}.`);
       } else if (res.deleted.length === 0) {
-        setBulkMsg(`Niciun produs șters — ${res.blocked.length} ${res.blocked.length === 1 ? "e folosit" : "sunt folosite"} în rețete.`);
+        setBulkMsg(`No items deleted — ${res.blocked.length} ${res.blocked.length === 1 ? "is used" : "are used"} in recipes.`);
       } else {
-        setBulkMsg(`${res.deleted.length} șterse; ${res.blocked.length} păstrate (folosite în rețete).`);
+        setBulkMsg(`${res.deleted.length} deleted; ${res.blocked.length} kept (used in recipes).`);
       }
     } catch {
-      setBulkMsg("Nu s-a putut șterge. Încearcă din nou.");
+      setBulkMsg("Couldn't delete. Please try again.");
     } finally {
       setBulkBusy(false);
     }
@@ -443,7 +461,7 @@ export default function IngredientsPage() {
     }
     setBulkProgress(null);
     setBulkBusy(false);
-    setBulkMsg(`Autofill: ${filled} completate, ${skipped} sărite (doar valorile goale).`);
+    setBulkMsg(`Autofill: ${filled} filled, ${skipped} skipped (empty values only).`);
   }
 
   const sharedThProps = { sortField, sortDir, onSort: handleSort };
@@ -462,20 +480,20 @@ export default function IngredientsPage() {
       )}
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingrediente</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingredients</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500 dark:text-[#7c756a]">{items.length} produse</span>
+          <span className="text-sm text-gray-500 dark:text-[#7c756a]">{items.length} items</span>
           <Link
             href="/ingredients/audit"
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-900/50 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
           >
-            <ScanSearch size={15} /> Audit unități
+            <ScanSearch size={15} /> Unit audit
           </Link>
           <button
             onClick={() => setCreatingNew(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
           >
-            <Plus size={15} /> Ingredient nou
+            <Plus size={15} /> New ingredient
           </button>
         </div>
       </div>
@@ -487,14 +505,14 @@ export default function IngredientsPage() {
           <input
             value={search}
             onChange={(e) => changeSearch(e.target.value)}
-            placeholder="Caută ingredient…"
+            placeholder="Search ingredient…"
             className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
           {search && (
             <button
               onClick={() => changeSearch("")}
-              title="Șterge căutarea"
-              aria-label="Șterge căutarea"
+              title="Clear search"
+              aria-label="Clear search"
               className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 dark:text-[#6e675c] hover:text-gray-600 dark:hover:text-[#a49c90] rounded transition-colors"
             >
               <X size={15} />
@@ -506,7 +524,7 @@ export default function IngredientsPage() {
           onChange={(e) => changeCategory(e.target.value)}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
         >
-          <option value="">Toate categoriile</option>
+          <option value="">All categories</option>
           {categories.map((c) => (
             <option key={c} value={c}>{groceryCategoryLabel(c)}</option>
           ))}
@@ -521,13 +539,41 @@ export default function IngredientsPage() {
         >
           <ListChecks size={15} /> Select
         </button>
+
+        {/* List / table view toggle */}
+        <div className="flex items-center rounded-lg border border-gray-200 dark:border-[#3a352e] overflow-hidden">
+          <button
+            onClick={() => changeView("list")}
+            aria-pressed={view === "list"}
+            title="List view"
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+              view === "list"
+                ? "bg-orange-500 text-white"
+                : "text-gray-700 dark:text-[#bab2a6] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
+            }`}
+          >
+            <List size={15} /> <span className="hidden sm:inline">List</span>
+          </button>
+          <button
+            onClick={() => changeView("table")}
+            aria-pressed={view === "table"}
+            title="Table view"
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition-colors ${
+              view === "table"
+                ? "bg-orange-500 text-white"
+                : "text-gray-700 dark:text-[#bab2a6] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
+            }`}
+          >
+            <Table size={15} /> <span className="hidden sm:inline">Table</span>
+          </button>
+        </div>
       </div>
 
       {/* Bulk action bar */}
       {selectMode && (
         <div className="flex flex-wrap items-center gap-3 mb-4 px-3 py-2.5 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-xl">
           <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">
-            {selectedCount > 0 ? `${selectedCount} selectate` : "Selectează rânduri…"}
+            {selectedCount > 0 ? `${selectedCount} selected` : "Select rows…"}
           </span>
 
           {selectedCount > 0 && (
@@ -538,7 +584,7 @@ export default function IngredientsPage() {
                 onChange={(e) => handleBulkCategory(e.target.value)}
                 className="px-2.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
               >
-                <option value="">Setează categoria…</option>
+                <option value="">Set category…</option>
                 {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{groceryCategoryLabel(c)}</option>)}
               </select>
 
@@ -550,7 +596,7 @@ export default function IngredientsPage() {
                 {bulkBusy && bulkProgress
                   ? <Loader2 size={14} className="animate-spin" />
                   : <Sparkles size={14} />}
-                {bulkBusy && bulkProgress ? `Autofill ${bulkProgress.done}/${bulkProgress.total}…` : "Autofill nutriție"}
+                {bulkBusy && bulkProgress ? `Autofill ${bulkProgress.done}/${bulkProgress.total}…` : "Autofill nutrition"}
               </button>
 
               {confirmBulkDelete ? (
@@ -561,13 +607,13 @@ export default function IngredientsPage() {
                     className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
                   >
                     {bulkBusy && <Loader2 size={14} className="animate-spin" />}
-                    Confirmă ștergerea ({selectedCount})
+                    Confirm delete ({selectedCount})
                   </button>
                   <button
                     onClick={() => setConfirmBulkDelete(false)}
                     className="px-2 py-1.5 text-sm text-gray-500 dark:text-[#a49c90] hover:text-gray-700"
                   >
-                    Anulează
+                    Cancel
                   </button>
                 </span>
               ) : (
@@ -576,7 +622,7 @@ export default function IngredientsPage() {
                   disabled={bulkBusy}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50 transition-colors"
                 >
-                  <Trash2 size={14} /> Șterge
+                  <Trash2 size={14} /> Delete
                 </button>
               )}
 
@@ -584,7 +630,7 @@ export default function IngredientsPage() {
                 onClick={() => { setSelectedIds(new Set()); setConfirmBulkDelete(false); }}
                 className="ml-auto text-sm text-gray-500 dark:text-[#a49c90] hover:text-gray-700 dark:hover:text-[#c4bcb0]"
               >
-                Deselectează
+                Deselect
               </button>
             </>
           )}
@@ -598,14 +644,15 @@ export default function IngredientsPage() {
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-          Se încarcă…
+          Loading…
         </div>
       ) : (
         <>
-        {/* Mobile: card list (below md) — the 13-column table is unusable on a phone */}
-        <div className="md:hidden space-y-2">
+        {/* Card / list view */}
+        {view === "list" && (
+        <div className="space-y-2">
           {sorted.length === 0 ? (
-            <p className="px-4 py-8 text-center text-gray-400 text-sm">Niciun ingredient găsit</p>
+            <p className="px-4 py-8 text-center text-gray-400 text-sm">No ingredients found</p>
           ) : (
             sorted.map((item) => {
               const isSelected = selectedIds.has(item.id);
@@ -626,7 +673,7 @@ export default function IngredientsPage() {
                       onChange={() => toggleOne(item.id)}
                       onClick={(e) => e.stopPropagation()}
                       className="accent-orange-500 shrink-0 w-4 h-4"
-                      aria-label={`Selectează ${item.name}`}
+                      aria-label={`Select ${item.name}`}
                     />
                   )}
                   <div className="flex-1 min-w-0">
@@ -638,7 +685,7 @@ export default function IngredientsPage() {
                       <span className="font-medium text-gray-700 dark:text-[#bab2a6]">{item.kcal != null ? `${fmt(item.kcal)} kcal` : "— kcal"}</span>
                       <span>P {item.protein != null ? fmt(item.protein) : "—"}</span>
                       <span>C {item.carbs != null ? fmt(item.carbs) : "—"}</span>
-                      <span>G {item.fat != null ? fmt(item.fat) : "—"}</span>
+                      <span>F {item.fat != null ? fmt(item.fat) : "—"}</span>
                     </div>
                   </div>
                   {!selectMode && <Pencil size={15} className="shrink-0 text-gray-300 dark:text-[#4a443c]" />}
@@ -647,9 +694,11 @@ export default function IngredientsPage() {
             })
           )}
         </div>
+        )}
 
-        {/* Desktop: full editable table (md+) */}
-        <div className="hidden md:block overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
+        {/* Table view — scrolls horizontally on small screens */}
+        {view === "table" && (
+        <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-[#2a2620] text-left">
@@ -660,30 +709,30 @@ export default function IngredientsPage() {
                       checked={allVisibleSelected}
                       onChange={toggleSelectAllVisible}
                       className="accent-orange-500 cursor-pointer"
-                      aria-label="Selectează tot"
+                      aria-label="Select all"
                     />
                   </th>
                 )}
                 <th className="px-2 py-2.5 w-10" />
-                <SortTh label="Nume (EN)"  field="name"       {...sharedThProps} />
-                <SortTh label="Nume (RO)"  field="nameRo"     {...sharedThProps} />
-                <SortTh label="Categorie"   field="category"   {...sharedThProps} />
-                <SortTh label="Unitate"    field="unit"       {...sharedThProps} />
-                <SortTh label="Unitate 2"     field="unit2"      {...sharedThProps} />
+                <SortTh label="Name (EN)"  field="name"       {...sharedThProps} />
+                <SortTh label="Name (RO)"  field="nameRo"     {...sharedThProps} />
+                <SortTh label="Category"   field="category"   {...sharedThProps} />
+                <SortTh label="Unit"    field="unit"       {...sharedThProps} />
+                <SortTh label="Unit 2"     field="unit2"      {...sharedThProps} />
                 <SortTh label="Conv."      field="conversion" align="right" {...sharedThProps} />
                 <SortTh label="g/unit"     field="unitWeight" align="right" {...sharedThProps} />
                 <SortTh label="kcal"       field="kcal"       align="right" {...sharedThProps} />
-                <SortTh label="Glucide g"    field="carbs"      align="right" {...sharedThProps} />
-                <SortTh label="Grăsimi g"      field="fat"        align="right" {...sharedThProps} />
-                <SortTh label="Proteine g"  field="protein"    align="right" {...sharedThProps} />
-                <SortTh label="Creat"    field="createdAt"  {...sharedThProps} />
+                <SortTh label="Carbs g"    field="carbs"      align="right" {...sharedThProps} />
+                <SortTh label="Fat g"      field="fat"        align="right" {...sharedThProps} />
+                <SortTh label="Protein g"  field="protein"    align="right" {...sharedThProps} />
+                <SortTh label="Created"    field="createdAt"  {...sharedThProps} />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-[#2e2a24]">
               {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={totalCols} className="px-4 py-8 text-center text-gray-400">
-                    Niciun ingredient găsit
+                    No ingredients found
                   </td>
                 </tr>
               ) : (
@@ -705,14 +754,14 @@ export default function IngredientsPage() {
                             checked={isSelected}
                             onChange={() => toggleOne(item.id)}
                             className="accent-orange-500 cursor-pointer"
-                            aria-label={`Selectează ${item.name}`}
+                            aria-label={`Select ${item.name}`}
                           />
                         </td>
                       )}
                       <td className="px-2 py-2">
                         <button
                           onClick={() => setEditingId(item.id)}
-                          title="Editează ingredient"
+                          title="Edit ingredient"
                           className="p-1.5 text-gray-400 dark:text-[#6e675c] hover:text-orange-500 dark:hover:text-orange-400 transition-colors rounded"
                         >
                           <Pencil size={14} />
@@ -752,7 +801,7 @@ export default function IngredientsPage() {
                         <EditableCell value={item.protein != null ? fmt(item.protein) : null} isNumber align="right" onSave={(v) => handleSave(item.id, "protein", v)} />
                       </td>
                       <td className="px-4 py-2 text-gray-400 dark:text-[#6e675c] whitespace-nowrap text-xs">
-                        {new Date(item.createdAt).toLocaleDateString("ro-RO", { day: "2-digit", month: "short", year: "numeric" })}
+                        {new Date(item.createdAt).toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" })}
                       </td>
                     </tr>
                   );
@@ -761,12 +810,13 @@ export default function IngredientsPage() {
             </tbody>
           </table>
         </div>
+        )}
         </>
       )}
 
       {!loading && sorted.length > 0 && (
         <p className="text-xs text-gray-400 dark:text-[#5c554b] mt-3">
-          Se afișează {sorted.length} din {items.length} · Macro per 100g · g/unit = grame per unitate (piece, tsp etc.) · Click pe orice celulă pentru editare
+          Showing {sorted.length} of {items.length} · Macros per 100g · g/unit = grams per unit (piece, tsp etc.){view === "table" ? " · Click any cell to edit" : " · Tap a row to edit"}
         </p>
       )}
 

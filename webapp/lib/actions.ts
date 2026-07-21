@@ -79,12 +79,15 @@ async function buildIngredientsAndInstructions(
   for (const ing of data.ingredients) {
     if (!ing.groceryItemName.trim()) continue;
 
+    // Case-insensitive lookup: "Flour" and "flour" are the same item. Matching
+    // exactly (case-sensitive) would create a near-duplicate GroceryItem row.
+    const trimmedName = ing.groceryItemName.trim();
     let groceryItem = await tx.groceryItem.findFirst({
-      where: { name: ing.groceryItemName.trim() },
+      where: { name: { equals: trimmedName, mode: "insensitive" } },
     });
     if (!groceryItem) {
       groceryItem = await tx.groceryItem.create({
-        data: { name: ing.groceryItemName.trim(), unit: ing.unit ?? null },
+        data: { name: trimmedName, unit: ing.unit ?? null },
       });
     }
 
@@ -453,6 +456,10 @@ type GroceryEntry = {
   quantity: number;
   unit: string | null;
   category: string;
+  // true for hand-added items (GroceryListItem) — the UI shows a delete affordance
+  // for these; recipe-derived lines can't be deleted directly. The `id` of a manual
+  // entry is `manual::<dbId>` so the client can recover the row id to delete.
+  manual?: boolean;
 };
 
 export async function getGroceryList(
@@ -519,12 +526,64 @@ export async function getGroceryList(
     });
   }
 
+  // Merge in this week's hand-added products.
+  const manual = await prisma.groceryListItem.findMany({
+    where: { weekStart: { gte: weekStart, lt: weekEnd } },
+  });
+  for (const m of manual) {
+    const cat = m.category || "Other";
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push({
+      id: `manual::${m.id}`,
+      name: m.name,
+      quantity: m.quantity ?? 0,
+      unit: m.unit,
+      category: cat,
+      manual: true,
+    });
+  }
+
   // Sort items within each category
   for (const cat of Object.keys(grouped)) {
     grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
   }
 
   return grouped;
+}
+
+// Add a product to a specific week's shopping list by hand (not from a recipe).
+// Scoped to the week's Monday so it only appears on that week.
+export async function addGroceryListItem(
+  weekStartIso: string,
+  data: { name: string; quantity?: number | null; unit?: string | null; category?: string | null }
+): Promise<GroceryEntry> {
+  const name = data.name.trim();
+  if (!name) throw new Error("The item name is missing");
+  const item = await prisma.groceryListItem.create({
+    data: {
+      weekStart: new Date(weekStartIso),
+      name,
+      quantity: data.quantity != null && data.quantity > 0 ? data.quantity : null,
+      unit: data.unit?.trim() || null,
+      category: data.category?.trim() || "Other",
+    },
+  });
+  revalidatePath("/grocery-list");
+  return {
+    id: `manual::${item.id}`,
+    name: item.name,
+    quantity: item.quantity ?? 0,
+    unit: item.unit,
+    category: item.category,
+    manual: true,
+  };
+}
+
+// Delete a hand-added product. `id` is the bare GroceryListItem id (the client
+// strips the `manual::` prefix before calling).
+export async function deleteGroceryListItem(id: string): Promise<void> {
+  await prisma.groceryListItem.delete({ where: { id } });
+  revalidatePath("/grocery-list");
 }
 
 // ─── Ingredients Page ─────────────────────────────────────────────────────────
@@ -540,10 +599,11 @@ export async function createGroceryItem(data: {
   carbs?: number | null;
   fat?: number | null;
   protein?: number | null;
-}): Promise<{ id: string; name: string; nameRo: string | null; category: string | null; unit: string | null; unit2: string | null; conversion: number | null; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null }> {
+  unitWeight?: number | null;
+}): Promise<{ id: string; name: string; nameRo: string | null; category: string | null; unit: string | null; unit2: string | null; conversion: number | null; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null; unitWeight: number | null }> {
   const item = await prisma.groceryItem.create({ data });
   revalidatePath("/ingredients");
-  return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein };
+  return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein, unitWeight: item.unitWeight };
 }
 
 export async function updateGroceryItem(

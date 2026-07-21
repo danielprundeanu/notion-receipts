@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { getGroceryList } from "@/lib/actions";
-import { GROCERY_CATEGORY_LABELS } from "@/lib/labels";
-import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
+import { getGroceryList, addGroceryListItem, deleteGroceryListItem } from "@/lib/actions";
+import { groceryCategoryLabel } from "@/lib/labels";
+import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2, Trash2, Plus } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "🍎 Fruits": "🍎",
@@ -36,10 +36,13 @@ function getMondayOf(date: Date): Date {
 function formatWeekRange(monday: Date): string {
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("ro-RO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${monday.toLocaleDateString("en-US", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
-type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string };
+type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string; manual?: boolean };
+
+const INPUT_CLS =
+  "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
 
 export default function GroceryListPage() {
   const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()));
@@ -49,6 +52,15 @@ export default function GroceryListPage() {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [isStuck, setIsStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Hand-added ("manual") products for this week.
+  const [newName, setNewName] = useState("");
+  const [newQty, setNewQty] = useState("");
+  const [newUnit, setNewUnit] = useState("");
+  const [newCategory, setNewCategory] = useState("Other");
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState(false);
+  const [deleteError, setDeleteError] = useState(false);
 
   const checkedKey = `grocery-checked:${weekStart.toISOString()}`;
 
@@ -87,6 +99,55 @@ export default function GroceryListPage() {
       return n;
     });
 
+  async function handleAddItem(e: FormEvent) {
+    e.preventDefault();
+    const name = newName.trim();
+    if (!name || adding) return;
+    setAdding(true);
+    setAddError(false);
+    try {
+      const entry = await addGroceryListItem(weekStart.toISOString(), {
+        name,
+        quantity: newQty ? parseFloat(newQty) : null,
+        unit: newUnit.trim() || null,
+        category: newCategory || "Other",
+      });
+      // Insert into the right category, keeping the alphabetical order load() uses.
+      setGrouped((prev) => {
+        const next = { ...prev };
+        const arr = [...(next[entry.category] ?? []), entry].sort((a, b) => a.name.localeCompare(b.name));
+        next[entry.category] = arr;
+        return next;
+      });
+      setNewName(""); setNewQty(""); setNewUnit(""); // keep category for repeated adds
+    } catch {
+      setAddError(true); // no silent failure — keep inputs, show the error
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  async function handleDeleteItem(entryId: string) {
+    const dbId = entryId.replace(/^manual::/, "");
+    const prev = grouped;
+    setDeleteError(false);
+    // Optimistic removal; drop now-empty categories.
+    setGrouped((g) => {
+      const next: Record<string, GroceryEntry[]> = {};
+      for (const [cat, items] of Object.entries(g)) {
+        const filtered = items.filter((i) => i.id !== entryId);
+        if (filtered.length) next[cat] = filtered;
+      }
+      return next;
+    });
+    try {
+      await deleteGroceryListItem(dbId);
+    } catch {
+      setGrouped(prev); // roll back to the pre-delete list
+      setDeleteError(true);
+    }
+  }
+
   const allItems = Object.values(grouped).flat();
   const totalCount = allItems.length;
 
@@ -104,22 +165,74 @@ export default function GroceryListPage() {
     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
   });
 
+  const addForm = (
+    <form onSubmit={handleAddItem} className="space-y-2">
+      <input
+        value={newName}
+        onChange={(e) => { setNewName(e.target.value); if (addError) setAddError(false); }}
+        placeholder="Product (e.g. napkins)"
+        aria-label="Product name"
+        className={`w-full ${INPUT_CLS}`}
+      />
+      <div className="flex gap-2">
+        <input
+          value={newQty}
+          onChange={(e) => setNewQty(e.target.value)}
+          inputMode="decimal" type="number" step="0.1" min="0"
+          placeholder="Qty"
+          aria-label="Quantity"
+          className={`w-20 ${INPUT_CLS}`}
+        />
+        <input
+          value={newUnit}
+          onChange={(e) => setNewUnit(e.target.value)}
+          placeholder="pcs"
+          aria-label="Unit"
+          className={`w-20 ${INPUT_CLS}`}
+        />
+        <select
+          value={newCategory}
+          onChange={(e) => setNewCategory(e.target.value)}
+          aria-label="Category"
+          className={`flex-1 min-w-0 ${INPUT_CLS}`}
+        >
+          {Object.keys(CATEGORY_ICONS).map((cat) => (
+            <option key={cat} value={cat}>
+              {CATEGORY_ICONS[cat]} {groceryCategoryLabel(cat)}
+            </option>
+          ))}
+        </select>
+      </div>
+      {addError && (
+        <p className="text-sm text-red-600 dark:text-red-400">Could not add the product. Please try again.</p>
+      )}
+      <button
+        type="submit"
+        disabled={adding || !newName.trim()}
+        className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+      >
+        {adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={16} />}
+        Add product
+      </button>
+    </form>
+  );
+
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Listă de cumpărături</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Shopping list</h1>
           {totalCount > 0 && (
             <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
-              {checkedCount}/{totalCount} produse bifate
+              {checkedCount}/{totalCount} items checked
             </p>
           )}
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
-            aria-label="Săptămâna anterioară"
+            aria-label="Previous week"
             className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronLeft size={18} />
@@ -129,13 +242,17 @@ export default function GroceryListPage() {
           </span>
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
-            aria-label="Săptămâna următoare"
+            aria-label="Next week"
             className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronRight size={18} />
           </button>
         </div>
       </div>
+
+      {deleteError && (
+        <p className="mb-4 text-sm text-red-600 dark:text-red-400">Could not delete the product. Please try again.</p>
+      )}
 
       {/* Sticky: chips + progress bar */}
       {!loading && totalCount > 0 && (
@@ -156,7 +273,7 @@ export default function GroceryListPage() {
             <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 md:px-8 pt-2 pb-2">
               {sortedCategories.map((cat) => {
                 const icon = CATEGORY_ICONS[cat] ?? "📦";
-                const catName = GROCERY_CATEGORY_LABELS[cat] ?? cat.replace(/^[^\w\s]+\s*/, "");
+                const catName = groceryCategoryLabel(cat);
                 const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
                 return (
                   <button
@@ -192,26 +309,29 @@ export default function GroceryListPage() {
         </div>
       ) : loadError ? (
         <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
-          <p className="font-medium">Nu s-a putut încărca lista</p>
+          <p className="font-medium">Could not load the list</p>
           <button
             onClick={() => load()}
             className="mt-3 px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
           >
-            Reîncearcă
+            Retry
           </button>
         </div>
       ) : totalCount === 0 ? (
-        <div className="text-center py-20 text-gray-400 dark:text-[#5c554b]">
-          <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Niciun produs în această săptămână</p>
-          <p className="text-sm mt-1">Adaugă rețete în planificator pentru a genera o listă</p>
+        <div>
+          <div className="text-center py-14 text-gray-400 dark:text-[#5c554b]">
+            <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
+            <p className="font-medium">No items this week</p>
+            <p className="text-sm mt-1">Add recipes to the planner or a product directly below</p>
+          </div>
+          {addForm}
         </div>
       ) : (
         <div className="space-y-6">
           {sortedCategories.map((cat) => {
             const items = grouped[cat];
             const icon = CATEGORY_ICONS[cat] ?? "📦";
-            const catName = GROCERY_CATEGORY_LABELS[cat] ?? cat.replace(/^[^\w\s]+\s*/, ""); // strip emoji prefix
+            const catName = groceryCategoryLabel(cat); // strip emoji prefix
             const allCatChecked = items.every((i) => checked.has(i.id));
 
             return (
@@ -229,31 +349,42 @@ export default function GroceryListPage() {
                     const done = checked.has(item.id);
                     return (
                       <li key={item.id}>
-                        <button
-                          onClick={() => toggleCheck(item.id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                            done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                          }`}
-                        >
-                          <div
-                            className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
-                              done
-                                ? "bg-orange-500 border-orange-500"
-                                : "border-gray-300 dark:border-[#46403a]"
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => toggleCheck(item.id)}
+                            className={`flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                              done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
                             }`}
                           >
-                            {done && <Check size={10} className="text-white" strokeWidth={3} />}
-                          </div>
-                          <span className={`flex-1 text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#5c554b]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
-                            {item.name}
-                          </span>
-                          {item.quantity > 0 && (
-                            <span className={`text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-900 dark:text-[#eae5de]"}`}>
-                              {item.quantity}
-                              {item.unit && ` ${item.unit}`}
+                            <div
+                              className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                done
+                                  ? "bg-orange-500 border-orange-500"
+                                  : "border-gray-300 dark:border-[#46403a]"
+                              }`}
+                            >
+                              {done && <Check size={10} className="text-white" strokeWidth={3} />}
+                            </div>
+                            <span className={`flex-1 min-w-0 truncate text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#5c554b]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
+                              {item.name}
                             </span>
+                            {item.quantity > 0 && (
+                              <span className={`shrink-0 text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-900 dark:text-[#eae5de]"}`}>
+                                {item.quantity}
+                                {item.unit && ` ${item.unit}`}
+                              </span>
+                            )}
+                          </button>
+                          {item.manual && (
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              aria-label={`Delete ${item.name}`}
+                              className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-300 dark:text-[#5c554b] hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           )}
-                        </button>
+                        </div>
                       </li>
                     );
                   })}
@@ -261,6 +392,12 @@ export default function GroceryListPage() {
               </div>
             );
           })}
+
+          {/* Add a product by hand to this week */}
+          <div className="border-t border-gray-100 dark:border-[#2a2620] pt-5">
+            <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6] mb-2.5">Add product</p>
+            {addForm}
+          </div>
         </div>
       )}
     </div>

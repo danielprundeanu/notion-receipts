@@ -5,11 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/recipes", label: "Rețete", img: "/icons/recipes.webp" },
-  { href: "/planner", label: "Planificator", img: "/icons/planner.webp" },
-  { href: "/grocery-list", label: "Cumpărături", img: "/icons/grocery.webp" },
-  { href: "/ingredients", label: "Ingrediente", img: "/icons/ingredients.webp" },
-  { href: "/settings", label: "Setări", img: "/icons/settings.webp" },
+  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Grocery", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
+  { href: "/settings", label: "Settings", img: "/icons/settings.webp" },
 ];
 
 export default function BottomNav() {

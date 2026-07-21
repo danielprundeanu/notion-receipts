@@ -19,6 +19,7 @@ export type GroceryItemResult = {
   carbs: number | null;
   fat: number | null;
   protein: number | null;
+  unitWeight: number | null;
 };
 
 
@@ -53,6 +54,7 @@ export default function GroceryItemModal({
   const [unit, setUnit] = useState("");
   const [unit2, setUnit2] = useState("");
   const [conversion, setConversion] = useState("");
+  const [unitWeight, setUnitWeight] = useState("");
   const [kcal, setKcal] = useState("");
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
@@ -79,13 +81,13 @@ export default function GroceryItemModal({
         body: JSON.stringify({ ingredientName, fromUnit: unit2.trim(), toUnit: unit.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { setAiConvError(data.error ?? "Nu s-a putut genera sugestia"); return; }
+      if (!res.ok) { setAiConvError(data.error ?? "Couldn't generate a suggestion"); return; }
       if (data.factor != null) {
         setConversion(String(data.factor));
         setAiConvNote(data.note || "");
       }
     } catch {
-      setAiConvError("Eroare la conexiune");
+      setAiConvError("Connection error");
     } finally {
       setAiConvLoading(false);
     }
@@ -99,13 +101,13 @@ export default function GroceryItemModal({
     try {
       const res = await fetch(`/api/nutrition?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      if (!res.ok) { setNutritionError(data.error ?? "Nu s-au găsit date"); return; }
+      if (!res.ok) { setNutritionError(data.error ?? "No data found"); return; }
       if (data.kcal    != null) setKcal(String(data.kcal));
       if (data.carbs   != null) setCarbs(String(data.carbs));
       if (data.fat     != null) setFat(String(data.fat));
       if (data.protein != null) setProtein(String(data.protein));
     } catch {
-      setNutritionError("Eroare la conexiune");
+      setNutritionError("Connection error");
     } finally {
       setFetchingNutrition(false);
     }
@@ -121,6 +123,7 @@ export default function GroceryItemModal({
       setUnit(data.unit ?? "");
       setUnit2(data.unit2 ?? "");
       setConversion(data.conversion?.toString() ?? "");
+      setUnitWeight(data.unitWeight?.toString() ?? "");
       setKcal(data.kcal?.toString() ?? "");
       setCarbs(data.carbs?.toString() ?? "");
       setFat(data.fat?.toString() ?? "");
@@ -166,6 +169,7 @@ export default function GroceryItemModal({
       unit: unit.trim(),
       unit2: unit2.trim() || null,
       conversion: conversion ? parseFloat(conversion) : null,
+      unitWeight: unitWeight ? parseFloat(unitWeight) : null,
       kcal: kcal ? parseFloat(kcal) : null,
       carbs: carbs ? parseFloat(carbs) : null,
       fat: fat ? parseFloat(fat) : null,
@@ -183,6 +187,7 @@ export default function GroceryItemModal({
           unit: payload.unit,
           unit2: payload.unit2 ?? null,
           conversion: payload.conversion,
+          unitWeight: payload.unitWeight,
           kcal: payload.kcal,
           carbs: payload.carbs,
           fat: payload.fat,
@@ -194,7 +199,7 @@ export default function GroceryItemModal({
       }
       onClose();
     } catch {
-      setSaveError("Nu s-a putut salva. Încearcă din nou.");
+      setSaveError("Couldn't save. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -210,7 +215,7 @@ export default function GroceryItemModal({
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {isEdit ? "Editează ingredient" : "Ingredient nou"}
+            {isEdit ? "Edit ingredient" : "New ingredient"}
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 p-1">
             <X size={18} />
@@ -225,30 +230,30 @@ export default function GroceryItemModal({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Nume (EN) *</label>
+                <label className={labelCls}>Name (EN) *</label>
                 <input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="ex: whole wheat flour"
+                  placeholder="e.g. whole wheat flour"
                   className={inputCls}
                   disabled={isEdit}
                 />
               </div>
               <div>
-                <label className={labelCls}>Nume (RO)</label>
+                <label className={labelCls}>Name (RO)</label>
                 <input
                   value={nameRo}
                   onChange={(e) => setNameRo(e.target.value)}
-                  placeholder="ex: făină integrală"
+                  placeholder="e.g. făină integrală"
                   className={inputCls}
                 />
               </div>
             </div>
 
             <div>
-              <label className={labelCls}>Categorie</label>
+              <label className={labelCls}>Category</label>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
-                <option value="">— selectează —</option>
+                <option value="">— select —</option>
                 {GROCERY_CATEGORIES.map((c) => (
                   <option key={c} value={c}>{groceryCategoryLabel(c)}</option>
                 ))}
@@ -257,16 +262,16 @@ export default function GroceryItemModal({
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Unitate principală *</label>
+                <label className={labelCls}>Primary unit *</label>
                 <input
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  placeholder="g, ml, buc…"
+                  placeholder="g, ml, pcs…"
                   className={inputCls}
                 />
               </div>
               <div>
-                <label className={labelCls}>Unitate secundară</label>
+                <label className={labelCls}>Secondary unit</label>
                 <input
                   value={unit2}
                   onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
@@ -279,16 +284,16 @@ export default function GroceryItemModal({
             {unit2 && (
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className={labelCls + " mb-0"}>Conversie (1 {unit2} = ? {unit || "unit"})</span>
+                  <span className={labelCls + " mb-0"}>Conversion (1 {unit2} = ? {unit || "unit"})</span>
                   <button
                     type="button"
                     onClick={handleSuggestConversion}
                     disabled={aiConvLoading || !unit.trim() || (!name.trim() && !nameRo.trim())}
                     className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
-                    title="Estimează cu AI (valori uzuale de gătit)"
+                    title="Estimate with AI (common cooking values)"
                   >
                     {aiConvLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                    {aiConvLoading ? "Se caută..." : "Sugestie AI"}
+                    {aiConvLoading ? "Searching..." : "AI suggestion"}
                   </button>
                 </div>
                 <input
@@ -300,7 +305,7 @@ export default function GroceryItemModal({
                 />
                 {aiConvNote != null && (
                   <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
-                    Sugerat de AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Verifică și ajustează dacă nu e corect.
+                    Suggested by AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Review and adjust if it's off.
                   </p>
                 )}
                 {aiConvError && (
@@ -309,20 +314,36 @@ export default function GroceryItemModal({
               </div>
             )}
 
+            {unit.trim() && !["g", "ml"].includes(unit.trim().toLowerCase()) && (
+              <div>
+                <label className={labelCls}>Weight per {unit.trim()} (g)</label>
+                <input
+                  inputMode="decimal" type="number" step="0.1" min="0"
+                  value={unitWeight}
+                  onChange={(e) => setUnitWeight(e.target.value)}
+                  placeholder="e.g. 60"
+                  className={inputCls}
+                />
+                <p className="text-xs text-gray-400 dark:text-[#5c554b] mt-1">
+                  How many grams are in 1 {unit.trim()}. Used only for nutrition calculations.
+                </p>
+              </div>
+            )}
+
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <span className={labelCls}>Nutriție (per 100{unit === "ml" ? "ml" : "g"})</span>
+                <span className={labelCls}>Nutrition (per 100{unit === "ml" ? "ml" : "g"})</span>
                 <button
                   type="button"
                   onClick={handleFetchNutrition}
                   disabled={fetchingNutrition || (!name.trim() && !nameRo.trim())}
                   className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
-                  title="Caută în Open Food Facts"
+                  title="Search Open Food Facts"
                 >
                   {fetchingNutrition
                     ? <Loader2 size={11} className="animate-spin" />
                     : <span>↓</span>}
-                  {fetchingNutrition ? "Se caută..." : "Auto-completează"}
+                  {fetchingNutrition ? "Searching..." : "Auto-fill"}
                 </button>
               </div>
               {nutritionError && (
@@ -331,9 +352,9 @@ export default function GroceryItemModal({
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: "kcal", value: kcal, set: setKcal },
-                  { label: "glucide g", value: carbs, set: setCarbs },
-                  { label: "grăsimi g", value: fat, set: setFat },
-                  { label: "proteine g", value: protein, set: setProtein },
+                  { label: "carbs g", value: carbs, set: setCarbs },
+                  { label: "fat g", value: fat, set: setFat },
+                  { label: "protein g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
@@ -351,12 +372,12 @@ export default function GroceryItemModal({
             {isEdit && (
               <div>
                 <span className={labelCls}>
-                  Folosit în{usedIn ? ` (${usedIn.length})` : ""}
+                  Used in{usedIn ? ` (${usedIn.length})` : ""}
                 </span>
                 {usedIn === null ? (
-                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Se încarcă…</p>
+                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Loading…</p>
                 ) : usedIn.length === 0 ? (
-                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Nefolosit în nicio rețetă.</p>
+                  <p className="text-xs text-gray-400 dark:text-[#5c554b]">Not used in any recipe.</p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
                     {usedIn.map((r) => (
@@ -380,24 +401,24 @@ export default function GroceryItemModal({
             {usedIn && usedIn.length > 0 ? (
               <>
                 <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-                  Nu poți șterge <strong>{name}</strong> — e folosit în {usedIn.length} {usedIn.length === 1 ? "rețetă" : "rețete"} (vezi lista de mai sus). Înlocuiește-l sau elimină-l din ele întâi.
+                  Can't delete <strong>{name}</strong> — it's used in {usedIn.length} {usedIn.length === 1 ? "recipe" : "recipes"} (see the list above). Replace or remove it from them first.
                 </p>
                 <button
                   type="button"
                   onClick={() => { setConfirmDelete(false); setDeleteBlocked(null); }}
                   className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
                 >
-                  Am înțeles
+                  Got it
                 </button>
               </>
             ) : (
               <>
                 <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-                  Ștergi definitiv <strong>{name}</strong>? Acțiunea nu poate fi anulată.
+                  Permanently delete <strong>{name}</strong>? This action cannot be undone.
                 </p>
                 {deleteBlocked != null && (
                   <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-                    Produsul e folosit în {deleteBlocked} {deleteBlocked === 1 ? "rețetă" : "rețete"} — nu a fost șters.
+                    The item is used in {deleteBlocked} {deleteBlocked === 1 ? "recipe" : "recipes"} — it wasn't deleted.
                   </p>
                 )}
                 <div className="flex gap-2">
@@ -408,14 +429,14 @@ export default function GroceryItemModal({
                     className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-40 flex items-center justify-center gap-1.5 transition-colors"
                   >
                     {deleting && <Loader2 size={13} className="animate-spin" />}
-                    Șterge definitiv
+                    Delete permanently
                   </button>
                   <button
                     type="button"
                     onClick={() => { setConfirmDelete(false); setDeleteBlocked(null); }}
                     className="px-4 py-2 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
                   >
-                    Anulează
+                    Cancel
                   </button>
                 </div>
               </>
@@ -433,9 +454,9 @@ export default function GroceryItemModal({
               type="button"
               onClick={() => setConfirmDelete(true)}
               className="flex items-center gap-1.5 px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
-              title="Șterge ingredient"
+              title="Delete ingredient"
             >
-              <Trash2 size={15} /> Șterge
+              <Trash2 size={15} /> Delete
             </button>
           )}
           <div className="flex gap-3 ml-auto">
@@ -444,7 +465,7 @@ export default function GroceryItemModal({
               onClick={onClose}
               className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
             >
-              Anulează
+              Cancel
             </button>
             <button
               type="button"
@@ -453,7 +474,7 @@ export default function GroceryItemModal({
               className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              {isEdit ? "Salvează" : "Creează ingredient"}
+              {isEdit ? "Save" : "Create ingredient"}
             </button>
           </div>
         </div>

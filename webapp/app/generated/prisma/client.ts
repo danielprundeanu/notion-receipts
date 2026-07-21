@@ -77,6 +77,11 @@ export type WeekPlan = Prisma.WeekPlanModel
  */
 export type IngredientNameMapping = Prisma.IngredientNameMappingModel
 /**
+ * Model GroceryListItem
+ * 
+ */
+export type GroceryListItem = Prisma.GroceryListItemModel
+/**
  * Model UnitRule
  * 
  */

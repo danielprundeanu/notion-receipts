@@ -96,9 +96,9 @@ function RecipeReviewCard({
       const res = await fetch("/api/import/upload-image", { method: "POST", body: form });
       const data = await res.json().catch(() => ({}));
       if (res.ok) onImageChange(data.url);
-      else setUploadError(data?.error ?? "Nu s-a putut încărca imaginea.");
+      else setUploadError(data?.error ?? "Couldn't upload the image.");
     } catch {
-      setUploadError("Nu s-a putut încărca imaginea.");
+      setUploadError("Couldn't upload the image.");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -111,7 +111,7 @@ function RecipeReviewCard({
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
             <AlertCircle size={16} />
-            <span className="font-medium text-sm">Eroare la parsare</span>
+            <span className="font-medium text-sm">Parse error</span>
           </div>
           <button onClick={onRemove} className="text-gray-400 hover:text-red-500 transition-colors">
             <X size={16} />
@@ -141,19 +141,19 @@ function RecipeReviewCard({
             )}
           </div>
           <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#7c756a]">
-            {recipe.servings && <span>{recipe.servings} porții</span>}
+            {recipe.servings && <span>{recipe.servings} servings</span>}
             {recipe.time && <span>{recipe.time} min</span>}
             {recipe.difficulty && <span>{recipe.difficulty}</span>}
             {recipe.link && (
               <a href={recipe.link} target="_blank" rel="noopener noreferrer"
                 className="text-orange-500 hover:underline flex items-center gap-0.5">
-                <Link2 size={10} /> sursă
+                <Link2 size={10} /> source
               </a>
             )}
           </div>
           {/* Ingredient stats + batch toggle */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{total} ingrediente:</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{total} ingredients:</span>
             {matched > 0 && (
               <span className="text-xs text-green-600 dark:text-green-400 font-medium">✓ {matched} matched</span>
             )}
@@ -165,7 +165,7 @@ function RecipeReviewCard({
             )}
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs text-gray-500 dark:text-[#7c756a]">Cantități per:</span>
+            <span className="text-xs text-gray-500 dark:text-[#7c756a]">Quantities per:</span>
             <button
               onClick={() => onBatchChange(true)}
               className={`text-xs px-2 py-0.5 rounded font-medium transition-colors ${
@@ -184,7 +184,7 @@ function RecipeReviewCard({
                   : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
-              1 porție
+              1 serving
             </button>
           </div>
         </div>
@@ -192,7 +192,7 @@ function RecipeReviewCard({
           {/* Image upload */}
           <button
             onClick={() => imgRef.current?.click()}
-            title={recipe.image ? "Schimbă imaginea" : "Adaugă imagine"}
+            title={recipe.image ? "Change image" : "Add image"}
             className={`transition-colors ${recipe.image ? "text-orange-400 hover:text-orange-600" : "text-gray-300 dark:text-[#4a443c] hover:text-orange-400"}`}
           >
             {uploading ? <Loader2 size={16} className="animate-spin" /> : (
@@ -213,7 +213,7 @@ function RecipeReviewCard({
           <button
             onClick={onRemove}
             className="text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors"
-            title="Elimină rețeta"
+            title="Remove recipe"
           >
             <X size={16} />
           </button>
@@ -233,7 +233,7 @@ function RecipeReviewCard({
             <div
               key={i}
               onClick={() => onIngredientToggle(i)}
-              title={ing.match.status === "matched" && !ing.unitConflict ? "Click pentru a marca de revizuit" : "Click pentru a marca ca matched"}
+              title={ing.match.status === "matched" && !ing.unitConflict ? "Click to mark for review" : "Click to mark as matched"}
               className="flex items-center justify-between gap-2 py-0.5 cursor-pointer rounded hover:bg-gray-50 dark:hover:bg-[#2a2620] px-1 -mx-1 transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
@@ -249,7 +249,7 @@ function RecipeReviewCard({
               )}
             </div>
           ))}
-          <p className="text-xs text-gray-400 dark:text-[#5c554b] pt-1">Click pe un ingredient pentru a-i schimba statusul.</p>
+          <p className="text-xs text-gray-400 dark:text-[#5c554b] pt-1">Click an ingredient to change its status.</p>
         </div>
       )}
     </div>
@@ -574,7 +574,7 @@ function ReviewRow({
           <div className="flex items-center gap-1.5">
             {isReviewed ? (
               <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-400 font-medium">
-                <Check size={10} /> rezolvat
+                <Check size={10} /> resolved
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-400 font-medium">
@@ -585,7 +585,7 @@ function ReviewRow({
           </div>
           {sameNameCount > 0 && (
             <span className="text-[10px] text-blue-500 dark:text-blue-400 font-medium">
-              → se aplică și la alte {sameNameCount}
+              → also applies to {sameNameCount} more
             </span>
           )}
         </div>
@@ -598,7 +598,7 @@ function ReviewRow({
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
             <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Caută în baza de date..."
+              placeholder="Search the database..."
               className="w-full text-sm pl-8 pr-3 py-1.5 border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] placeholder-gray-400 dark:placeholder-[#5c554b] focus:outline-none focus:ring-2 focus:ring-orange-400"
             />
             {searching && <Loader2 size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 animate-spin text-gray-400" />}
@@ -606,7 +606,7 @@ function ReviewRow({
 
           <div className="space-y-1 max-h-56 overflow-y-auto">
             {list.length === 0 && searchQuery.trim().length >= 2 && (
-              <p className="text-xs text-gray-400 dark:text-[#5c554b]">Niciun rezultat pentru &ldquo;{searchQuery}&rdquo;.</p>
+              <p className="text-xs text-gray-400 dark:text-[#5c554b]">No results for &ldquo;{searchQuery}&rdquo;.</p>
             )}
             {list.map((c) => {
               const isAuto = (c as { isAuto?: boolean }).isAuto;
@@ -635,7 +635,7 @@ function ReviewRow({
               <input type="radio" name={`pick-${recipeIndex}-${ingIndex}`} checked={isNew}
                 onChange={() => { seededRef.current = null; setSelectedId("new"); }} className="accent-orange-500" />
               <Plus size={13} className="text-orange-500" />
-              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Crează ingredient nou &ldquo;{ing.name}&rdquo;</span>
+              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Create new ingredient &ldquo;{ing.name}&rdquo;</span>
             </label>
           </div>
 
@@ -643,20 +643,20 @@ function ReviewRow({
           {isNew && (
             <div className="mt-1 p-3 rounded-lg border border-dashed border-orange-300 dark:border-orange-800 bg-orange-50/40 dark:bg-orange-950/10 space-y-2">
               <div>
-                <label className={labelCls}>Nume ingredient</label>
+                <label className={labelCls}>Ingredient name</label>
                 <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className={inputCls} />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={labelCls}>Unitate</label>
+                  <label className={labelCls}>Unit</label>
                   <select value={newUnit ?? "g"} onChange={(e) => setNewUnit(e.target.value)} className={inputCls}>
                     {UNITS.map((u) => <option key={u} value={u}>{u}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>Categorie</label>
+                  <label className={labelCls}>Category</label>
                   <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className={inputCls}>
-                    <option value="">— selectează —</option>
+                    <option value="">— select —</option>
                     {categories.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
@@ -668,28 +668,28 @@ function ReviewRow({
         {/* ── Conversion (only for a real item with a foreign unit) ── */}
         {!isNew && foreign && (
           <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2a24] pt-3">
-            <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Conversie unități</p>
+            <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Unit conversion</p>
 
             {selLoading || !sel ? (
               <p className="text-xs text-gray-400 dark:text-[#5c554b] flex items-center gap-1.5">
-                <Loader2 size={12} className="animate-spin" /> se încarcă unitățile…
+                <Loader2 size={12} className="animate-spin" /> loading units…
               </p>
             ) : units.length === 0 ? (
               <p className="text-xs text-gray-500 dark:text-[#7c756a]">
-                Ingredientul nu are unitate setată — se stochează ca <strong>{qty} {foreign}</strong>.
+                This ingredient has no unit set — it is stored as <strong>{qty} {foreign}</strong>.
               </p>
             ) : matches ? (
               /* Scenario 2 — foreign matches one of the item's units */
               <div className="space-y-1.5">
-                <p className="text-xs text-gray-500 dark:text-[#7c756a]">Unitatea din fișier se potrivește:</p>
+                <p className="text-xs text-gray-500 dark:text-[#7c756a]">The unit from the file matches:</p>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-green-400 dark:border-green-700 bg-green-50 dark:bg-green-950/20 tabular-nums">
                   <span className="text-sm font-medium text-gray-900 dark:text-[#eae5de]">{qty ?? ""} {foreign}</span>
-                  <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">potrivit cu fișierul</span>
+                  <span className="ml-auto text-xs text-green-600 dark:text-green-400 font-medium">matches the file</span>
                 </div>
                 {matchOther && (
                   <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-gray-50 dark:bg-[#24211c] tabular-nums">
                     <span className="text-sm text-gray-500 dark:text-[#a49c90]">{fmtNum(matchOther.val)} {matchOther.unit}</span>
-                    <span className="ml-auto text-xs text-gray-400 dark:text-[#5c554b]">calculat din DB</span>
+                    <span className="ml-auto text-xs text-gray-400 dark:text-[#5c554b]">computed from DB</span>
                   </div>
                 )}
               </div>
@@ -706,7 +706,7 @@ function ReviewRow({
                 <label className="flex items-center gap-2 px-3 py-2 rounded-lg border border-dashed border-blue-300 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/20 cursor-pointer">
                   <input type="checkbox" checked={addU2} onChange={(e) => setAddU2(e.target.checked)} className="accent-blue-500" />
                   <span className="text-xs text-blue-600 dark:text-blue-400">
-                    Adaugă &ldquo;{foreign}&rdquo; ca a 2-a unitate (unit2) pe &ldquo;{sel.name}&rdquo;
+                    Add &ldquo;{foreign}&rdquo; as a 2nd unit (unit2) on &ldquo;{sel.name}&rdquo;
                   </span>
                 </label>
               </div>
@@ -732,7 +732,7 @@ function ReviewRow({
                         <span className="w-24 text-right text-sm text-gray-400 dark:text-[#6e675c]">{fmtNum(derived)}</span>
                       )}
                       <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">{u}</span>
-                      <span className="ml-auto text-xs font-medium">{isTarget ? <span className="text-orange-600 dark:text-orange-400">țintă</span> : <span className="text-gray-400 dark:text-[#5c554b]">derivat din DB</span>}</span>
+                      <span className="ml-auto text-xs font-medium">{isTarget ? <span className="text-orange-600 dark:text-orange-400">target</span> : <span className="text-gray-400 dark:text-[#5c554b]">derived from DB</span>}</span>
                     </label>
                   );
                 })}
@@ -742,14 +742,14 @@ function ReviewRow({
             {/* AI conversion suggestion status */}
             {aiLoading && (
               <p className="text-xs text-purple-500 dark:text-purple-400 flex items-center gap-1.5">
-                <Loader2 size={12} className="animate-spin" /> AI caută o conversie potrivită…
+                <Loader2 size={12} className="animate-spin" /> AI is finding a suitable conversion…
               </p>
             )}
             {aiSuggested && !aiLoading && (
               <div className="flex items-start gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg px-2.5 py-1.5">
                 <Sparkles size={12} className="mt-0.5 shrink-0" />
                 <span>
-                  <strong>Sugerat de AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Verifică și ajustează dacă nu e corect.
+                  <strong>Suggested by AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Review and adjust if it's off.
                 </span>
               </div>
             )}
@@ -761,25 +761,25 @@ function ReviewRow({
                 : "bg-gray-50 dark:bg-[#24211c] text-gray-500 dark:text-[#7c756a] border border-gray-200 dark:border-[#3a352e]"
               }`}>
                 {matches
-                  ? <>✓ se stochează ca <strong>{qty} {foreign}</strong></>
+                  ? <>✓ stored as <strong>{qty} {foreign}</strong></>
                   : singleUnit && addU2
-                    ? <>✓ &ldquo;{foreign}&rdquo; devine unit2 pe &ldquo;{sel.name}&rdquo;{factorValid ? <> · 1 {foreign} = {factorNum} {units[0]}</> : <> (fără conversie)</>}</>
+                    ? <>✓ &ldquo;{foreign}&rdquo; becomes unit2 on &ldquo;{sel.name}&rdquo;{factorValid ? <> · 1 {foreign} = {factorNum} {units[0]}</> : <> (no conversion)</>}</>
                     : factorValid
                       ? <>✓ <strong>{qty} {foreign}</strong> → <strong>{outTarget} {target}</strong></>
-                      : <>Introdu factorul de conversie pentru a continua</>}
+                      : <>Enter the conversion factor to continue</>}
               </div>
             )}
           </div>
         )}
 
-        {/* ── Observații (last in hierarchy) ── */}
+        {/* ── Notes (last in hierarchy) ── */}
         <div className="space-y-2 border-t border-gray-100 dark:border-[#2e2a24] pt-3">
-          <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Observații</p>
+          <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">Notes</p>
           <input
             type="text"
             value={obs}
             onChange={(e) => setObs(e.target.value)}
-            placeholder="ex: roughly chopped, la temperatura camerei"
+            placeholder="e.g. roughly chopped, at room temperature"
             className="w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2620] text-gray-700 dark:text-[#c4bcb0] placeholder-gray-300 dark:placeholder-[#4a443c] focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
@@ -789,12 +789,12 @@ function ReviewRow({
           {!isReviewed && (
             <button onClick={() => onSkip(recipeIndex, ingIndex)}
               className="text-xs text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#7c756a] transition-colors">
-              Sare peste
+              Skip
             </button>
           )}
           <button onClick={handleSave} disabled={!canSave}
             className="ml-auto text-sm font-semibold py-2 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-            {isReviewed ? "Actualizează" : "Salvează"}
+            {isReviewed ? "Update" : "Save"}
           </button>
         </div>
       </div>
@@ -891,12 +891,12 @@ export default function ImportPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Eroare la parsare");
+      if (!res.ok) throw new Error(data.error ?? "Parse error");
 
       setRecipes(data.recipes);
       setStep(2);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Eroare necunoscută");
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -1106,12 +1106,12 @@ export default function ImportPage() {
         body: JSON.stringify({ recipes: payload, newUnitRules }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Eroare la import");
+      if (!res.ok) throw new Error(data.error ?? "Import error");
 
       setImportResult(data);
       setStep(4);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Eroare necunoscută");
+      setError(e instanceof Error ? e.message : "Unknown error");
     } finally {
       setLoading(false);
     }
@@ -1164,7 +1164,7 @@ export default function ImportPage() {
             <ArrowLeft size={16} />
           </Link>
           <h1 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
-            Import rețete
+            Import recipes
           </h1>
         </div>
         <StepIndicator step={step} />
@@ -1185,7 +1185,7 @@ export default function ImportPage() {
                     : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
-                <Link2 size={15} /> Linkuri URL
+                <Link2 size={15} /> URL links
               </button>
               <button
                 onClick={() => setInputMode("text")}
@@ -1195,7 +1195,7 @@ export default function ImportPage() {
                     : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
-                <FileText size={15} /> Text / Fișier
+                <FileText size={15} /> Text / File
               </button>
             </div>
 
@@ -1203,7 +1203,7 @@ export default function ImportPage() {
               <div className="bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl p-4 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-[#c4bcb0] mb-1">
-                    URL-uri rețete (un URL per linie)
+                    Recipe URLs (one URL per line)
                   </label>
                   <textarea
                     value={urlsText}
@@ -1214,35 +1214,35 @@ export default function ImportPage() {
                   />
                 </div>
                 <p className="text-xs text-gray-400 dark:text-[#5c554b]">
-                  Suportă AllRecipes, Jamie Oliver, BBC Good Food, și alte site-uri cu schema.org/Recipe markup.
+                  Supports AllRecipes, Jamie Oliver, BBC Good Food, and other sites with schema.org/Recipe markup.
                 </p>
               </div>
             ) : (
               <div className="bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl p-4 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-[#c4bcb0] mb-1">
-                    Text rețetă (format structurat)
+                    Recipe text (structured format)
                   </label>
                   <textarea
                     value={textContent}
                     onChange={(e) => setTextContent(e.target.value)}
-                    placeholder={"=== Nume Rețetă ===\nServings: 4 Batch: True\nTime: 30\nDifficulty: Easy\nCategories: Dinner, Lunch\nFavorite: No\nLink: https://...\nImage: data/local/img/photo.jpg\n\n# Ingrediente principale\n200g Ciocolată\n1 cup Lapte\n\n# Sosuri\n2 tbsp Ulei de cocos\n\n## Pași\n1. Primul pas\n2. Al doilea pas\n\n## Tips\n- Sfat util\n- Alt sfat"}
+                    placeholder={"=== Recipe Name ===\nServings: 4 Batch: True\nTime: 30\nDifficulty: Easy\nCategories: Dinner, Lunch\nFavorite: No\nLink: https://...\nImage: data/local/img/photo.jpg\n\n# Main ingredients\n200g Chocolate\n1 cup Milk\n\n# Sauces\n2 tbsp Coconut oil\n\n## Steps\n1. First step\n2. Second step\n\n## Tips\n- Useful tip\n- Another tip"}
                     rows={12}
                     className="w-full text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] placeholder-gray-400 dark:placeholder-[#5c554b] focus:outline-none focus:ring-2 focus:ring-orange-400 resize-none font-mono"
                   />
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-gray-400 dark:text-[#5c554b]">sau</span>
+                  <span className="text-xs text-gray-400 dark:text-[#5c554b]">or</span>
                   <button
                     onClick={() => fileRef.current?.click()}
                     className="flex items-center gap-1.5 text-sm text-orange-600 dark:text-orange-400 hover:underline"
                   >
-                    <Upload size={14} /> Încarcă fișier .txt
+                    <Upload size={14} /> Upload .txt file
                   </button>
                   <input ref={fileRef} type="file" accept=".txt" className="hidden" onChange={handleFile} />
                   {textContent && (
                     <span className="text-xs text-green-600 dark:text-green-400">
-                      ✓ {textContent.split("\n").length} linii încărcate
+                      ✓ {textContent.split("\n").length} lines loaded
                     </span>
                   )}
                 </div>
@@ -1262,7 +1262,7 @@ export default function ImportPage() {
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-                {loading ? "Se parsează..." : "Parsează rețetele"}
+                {loading ? "Parsing..." : "Parse recipes"}
               </button>
             </div>
           </div>
@@ -1273,7 +1273,7 @@ export default function ImportPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600 dark:text-[#a49c90]">
-                {validRecipes.length} rețete găsite · verifică și elimină ce nu dorești
+                {validRecipes.length} recipes found · review and remove any you don't want
               </p>
             </div>
 
@@ -1291,9 +1291,9 @@ export default function ImportPage() {
 
             {recipes.length === 0 && (
               <div className="text-center py-12 text-gray-400 dark:text-[#5c554b]">
-                <p className="text-sm">Toate rețetele au fost eliminate.</p>
+                <p className="text-sm">All recipes have been removed.</p>
                 <button onClick={() => setStep(1)} className="mt-2 text-orange-500 hover:underline text-sm">
-                  Înapoi la input
+                  Back to input
                 </button>
               </div>
             )}
@@ -1304,13 +1304,13 @@ export default function ImportPage() {
                   onClick={() => setStep(1)}
                   className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
                 >
-                  <ArrowLeft size={14} /> Înapoi
+                  <ArrowLeft size={14} /> Back
                 </button>
                 <button
                   onClick={() => setStep(totalConflicts > 0 ? 3 : 4)}
                   className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
                 >
-                  {totalConflicts > 0 ? `Rezolvă ${totalConflicts} conflicte` : "Preview & import"}
+                  {totalConflicts > 0 ? `Resolve ${totalConflicts} conflicts` : "Preview & import"}
                   <ArrowRight size={16} />
                 </button>
               </div>
@@ -1323,10 +1323,10 @@ export default function ImportPage() {
           <div className="space-y-4">
             <div>
               <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
-                Verifică ingrediente
+                Review ingredients
               </h2>
               <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
-                {allIngredients.length} ingrediente · {totalConflicts > 0 ? `${totalConflicts} necesită atenție` : "toate rezolvate"}
+                {allIngredients.length} ingredients · {totalConflicts > 0 ? `${totalConflicts} need attention` : "all resolved"}
               </p>
             </div>
 
@@ -1398,7 +1398,7 @@ export default function ImportPage() {
               <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl px-4 py-3 text-sm text-red-700 dark:text-red-400 flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>
-                  Mai sunt <strong>{conflictIngredients.length} ingrediente nerezolvate</strong>. Mapează sau sari peste ele înainte de import.
+                  <strong>{conflictIngredients.length} ingredients still unresolved</strong>. Map them or skip them before importing.
                 </span>
               </div>
             )}
@@ -1407,7 +1407,7 @@ export default function ImportPage() {
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>
-                  <strong>{unitConflictIngredients.length} unități nerezolvate</strong> se vor importa ca „piece”. Dacă produsul n-are greutate pe bucată (g/buc), nutriția nu va fi corectă — le poți completa oricând din <strong>Ingredients → Audit unități</strong>.
+                  <strong>{unitConflictIngredients.length} unresolved units</strong> will be imported as “piece”. If the item has no weight per piece (g/pc), nutrition won't be correct — you can fill them in anytime from <strong>Ingredients → Unit audit</strong>.
                 </span>
               </div>
             )}
@@ -1423,7 +1423,7 @@ export default function ImportPage() {
                 onClick={() => setStep(2)}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
               >
-                <ArrowLeft size={14} /> Înapoi la review
+                <ArrowLeft size={14} /> Back to review
               </button>
               <button
                 onClick={() => setStep(4)}
@@ -1443,11 +1443,11 @@ export default function ImportPage() {
               <CheckCircle size={32} className="text-green-600 dark:text-green-400" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#eae5de]">Import reușit!</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-[#eae5de]">Import successful!</h2>
               <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">
-                {importResult.recipesCreated} rețete adăugate
+                {importResult.recipesCreated} recipes added
                 {importResult.newIngredientsCreated > 0 &&
-                  ` · ${importResult.newIngredientsCreated} ingrediente noi create`}
+                  ` · ${importResult.newIngredientsCreated} new ingredients created`}
               </p>
             </div>
             <div className="flex items-center justify-center gap-3">
@@ -1462,13 +1462,13 @@ export default function ImportPage() {
                 }}
                 className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors"
               >
-                Import nou
+                New import
               </button>
               <Link
                 href="/recipes"
                 className="flex items-center gap-2 px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
               >
-                Vezi rețetele <ArrowRight size={14} />
+                View recipes <ArrowRight size={14} />
               </Link>
             </div>
           </div>
@@ -1479,10 +1479,10 @@ export default function ImportPage() {
           <div className="space-y-5">
             <div>
               <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de]">
-                Preview rețete
+                Preview recipes
               </h2>
               <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
-                {validRecipes.length} rețete · {validRecipes.reduce((s, r) => s + r.ingredients.length, 0)} ingrediente · click pe ingredient pentru a edita
+                {validRecipes.length} recipes · {validRecipes.reduce((s, r) => s + r.ingredients.length, 0)} ingredients · click an ingredient to edit
               </p>
             </div>
 
@@ -1499,15 +1499,15 @@ export default function ImportPage() {
                       {r.favorite && <span className="text-xs text-yellow-500">★</span>}
                     </div>
                     <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-[#7c756a]">
-                      {r.servings && <span>{r.servings} porții</span>}
+                      {r.servings && <span>{r.servings} servings</span>}
                       {r.time && <span>{r.time} min</span>}
                       {r.difficulty && <span>{r.difficulty}</span>}
                       <span className={`px-1.5 py-0.5 rounded font-medium ${r.batch ? "bg-orange-100 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400" : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a]"}`}>
-                        {r.batch ? "batch" : "per porție"}
+                        {r.batch ? "batch" : "per serving"}
                       </span>
                       {r.link && (
                         <a href={r.link} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline flex items-center gap-0.5">
-                          <Link2 size={10} /> sursă
+                          <Link2 size={10} /> source
                         </a>
                       )}
                     </div>
@@ -1521,15 +1521,15 @@ export default function ImportPage() {
                 {(() => {
                   const groups: Record<string, Array<{ ing: typeof r.ingredients[0]; ii: number }>> = {};
                   r.ingredients.forEach((ing, ii) => {
-                    const key = ing.groupName ?? "Ingrediente";
+                    const key = ing.groupName ?? "Ingredients";
                     (groups[key] = groups[key] ?? []).push({ ing, ii });
                   });
                   return (
                     <div className="px-4 py-3 space-y-3">
                       {/* Column headers: original din text vs. ce se importă */}
                       <div className="hidden sm:grid grid-cols-2 gap-2 pb-1.5 border-b border-gray-100 dark:border-[#2e2a24]">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Din text</span>
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Se importă</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">From text</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b]">Imported</span>
                       </div>
                       {Object.entries(groups).map(([gName, items]) => (
                         <div key={gName}>
@@ -1559,7 +1559,7 @@ export default function ImportPage() {
                                     setStep(3);
                                   } : undefined}
                                   className={`grid grid-cols-1 sm:grid-cols-2 gap-0.5 sm:gap-2 sm:items-center text-xs py-1.5 sm:py-1 rounded px-1.5 -mx-1 ${ext.skipped ? "opacity-40 line-through" : ""} ${canEdit ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors" : ""}`}
-                                  title={canEdit ? "Click pentru a edita" : undefined}
+                                  title={canEdit ? "Click to edit" : undefined}
                                 >
                                   {/* Din text (original) */}
                                   <span className="min-w-0 truncate text-gray-400 dark:text-[#6e675c] tabular-nums">
@@ -1590,7 +1590,7 @@ export default function ImportPage() {
                 {/* Instructions preview */}
                 {r.instructions.length > 0 && (
                   <div className="border-t border-gray-100 dark:border-[#2e2a24] px-4 py-3">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Instrucțiuni</p>
+                    <p className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide mb-2">Instructions</p>
                     <div className="space-y-1">
                       {r.instructions.slice(0, 4).map((inst, j) => (
                         inst.isSection
@@ -1598,7 +1598,7 @@ export default function ImportPage() {
                           : <p key={j} className="text-xs text-gray-600 dark:text-[#a49c90] leading-relaxed">{inst.text}</p>
                       ))}
                       {r.instructions.length > 4 && (
-                        <p className="text-xs text-gray-400 dark:text-[#5c554b]">... și încă {r.instructions.length - 4} pași</p>
+                        <p className="text-xs text-gray-400 dark:text-[#5c554b]">... and {r.instructions.length - 4} more steps</p>
                       )}
                     </div>
                   </div>
@@ -1617,7 +1617,7 @@ export default function ImportPage() {
                 onClick={() => setStep(totalConflicts > 0 ? 3 : 2)}
                 className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#a49c90] transition-colors"
               >
-                <ArrowLeft size={14} /> Înapoi
+                <ArrowLeft size={14} /> Back
               </button>
               <button
                 onClick={handleImport}
@@ -1625,7 +1625,7 @@ export default function ImportPage() {
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
-                {loading ? "Se importă..." : `Importă ${validRecipes.length} rețete`}
+                {loading ? "Importing..." : `Import ${validRecipes.length} recipes`}
               </button>
             </div>
           </div>

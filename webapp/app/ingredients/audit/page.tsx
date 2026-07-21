@@ -60,8 +60,8 @@ function FixInput({
           type="button"
           onClick={suggest}
           disabled={aiLoading}
-          title={aiErr ? "AI n-a putut estima — încearcă din nou sau completează manual" : "Estimează cu AI"}
-          aria-label="Sugestie AI"
+          title={aiErr ? "AI couldn't estimate — try again or fill it in manually" : "Estimate with AI"}
+          aria-label="AI suggestion"
           className={`p-1.5 rounded-lg transition-colors disabled:opacity-40 ${
             aiErr
               ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30"
@@ -87,7 +87,7 @@ function FixInput({
         onClick={save}
         disabled={saving || !draft.trim()}
         className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-40 transition-colors"
-        aria-label="salvează"
+        aria-label="save"
       >
         {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
       </button>
@@ -124,18 +124,18 @@ export default function UnitAuditPage() {
           href="/ingredients"
           className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors mb-3"
         >
-          <ArrowLeft size={15} /> Înapoi la ingrediente
+          <ArrowLeft size={15} /> Back to ingredients
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Audit unități</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Unit audit</h1>
         <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">
-          Probleme sistematice de import care strică nutriția. Fix-ul se aplică o singură dată pe produs
-          și se propagă automat în toate rețetele care-l folosesc.
+          Systematic import issues that break nutrition. The fix is applied once per item
+          and automatically propagates to every recipe that uses it.
         </p>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-          <Loader2 size={18} className="animate-spin mr-2" /> Se încarcă…
+          <Loader2 size={18} className="animate-spin mr-2" /> Loading…
         </div>
       ) : (
         <div className="space-y-8">
@@ -143,30 +143,30 @@ export default function UnitAuditPage() {
           <section>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-1">
               <TriangleAlert size={15} className="text-orange-500" />
-              Unități care nu se pot transforma în grame
+              Units that cannot be converted to grams
               <span className="text-xs font-normal text-gray-400 dark:text-[#6e675c]">
                 ({missing.length})
               </span>
             </h2>
             <p className="text-xs text-gray-400 dark:text-[#6e675c] mb-3">
-              Cantitatea nu poate fi convertită în grame, deci nutriția iese 0. Pentru unități de volum
-              (cup, tbsp) completează <strong>conversia</strong> (1 cup = ? g); pentru bucăți,
-              <strong> greutatea pe bucată</strong>. Doar produsele cu nutriție sunt listate.
+              The quantity cannot be converted to grams, so nutrition comes out as 0. For volume units
+              (cup, tbsp) fill in the <strong>conversion</strong> (1 cup = ? g); for pieces,
+              the <strong>weight per piece</strong>. Only items with nutrition are listed.
             </p>
 
             {missing.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-[#7c756a] bg-gray-50 dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl px-4 py-6 text-center">
-                {savedCount > 0 ? "Gata — toate se pot converti acum 🎉" : "Nimic de reparat aici 🎉"}
+                {savedCount > 0 ? "Done — everything can be converted now 🎉" : "Nothing to fix here 🎉"}
               </p>
             ) : (
               <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
-                      <th className="px-3 py-2 font-medium">Produs</th>
-                      <th className="px-3 py-2 font-medium">Unități</th>
-                      <th className="hidden md:table-cell px-3 py-2 font-medium text-right">Folosiri</th>
-                      <th className="hidden md:table-cell px-3 py-2 font-medium">Exemple rețete</th>
+                      <th className="px-3 py-2 font-medium">Item</th>
+                      <th className="px-3 py-2 font-medium">Units</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium text-right">Uses</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium">Example recipes</th>
                       <th className="px-3 py-2 font-medium text-right">Fix</th>
                     </tr>
                   </thead>
@@ -176,7 +176,7 @@ export default function UnitAuditPage() {
                       const unit2Lower = r.unit2?.toLowerCase();
                       const convCase = !!unit2Lower && offending.some((u) => u.toLowerCase() === unit2Lower);
                       const field: "conversion" | "unitWeight" = convCase ? "conversion" : "unitWeight";
-                      const badUnit = offending[0] ?? "buc";
+                      const badUnit = offending[0] ?? "pcs";
                       const hint = convCase
                         ? `1 ${r.unit2} = ? ${r.unit ?? "g"}`
                         : `? g / ${badUnit}`;
@@ -197,11 +197,11 @@ export default function UnitAuditPage() {
                           <td className="px-3 py-2 text-gray-500 dark:text-[#a49c90]">
                             {r.unit ?? "—"}{r.unit2 ? ` / ${r.unit2}` : ""}
                             <span className="block text-[11px] text-orange-500/80">
-                              folosit ca: {offending.join(", ")}
+                              used as: {offending.join(", ")}
                             </span>
                           </td>
                           <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
-                            {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} rețete)</span>
+                            {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} recipes)</span>
                           </td>
                           <td className="hidden md:table-cell px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
                             {r.sampleRecipes.join(", ")}
@@ -233,29 +233,29 @@ export default function UnitAuditPage() {
           <section>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-3">
               <TriangleAlert size={15} className="text-gray-400" />
-              Nepotriviri de unitate
+              Unit mismatches
               <span className="text-xs font-normal text-gray-400 dark:text-[#6e675c]">
                 ({mismatches.length})
               </span>
             </h2>
             <p className="text-xs text-gray-400 dark:text-[#6e675c] mb-3">
-              Ingrediente a căror unitate stocată nu e printre unitățile produsului. Deschide rețeta
-              și corectează unitatea, sau adaugă unitatea pe produs.
+              Ingredients whose stored unit is not among the item units. Open the recipe
+              and correct the unit, or add the unit to the item.
             </p>
 
             {mismatches.length === 0 ? (
               <p className="text-sm text-gray-500 dark:text-[#7c756a] bg-gray-50 dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl px-4 py-6 text-center">
-                Nicio nepotrivire 🎉
+                No mismatches 🎉
               </p>
             ) : (
               <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
-                      <th className="px-3 py-2 font-medium">Rețetă</th>
-                      <th className="px-3 py-2 font-medium">Produs</th>
-                      <th className="px-3 py-2 font-medium">Unitate stocată</th>
-                      <th className="hidden md:table-cell px-3 py-2 font-medium">Unitățile produsului</th>
+                      <th className="px-3 py-2 font-medium">Recipe</th>
+                      <th className="px-3 py-2 font-medium">Item</th>
+                      <th className="px-3 py-2 font-medium">Stored unit</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium">Item units</th>
                     </tr>
                   </thead>
                   <tbody>

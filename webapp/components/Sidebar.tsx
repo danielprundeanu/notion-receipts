@@ -5,10 +5,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/recipes", label: "Rețete", img: "/icons/recipes.webp" },
-  { href: "/planner", label: "Planificator", img: "/icons/planner.webp" },
-  { href: "/grocery-list", label: "Listă cumpărături", img: "/icons/grocery.webp" },
-  { href: "/ingredients", label: "Ingrediente", img: "/icons/ingredients.webp" },
+  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Grocery list", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
 ];
 
 export default function Sidebar() {
@@ -68,7 +68,7 @@ export default function Sidebar() {
             height={20}
             className={`transition-opacity ${pathname === "/settings" || pathname.startsWith("/settings/") ? "opacity-100" : "opacity-60"}`}
           />
-          Setări
+          Settings
         </Link>
       </div>
     </aside>

@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     await saveIngredientMappings(newIngredientMappings);
 
     if (!Array.isArray(recipes) || recipes.length === 0) {
-      return NextResponse.json({ error: "Nu sunt rețete de importat" }, { status: 400 });
+      return NextResponse.json({ error: "No recipes to import" }, { status: 400 });
     }
 
     // Validate: every ingredient must have a groceryItemId or a newItem
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
       );
       if (unresolved.length > 0) {
         return NextResponse.json(
-          { error: `Rețeta "${recipe.name}" are ${unresolved.length} ingredient(e) fără match: ${unresolved.map((i) => i.name).join(", ")}` },
+          { error: `Recipe "${recipe.name}" has ${unresolved.length} unmatched ingredient(s): ${unresolved.map((i) => i.name).join(", ")}` },
           { status: 400 }
         );
       }
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json(
       {
-        error: err instanceof Error ? err.message : "Eroare internă",
+        error: err instanceof Error ? err.message : "Internal error",
         recipesCreated: created.length,
         recipeIds: created,
         newIngredientsCreated: newIngredientCount.reduce((a, b) => a + b, 0),
