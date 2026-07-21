@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.25.0] — 2026-07-21
+
+### ♿ Accesibilitate & mobil
+- **Ținte tactile mărite (long-tail)** — butoane de închidere, toggle favorite, „Adaugă în planner"/„Editează", stepperele din modale, comutatorul de temă, chip-urile de categorie, butonul de adăugare masă.
+- **Navigație accesibilă** — etichetele din bara de jos + sidebar traduse în română, `aria-current` pe pagina activă, contrast îmbunătățit pe etichetele inactive, `aria-label` pe săgețile de navigare între săptămâni.
+- **Tastatură numerică pe mobil** — `inputMode="decimal"` pe câmpurile numerice (cantități, conversii, nutriție).
+- Shell-ul folosește `100dvh` în loc de `100vh` — fără conținut tăiat de bara browserului pe mobil.
+
+### 🐛 Fixes
+- **Favorite fără eșec silențios** — toggle-ul de favorite face rollback dacă salvarea eșuează.
+- **Stare de gol corectă** — filtrul „Favorite" fără rezultate arată „Încearcă o altă căutare", nu „Adaugă prima ta rețetă".
+- **Rute API mai robuste** — `search-items` prins în try/catch; `nutrition` nu mai scurge mesajul intern de eroare către client; upload-ul de imagine din import are limită de dimensiune (10MB).
+- **Confirmare la deconectare** — evită sign-out accidental pe mobil.
+
 ## [0.24.0] — 2026-07-21
 
 ### 🎨 UI / UX

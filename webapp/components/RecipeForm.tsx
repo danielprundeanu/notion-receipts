@@ -310,7 +310,7 @@ function GroceryItemEditModal({
                 </button>
               </div>
               <input
-                type="number" step="0.001" min="0"
+                inputMode="decimal" type="number" step="0.001" min="0"
                 value={conversion}
                 onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
                 placeholder={`ex: 240 dacă 1 cup = 240 ${item.unit ?? "g"}`}
@@ -357,7 +357,7 @@ function GroceryItemEditModal({
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
                     <input
-                      type="number" step="0.1" min="0"
+                      inputMode="decimal" type="number" step="0.1" min="0"
                       value={value}
                       onChange={(e) => set(e.target.value)}
                       className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
@@ -924,7 +924,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         <div>
           <Label>Timp (min)</Label>
           <input
-            type="number" min="1"
+            inputMode="decimal" type="number" min="1"
             value={time}
             onChange={(e) => setTime(e.target.value)}
             placeholder="30"
@@ -1065,7 +1065,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 −
               </button>
               <input
-                type="number"
+                inputMode="decimal" type="number"
                 min="1"
                 value={servings}
                 onFocus={() => { servingsAtFocus.current = curServings; }}
@@ -1160,7 +1160,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     <div className="sm:hidden space-y-1.5">
                       <div className="flex gap-2 items-center">
                         <input
-                          type="number" min="0" step="0.001"
+                          inputMode="decimal" type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Cant."
@@ -1211,7 +1211,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     <div className="hidden sm:block space-y-1">
                       <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2 items-center">
                         <input
-                          type="number" min="0" step="0.001"
+                          inputMode="decimal" type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Cant."

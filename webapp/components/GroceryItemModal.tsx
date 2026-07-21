@@ -292,7 +292,7 @@ export default function GroceryItemModal({
                   </button>
                 </div>
                 <input
-                  type="number" step="0.001" min="0"
+                  inputMode="decimal" type="number" step="0.001" min="0"
                   value={conversion}
                   onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
                   placeholder="ex: 240"
@@ -338,7 +338,7 @@ export default function GroceryItemModal({
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
                     <input
-                      type="number" step="0.1" min="0"
+                      inputMode="decimal" type="number" step="0.1" min="0"
                       value={value}
                       onChange={(e) => set(e.target.value)}
                       className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"

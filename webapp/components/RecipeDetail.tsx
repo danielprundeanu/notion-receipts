@@ -182,7 +182,7 @@ function AddToPlannerModal({
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-sm p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">Adaugă în planner</h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-3">
             <X size={18} />
           </button>
         </div>
@@ -241,7 +241,7 @@ function AddToPlannerModal({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); removeDay(i); }}
-                          className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-gray-400 dark:bg-[#5c554b] text-white flex items-center justify-center text-[8px] leading-none hover:bg-red-400 transition-colors"
+                          className="absolute -top-1 -right-1 w-3.5 h-3.5 before:content-[''] before:absolute before:-inset-2 rounded-full bg-gray-400 dark:bg-[#5c554b] text-white flex items-center justify-center text-[8px] leading-none hover:bg-red-400 transition-colors"
                         >
                           ×
                         </button>
@@ -359,7 +359,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   function handleToggleFavorite() {
     const next = !isFavorite;
     setIsFavorite(next);
-    startTransition(() => toggleFavorite(recipe.id, next));
+    startTransition(async () => {
+      try {
+        await toggleFavorite(recipe.id, next);
+      } catch {
+        setIsFavorite(!next); // rollback — the toggle didn't persist
+      }
+    });
   }
 
   type GroupEntry = { name: string | null; items: typeof recipe.ingredients };
@@ -413,13 +419,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <button
             onClick={() => setShowPlanner(true)}
             title="Adaugă în planner"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-1.5 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2.5 hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
           >
             <CalendarPlus size={13} /> Adaugă în planner
           </button>
           <Link
             href={`/recipes/${recipe.id}/edit`}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-1.5 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
             <Pencil size={13} /> Editează
           </Link>
@@ -445,7 +451,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             <button
               onClick={handleToggleFavorite}
               title={isFavorite ? "Elimină de la favorite" : "Adaugă la favorite"}
-              className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+              className="p-3 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
             >
               <Star
                 size={20}

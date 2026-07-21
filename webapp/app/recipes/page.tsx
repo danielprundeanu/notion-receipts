@@ -50,7 +50,7 @@ export default async function RecipesPage({
         <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
           <p className="text-lg font-semibold">Nicio rețetă găsită</p>
           <p className="text-sm mt-1">
-            {q || cat ? "Încearcă o altă căutare" : "Adaugă prima ta rețetă"}
+            {q || cat || favOnly ? "Încearcă o altă căutare" : "Adaugă prima ta rețetă"}
           </p>
         </div>
       ) : (

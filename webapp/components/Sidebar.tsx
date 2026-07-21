@@ -5,10 +5,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
-  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
-  { href: "/grocery-list", label: "Grocery List", img: "/icons/grocery.webp" },
-  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
+  { href: "/recipes", label: "Rețete", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planificator", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Listă cumpărături", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingrediente", img: "/icons/ingredients.webp" },
 ];
 
 export default function Sidebar() {
@@ -36,6 +36,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400"
@@ -53,6 +54,7 @@ export default function Sidebar() {
       <div className="p-3 border-t border-gray-100 dark:border-[#2e2a24]">
         <Link
           href="/settings"
+          aria-current={pathname === "/settings" || pathname.startsWith("/settings/") ? "page" : undefined}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
             pathname === "/settings" || pathname.startsWith("/settings/")
               ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400"
@@ -66,7 +68,7 @@ export default function Sidebar() {
             height={20}
             className={`transition-opacity ${pathname === "/settings" || pathname.startsWith("/settings/") ? "opacity-100" : "opacity-60"}`}
           />
-          Settings
+          Setări
         </Link>
       </div>
     </aside>

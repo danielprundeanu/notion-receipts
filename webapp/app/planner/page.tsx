@@ -636,7 +636,7 @@ function RecipeSelectorModal({
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
             {DAYS[day]} · {mealLabel(mealType)}
           </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
+          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-3">
             <X size={18} />
           </button>
         </div>
@@ -769,7 +769,7 @@ function RecipeSelectorModal({
           <button
             onClick={handleSave}
             disabled={!selected || saving}
-            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
+            className="px-4 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
           >
             {saving && <Loader2 size={13} className="animate-spin" />}
             Adaugă
@@ -913,7 +913,7 @@ export default function PlannerPage() {
       {!isThisWeek(weekStart) && (
         <button
           onClick={() => setWeekStart(getMondayOf(new Date()))}
-          className="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
+          className="px-3 py-2.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
         >
           Azi
         </button>
@@ -926,6 +926,7 @@ export default function PlannerPage() {
             return n;
           })
         }
+        aria-label="Săptămâna anterioară"
         className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronLeft size={18} />
@@ -941,6 +942,7 @@ export default function PlannerPage() {
             return n;
           })
         }
+        aria-label="Săptămâna următoare"
         className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
       >
         <ChevronRight size={18} />
@@ -1045,7 +1047,7 @@ export default function PlannerPage() {
                         ))}
                         <button
                           onClick={() => setModal({ day: mobileDay, meal })}
-                          className="w-full py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
+                          className="w-full min-h-[44px] py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
                         >
                           <Plus
                             size={15}

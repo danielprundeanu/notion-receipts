@@ -59,8 +59,9 @@ export async function GET(req: NextRequest) {
       protein: getNutrient(food, NID.protein),
     });
   } catch (err) {
+    console.error("[nutrition]", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Eroare la căutare" },
+      { error: "Eroare la căutarea nutriției. Încearcă din nou." },
       { status: 500 }
     );
   }

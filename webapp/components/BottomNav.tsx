@@ -5,11 +5,11 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 
 const nav = [
-  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
-  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
-  { href: "/grocery-list", label: "Grocery", img: "/icons/grocery.webp" },
-  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
-  { href: "/settings", label: "Settings", img: "/icons/settings.webp" },
+  { href: "/recipes", label: "Rețete", img: "/icons/recipes.webp" },
+  { href: "/planner", label: "Planificator", img: "/icons/planner.webp" },
+  { href: "/grocery-list", label: "Cumpărături", img: "/icons/grocery.webp" },
+  { href: "/ingredients", label: "Ingrediente", img: "/icons/ingredients.webp" },
+  { href: "/settings", label: "Setări", img: "/icons/settings.webp" },
 ];
 
 export default function BottomNav() {
@@ -29,10 +29,11 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
+            aria-current={active ? "page" : undefined}
             className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-colors ${
               active
                 ? "text-orange-600 dark:text-orange-400"
-                : "text-gray-400 dark:text-[#5c554b]"
+                : "text-gray-500 dark:text-[#8a8175]"
             }`}
           >
             <Image

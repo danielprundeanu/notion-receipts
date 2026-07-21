@@ -119,6 +119,7 @@ export default function GroceryListPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
+            aria-label="Săptămâna anterioară"
             className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronLeft size={18} />
@@ -128,6 +129,7 @@ export default function GroceryListPage() {
           </span>
           <button
             onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
+            aria-label="Săptămâna următoare"
             className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
           >
             <ChevronRight size={18} />
@@ -160,7 +162,7 @@ export default function GroceryListPage() {
                   <button
                     key={cat}
                     onClick={() => document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-medium border transition-colors ${
                       allCatChecked
                         ? "border-gray-100 dark:border-[#2e2a24] text-gray-300 dark:text-[#4a443c]"
                         : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#24211c]"

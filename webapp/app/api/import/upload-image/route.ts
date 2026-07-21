@@ -17,6 +17,10 @@ export async function POST(req: NextRequest) {
     if (!ALLOWED.includes(file.type)) {
       return NextResponse.json({ error: "Tip de fișier nesuportat" }, { status: 400 });
     }
+    const MAX_MB = 10;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      return NextResponse.json({ error: `Imaginea e prea mare (max ${MAX_MB}MB).` }, { status: 400 });
+    }
 
     const buf = Buffer.from(await file.arrayBuffer());
     // MD5 of content as filename (consistent with the existing convention).
