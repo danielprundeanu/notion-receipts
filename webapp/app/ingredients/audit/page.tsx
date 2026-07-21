@@ -165,8 +165,8 @@ export default function UnitAuditPage() {
                     <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
                       <th className="px-3 py-2 font-medium">Produs</th>
                       <th className="px-3 py-2 font-medium">Unități</th>
-                      <th className="px-3 py-2 font-medium text-right">Folosiri</th>
-                      <th className="px-3 py-2 font-medium">Exemple rețete</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium text-right">Folosiri</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium">Exemple rețete</th>
                       <th className="px-3 py-2 font-medium text-right">Fix</th>
                     </tr>
                   </thead>
@@ -200,10 +200,10 @@ export default function UnitAuditPage() {
                               folosit ca: {offending.join(", ")}
                             </span>
                           </td>
-                          <td className="px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
+                          <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
                             {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} rețete)</span>
                           </td>
-                          <td className="px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
+                          <td className="hidden md:table-cell px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
                             {r.sampleRecipes.join(", ")}
                           </td>
                           <td className="px-3 py-2">
@@ -255,7 +255,7 @@ export default function UnitAuditPage() {
                       <th className="px-3 py-2 font-medium">Rețetă</th>
                       <th className="px-3 py-2 font-medium">Produs</th>
                       <th className="px-3 py-2 font-medium">Unitate stocată</th>
-                      <th className="px-3 py-2 font-medium">Unitățile produsului</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium">Unitățile produsului</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -278,7 +278,7 @@ export default function UnitAuditPage() {
                           </Link>
                         </td>
                         <td className="px-3 py-2 text-red-600 dark:text-red-400">{m.ingUnit ?? "—"}</td>
-                        <td className="px-3 py-2 text-gray-500 dark:text-[#a49c90]">
+                        <td className="hidden md:table-cell px-3 py-2 text-gray-500 dark:text-[#a49c90]">
                           {m.itemUnit ?? "—"}{m.itemUnit2 ? ` / ${m.itemUnit2}` : ""}
                         </td>
                       </tr>

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0] — 2026-07-21
+
+### 🎨 UI / UX
+- **Tabelul de ingrediente, utilizabil pe mobil** — sub `md`, tabelul de 13 coloane (scroll orizontal, celule minuscule) e înlocuit cu o listă de carduri: nume + traducere · categorie · unitate, plus macro-uri (kcal / P / C / G); tap pe card deschide editorul. Tabelul complet rămâne pe desktop.
+- **Audit unități** — coloanele de context (Folosiri, Exemple rețete, Unitățile produsului) se ascund pe mobil, ca tabelele să încapă fără scroll orizontal.
+- Header-ul și bara de filtre din Ingrediente se împachetează pe ecrane înguste.
+
 ## [0.23.0] — 2026-07-21
 
 ### 🌍 i18n / UI

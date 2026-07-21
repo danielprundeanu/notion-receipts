@@ -461,7 +461,7 @@ export default function IngredientsPage() {
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingrediente</h1>
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500 dark:text-[#7c756a]">{items.length} produse</span>
@@ -481,7 +481,7 @@ export default function IngredientsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-5">
         <div className="relative flex-1 max-w-sm">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
           <input
@@ -601,7 +601,55 @@ export default function IngredientsPage() {
           Se încarcă…
         </div>
       ) : (
-        <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
+        <>
+        {/* Mobile: card list (below md) — the 13-column table is unusable on a phone */}
+        <div className="md:hidden space-y-2">
+          {sorted.length === 0 ? (
+            <p className="px-4 py-8 text-center text-gray-400 text-sm">Niciun ingredient găsit</p>
+          ) : (
+            sorted.map((item) => {
+              const isSelected = selectedIds.has(item.id);
+              return (
+                <div
+                  key={item.id}
+                  onClick={() => (selectMode ? toggleOne(item.id) : setEditingId(item.id))}
+                  className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                    isSelected
+                      ? "bg-orange-50 dark:bg-orange-950/20 border-orange-300 dark:border-orange-800/50"
+                      : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#2e2a24] active:bg-gray-50 dark:active:bg-[#2a2620]"
+                  }`}
+                >
+                  {selectMode && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOne(item.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="accent-orange-500 shrink-0 w-4 h-4"
+                      aria-label={`Selectează ${item.name}`}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-[#eae5de] truncate">{item.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-[#7c756a] truncate">
+                      {[item.nameRo, groceryCategoryLabel(item.category), item.unit].filter(Boolean).join(" · ") || "—"}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-600 dark:text-[#a49c90]">
+                      <span className="font-medium text-gray-700 dark:text-[#bab2a6]">{item.kcal != null ? `${fmt(item.kcal)} kcal` : "— kcal"}</span>
+                      <span>P {item.protein != null ? fmt(item.protein) : "—"}</span>
+                      <span>C {item.carbs != null ? fmt(item.carbs) : "—"}</span>
+                      <span>G {item.fat != null ? fmt(item.fat) : "—"}</span>
+                    </div>
+                  </div>
+                  {!selectMode && <Pencil size={15} className="shrink-0 text-gray-300 dark:text-[#4a443c]" />}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop: full editable table (md+) */}
+        <div className="hidden md:block overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 dark:bg-[#2a2620] text-left">
@@ -713,6 +761,7 @@ export default function IngredientsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       {!loading && sorted.length > 0 && (
