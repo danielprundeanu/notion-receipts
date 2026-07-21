@@ -25,6 +25,7 @@ import {
   getRecipesPanel,
   getRecipeCategories,
 } from "@/lib/actions";
+import { mealLabel, categoryLabel } from "@/lib/labels";
 import {
   ChevronLeft,
   ChevronRight,
@@ -37,7 +38,8 @@ import {
   Trash2,
 } from "lucide-react";
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS = ["Lun", "Mar", "Mie", "Joi", "Vin", "Sâm", "Dum"];
+// Stored/compared as WeekPlan.mealType — keep the English values; show mealLabel() for display.
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -81,7 +83,7 @@ function getMondayOf(date: Date): Date {
 function formatWeekRange(monday: Date): string {
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${monday.toLocaleDateString("ro-RO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 function isThisWeek(monday: Date): boolean {
@@ -353,7 +355,7 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
               const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
               return (
                 <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
-                  {c}
+                  {categoryLabel(c)}
                 </span>
               );
             })}
@@ -477,7 +479,7 @@ function RecipePanel() {
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-sm font-semibold text-gray-700 dark:text-[#eae5de] shrink-0">
-          Recipes
+          Rețete
         </span>
         <div className="relative">
           <Search
@@ -487,7 +489,7 @@ function RecipePanel() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
+            placeholder="Caută…"
             className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
         </div>
@@ -500,7 +502,7 @@ function RecipePanel() {
           }`}
         >
           <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-          Favorites
+          Favorite
         </button>
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-1">
           <button
@@ -511,7 +513,7 @@ function RecipePanel() {
                 : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
             }`}
           >
-            All
+            Toate
           </button>
           {categories.map((cat) => (
             <button
@@ -525,7 +527,7 @@ function RecipePanel() {
                   : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
               }`}
             >
-              {cat}
+              {categoryLabel(cat)}
             </button>
           ))}
         </div>
@@ -537,7 +539,7 @@ function RecipePanel() {
           <Loader2 size={16} className="animate-spin text-gray-400" />
         </div>
       ) : recipes.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4">No recipes found.</p>
+        <p className="text-sm text-gray-400 py-4">Nu s-au găsit rețete.</p>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
           {recipes.map((recipe) => (
@@ -547,7 +549,7 @@ function RecipePanel() {
       )}
 
       <p className="text-xs text-gray-400 dark:text-[#5c554b]">
-        Drag a recipe onto a day / meal slot above to add it to the plan.
+        Trage o rețetă pe o zi / masă de mai sus pentru a o adăuga în plan.
       </p>
     </div>
   );
@@ -632,7 +634,7 @@ function RecipeSelectorModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {DAYS[day]} · {mealType}
+            {DAYS[day]} · {mealLabel(mealType)}
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
@@ -646,7 +648,7 @@ function RecipeSelectorModal({
             <input
               value={query}
               onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-              placeholder="Search recipe…"
+              placeholder="Caută rețetă…"
               style={{ fontSize: "16px" }}
               className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
@@ -675,7 +677,7 @@ function RecipeSelectorModal({
                   : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
               }`}
             >
-              All
+              Toate
             </button>
             {categories.map((cat) => (
               <button
@@ -687,7 +689,7 @@ function RecipeSelectorModal({
                     : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
-                {cat}
+                {categoryLabel(cat)}
               </button>
             ))}
           </div>
@@ -700,7 +702,7 @@ function RecipeSelectorModal({
               <Loader2 size={18} className="animate-spin text-gray-400" />
             </div>
           ) : results.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No recipes found.</p>
+            <p className="text-sm text-gray-400 text-center py-8">Nu s-au găsit rețete.</p>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
               {results.map((r) => (
@@ -751,7 +753,7 @@ function RecipeSelectorModal({
             </div>
           )}
           {!selected && (
-            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Select a recipe above</span>
+            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Selectează o rețetă de mai sus</span>
           )}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
@@ -770,7 +772,7 @@ function RecipeSelectorModal({
             className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
           >
             {saving && <Loader2 size={13} className="animate-spin" />}
-            Add
+            Adaugă
           </button>
         </div>
 
@@ -913,7 +915,7 @@ export default function PlannerPage() {
           onClick={() => setWeekStart(getMondayOf(new Date()))}
           className="px-3 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
         >
-          Today
+          Azi
         </button>
       )}
       <button
@@ -965,7 +967,7 @@ export default function PlannerPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">
-            Planner
+            Planificator
           </h1>
           {weekNav}
         </div>
@@ -1028,7 +1030,7 @@ export default function PlannerPage() {
                   return (
                     <div key={meal}>
                       <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b] mb-2">
-                        {meal}
+                        {mealLabel(meal)}
                       </h3>
                       <div className="space-y-2">
                         {entries.map((entry) => (
@@ -1093,7 +1095,7 @@ export default function PlannerPage() {
                               {Math.round(nut.kcal)} kcal
                             </div>
                             <div className="text-[9px] text-gray-400 dark:text-[#5c554b] leading-tight">
-                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · F {Math.round(nut.fat)}g
+                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · G {Math.round(nut.fat)}g
                             </div>
                           </div>
                         )}
@@ -1110,7 +1112,7 @@ export default function PlannerPage() {
                   >
                     <div className="flex items-start pt-2">
                       <span className="text-xs font-medium text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">
-                        {meal}
+                        {mealLabel(meal)}
                       </span>
                     </div>
                     {DAYS.map((_, dayIdx) => (

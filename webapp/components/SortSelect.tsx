@@ -5,8 +5,8 @@ import { ArrowDownAZ, ArrowDownWideNarrow, ArrowUpNarrowWide, LayoutGrid, Grid2X
 import { useEffect, useState } from "react";
 
 const SORT_OPTIONS = [
-  { value: "date_desc", icon: ArrowDownWideNarrow, label: "Newest first" },
-  { value: "date_asc",  icon: ArrowUpNarrowWide,  label: "Oldest first" },
+  { value: "date_desc", icon: ArrowDownWideNarrow, label: "Cele mai noi" },
+  { value: "date_asc",  icon: ArrowUpNarrowWide,  label: "Cele mai vechi" },
   { value: "name_asc",  icon: ArrowDownAZ,         label: "A–Z" },
 ] as const;
 

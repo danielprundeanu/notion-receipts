@@ -1,0 +1,47 @@
+# UX & i18n conventions
+
+> Read this before any UI change. The app is used **predominantly on mobile** by **2 trusted
+> users** with **shared data**. Optimize for mobile ergonomics, correctness of shared data, and
+> honest feedback — not for scale/abuse hardening.
+
+## Mobile-first & touch targets
+- Design and test at **~390px width first**; desktop is secondary.
+- Interactive controls need a **≥40px (ideally 44px) touch target**. Concretely:
+  - Round steppers (+/− porții): `w-10 h-10` (min), never `w-7 h-7`.
+  - Icon-only nav arrows / close buttons: `p-3` or `min-w-[44px] min-h-[44px] flex items-center justify-center` (keep the icon small, grow the hit area).
+  - Tappable list rows: give real vertical padding (`py-2.5`+).
+- Don't rely on **hover** for anything essential on mobile (no hover exists). In select mode, tapping a card must toggle selection, not navigate. Destructive actions need a **visible affordance**, not swipe-only.
+- Wide content (tables) must not overflow the page body — give it its own `overflow-x-auto`, or switch to a card/list layout under `md:`.
+
+## Feedback & error handling (shared data — no silent failures)
+- **Every mutation** (server action / `fetch`) is wrapped in `try/catch`. On failure: **roll back** the optimistic UI to its prior state and show a message (toast / inline red text). Never leave a false "saved" state.
+- **Loading always clears**: put `setLoading(false)` in `finally`. A spinner must never hang on error. For data loads, prefer an **error + "Reîncearcă"** state over a false empty state.
+- **Modals**: `try/catch/finally`; on error keep the modal open, show the error, stop the spinner — never a stuck disabled button.
+- After mutations, `revalidatePath` the pages that render the changed data (e.g. editing a grocery item → `revalidatePath("/recipes")`).
+
+## Data integrity
+- Multi-step DB writes must be **transactional** (`prisma.$transaction`). Keep external API calls (translation, blob) **outside** the transaction.
+- Don't delete a `GroceryItem` still referenced by ingredients (it would orphan nameless rows) — the server refuses and the UI explains why.
+- Validate numeric inputs server-side (servings ≥ 1 integer, dayOfWeek 0–6, etc.).
+
+## i18n (UI copy is Romanian)
+- All user-facing copy is **Romanian**. Locale for dates: `toLocaleDateString("ro-RO", …)` (not `en-GB`).
+- **DANGER — some English strings are DB values / filter keys, NOT display text.** Never translate the stored value; translate only the shown **label** via `lib/labels.ts`:
+  - `WeekPlan.mealType` (`Breakfast`/`Lunch`/…) → `mealLabel()`
+  - `Recipe.category` (`Soup`/`Dinner`/…) → `categoryLabel()`
+  - `Recipe.difficulty` (`Easy`/`Moderate`/`Hard`) → `difficultyLabel()`
+  - `GroceryItem.category` (emoji-prefixed) → `groceryCategoryLabel()`
+  - Keep the English value in the DB, the `?cat=` URL, `<option value>`, and all comparisons. Only `{…Label(v)}` in display.
+- Units (`g`, `ml`, `cup`, `tsp`, …) are **not** translated (they're conventions/values).
+- **Editing i18n safely:** use the `Edit` tool or Python with explicit UTF-8. **Do NOT use `perl -CSD`** on these files — it double-encodes Romanian diacritics (`ț`→`ReÈete` mojibake). After bulk edits, grep for `È|Ä|Ã` to catch mojibake.
+
+## Theme
+- Dark/light via the `.dark` class on `<html>`; localStorage key `"theme"`.
+- An **anti-flash inline script** in `app/layout.tsx` applies the class before first paint (mirrors `ThemeProvider`). `ThemeProvider` must not clobber it on its first effect run. Don't remove either half.
+
+## Images (Vercel)
+- Upload routes use **Vercel Blob** when `BLOB_READ_WRITE_TOKEN` is set (store must be **public** — private stores can't be served via `<img>`); dev falls back to the filesystem.
+- Never store base64 in the DB (`imageUrl`). `next.config` `remotePatterns` only allows the blob host — so in `RecipesGrid`, `next/image` is used only for local (`/…`) and blob URLs; any other remote URL renders via a plain `<img>` (`RecipeCover`) so one bad host can't crash the whole grid.
+
+## Styling
+- Match the surrounding component's Tailwind + dark-mode tokens: `dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text, **orange-500** brand accent, teal secondary.

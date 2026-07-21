@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { groceryCategoryLabel } from "@/lib/labels";
 
 type GroceryItem = {
   id: string;
@@ -110,7 +111,7 @@ function EditableCell({
   return (
     <span
       onClick={startEdit}
-      title="Click to edit"
+      title="Click pentru editare"
       className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
         !value && value !== 0 ? "text-gray-300" : ""
       } ${align === "right" ? "text-right" : ""}`}
@@ -154,7 +155,7 @@ function SelectCell({
         className="w-full px-1.5 py-0.5 text-sm border border-orange-400 rounded focus:outline-none bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de]"
       >
         <option value="">{placeholder}</option>
-        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
+        {opts.map((o) => <option key={o} value={o}>{groceryCategoryLabel(o)}</option>)}
       </select>
     );
   }
@@ -162,12 +163,12 @@ function SelectCell({
   return (
     <span
       onClick={() => setEditing(true)}
-      title="Click to edit"
+      title="Click pentru editare"
       className={`block cursor-pointer rounded px-1 py-0.5 -mx-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 hover:text-orange-900 dark:hover:text-orange-300 transition-colors ${
         !value ? "text-gray-300" : ""
       }`}
     >
-      {value ?? placeholder}
+      {value ? groceryCategoryLabel(value) : placeholder}
     </span>
   );
 }
@@ -461,9 +462,9 @@ export default function IngredientsPage() {
       )}
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingredients</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Ingrediente</h1>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-500 dark:text-[#7c756a]">{items.length} items</span>
+          <span className="text-sm text-gray-500 dark:text-[#7c756a]">{items.length} produse</span>
           <Link
             href="/ingredients/audit"
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-900/50 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
@@ -474,7 +475,7 @@ export default function IngredientsPage() {
             onClick={() => setCreatingNew(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
           >
-            <Plus size={15} /> New ingredient
+            <Plus size={15} /> Ingredient nou
           </button>
         </div>
       </div>
@@ -486,7 +487,7 @@ export default function IngredientsPage() {
           <input
             value={search}
             onChange={(e) => changeSearch(e.target.value)}
-            placeholder="Search ingredient…"
+            placeholder="Caută ingredient…"
             className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           />
           {search && (
@@ -505,9 +506,9 @@ export default function IngredientsPage() {
           onChange={(e) => changeCategory(e.target.value)}
           className="px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
         >
-          <option value="">All categories</option>
+          <option value="">Toate categoriile</option>
           {categories.map((c) => (
-            <option key={c} value={c}>{c}</option>
+            <option key={c} value={c}>{groceryCategoryLabel(c)}</option>
           ))}
         </select>
         <button
@@ -538,7 +539,7 @@ export default function IngredientsPage() {
                 className="px-2.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
               >
                 <option value="">Setează categoria…</option>
-                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{groceryCategoryLabel(c)}</option>)}
               </select>
 
               <button
@@ -597,7 +598,7 @@ export default function IngredientsPage() {
       {/* Table */}
       {loading ? (
         <div className="flex items-center justify-center h-48 text-gray-400 text-sm">
-          Loading…
+          Se încarcă…
         </div>
       ) : (
         <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
@@ -616,25 +617,25 @@ export default function IngredientsPage() {
                   </th>
                 )}
                 <th className="px-2 py-2.5 w-10" />
-                <SortTh label="Name (EN)"  field="name"       {...sharedThProps} />
-                <SortTh label="Name (RO)"  field="nameRo"     {...sharedThProps} />
-                <SortTh label="Category"   field="category"   {...sharedThProps} />
-                <SortTh label="Unit"       field="unit"       {...sharedThProps} />
-                <SortTh label="Unit 2"     field="unit2"      {...sharedThProps} />
+                <SortTh label="Nume (EN)"  field="name"       {...sharedThProps} />
+                <SortTh label="Nume (RO)"  field="nameRo"     {...sharedThProps} />
+                <SortTh label="Categorie"   field="category"   {...sharedThProps} />
+                <SortTh label="Unitate"    field="unit"       {...sharedThProps} />
+                <SortTh label="Unitate 2"     field="unit2"      {...sharedThProps} />
                 <SortTh label="Conv."      field="conversion" align="right" {...sharedThProps} />
                 <SortTh label="g/unit"     field="unitWeight" align="right" {...sharedThProps} />
                 <SortTh label="kcal"       field="kcal"       align="right" {...sharedThProps} />
-                <SortTh label="Carbs g"    field="carbs"      align="right" {...sharedThProps} />
-                <SortTh label="Fat g"      field="fat"        align="right" {...sharedThProps} />
-                <SortTh label="Protein g"  field="protein"    align="right" {...sharedThProps} />
-                <SortTh label="Created"    field="createdAt"  {...sharedThProps} />
+                <SortTh label="Glucide g"    field="carbs"      align="right" {...sharedThProps} />
+                <SortTh label="Grăsimi g"      field="fat"        align="right" {...sharedThProps} />
+                <SortTh label="Proteine g"  field="protein"    align="right" {...sharedThProps} />
+                <SortTh label="Creat"    field="createdAt"  {...sharedThProps} />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-[#2e2a24]">
               {sorted.length === 0 ? (
                 <tr>
                   <td colSpan={totalCols} className="px-4 py-8 text-center text-gray-400">
-                    No ingredients found
+                    Niciun ingredient găsit
                   </td>
                 </tr>
               ) : (
@@ -663,7 +664,7 @@ export default function IngredientsPage() {
                       <td className="px-2 py-2">
                         <button
                           onClick={() => setEditingId(item.id)}
-                          title="Edit ingredient"
+                          title="Editează ingredient"
                           className="p-1.5 text-gray-400 dark:text-[#6e675c] hover:text-orange-500 dark:hover:text-orange-400 transition-colors rounded"
                         >
                           <Pencil size={14} />
@@ -716,7 +717,7 @@ export default function IngredientsPage() {
 
       {!loading && sorted.length > 0 && (
         <p className="text-xs text-gray-400 dark:text-[#5c554b] mt-3">
-          Showing {sorted.length} of {items.length} · Macros per 100g · g/unit = grame per unitate (piece, tsp etc.) · Click any cell to edit
+          Se afișează {sorted.length} din {items.length} · Macro per 100g · g/unit = grame per unitate (piece, tsp etc.) · Click pe orice celulă pentru editare
         </p>
       )}
 

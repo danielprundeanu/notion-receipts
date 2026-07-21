@@ -75,6 +75,12 @@ npx tsx scripts/<name>.ts   # one-off DB scripts
   request time — image writes won't persist. Use blob storage for uploads instead.
 
 ## Conventions
+- **UX & i18n rules: read `webapp/UX_CONVENTIONS.md` before any UI change.** It's the source of
+  truth for mobile touch targets, silent-failure/error-handling rules, the i18n display-label maps
+  in `lib/labels.ts` (never translate DB values like `mealType`/`category`/`difficulty` — only
+  their shown label), the theme anti-flash, and image/blob handling. Non-obvious highlights:
+  mobile-first (≥40–44px touch targets); every mutation needs try/catch + rollback + visible error
+  (no silent failures on shared data); **never edit i18n files with `perl -CSD`** (mojibake).
 - UI copy: Romanian. Match the surrounding component's Tailwind classes & dark-mode tokens
   (`dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text, orange-500 accent).
 - Releases: `/release <version>` bumps root `CHANGELOG.md` + `webapp/package.json` and commits.

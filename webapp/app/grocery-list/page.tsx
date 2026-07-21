@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getGroceryList } from "@/lib/actions";
+import { GROCERY_CATEGORY_LABELS } from "@/lib/labels";
 import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -35,7 +36,7 @@ function getMondayOf(date: Date): Date {
 function formatWeekRange(monday: Date): string {
   const sunday = new Date(monday);
   sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${monday.toLocaleDateString("ro-RO", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("ro-RO", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string };
@@ -108,10 +109,10 @@ export default function GroceryListPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Grocery List</h1>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Listă de cumpărături</h1>
           {totalCount > 0 && (
             <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
-              {checkedCount}/{totalCount} items checked
+              {checkedCount}/{totalCount} produse bifate
             </p>
           )}
         </div>
@@ -153,7 +154,7 @@ export default function GroceryListPage() {
             <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 md:px-8 pt-2 pb-2">
               {sortedCategories.map((cat) => {
                 const icon = CATEGORY_ICONS[cat] ?? "📦";
-                const catName = cat.replace(/^[^\w\s]+\s*/, "");
+                const catName = GROCERY_CATEGORY_LABELS[cat] ?? cat.replace(/^[^\w\s]+\s*/, "");
                 const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
                 return (
                   <button
@@ -200,15 +201,15 @@ export default function GroceryListPage() {
       ) : totalCount === 0 ? (
         <div className="text-center py-20 text-gray-400 dark:text-[#5c554b]">
           <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
-          <p className="font-medium">No items this week</p>
-          <p className="text-sm mt-1">Add recipes to your planner to generate a list</p>
+          <p className="font-medium">Niciun produs în această săptămână</p>
+          <p className="text-sm mt-1">Adaugă rețete în planificator pentru a genera o listă</p>
         </div>
       ) : (
         <div className="space-y-6">
           {sortedCategories.map((cat) => {
             const items = grouped[cat];
             const icon = CATEGORY_ICONS[cat] ?? "📦";
-            const catName = cat.replace(/^[^\w\s]+\s*/, ""); // strip emoji prefix
+            const catName = GROCERY_CATEGORY_LABELS[cat] ?? cat.replace(/^[^\w\s]+\s*/, ""); // strip emoji prefix
             const allCatChecked = items.every((i) => checked.has(i.id));
 
             return (

@@ -11,6 +11,7 @@ import {
   getGroceryItemDetails,
   updateGroceryItem,
 } from "@/lib/actions";
+import { categoryLabel, difficultyLabel } from "@/lib/labels";
 import GroceryItemModal from "@/components/GroceryItemModal";
 
 const CATEGORIES = [
@@ -61,7 +62,7 @@ function emptyIngredient(): IngredientRow {
   return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null, notes: "" };
 }
 
-function defaultGroup(name = "Ingredients"): IngredientGroup {
+function defaultGroup(name = "Ingrediente"): IngredientGroup {
   return { id: uid(), name, ingredients: [emptyIngredient()] };
 }
 
@@ -110,7 +111,7 @@ function GroceryItemInput({
       <input
         value={value}
         onChange={(e) => { hasTouched.current = true; onChange(e.target.value); setOpen(true); }}
-        placeholder="Ingredient name"
+        placeholder="Nume ingredient"
         className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
       />
       {showDropdown && (
@@ -150,7 +151,7 @@ function GroceryItemInput({
               }}
               className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a352e]"
             >
-              <Plus size={13} /> Add &ldquo;{value}&rdquo; as new ingredient
+              <Plus size={13} /> Adaugă &ldquo;{value}&rdquo; ca ingredient nou
             </button>
           )}
         </div>
@@ -263,7 +264,7 @@ function GroceryItemEditModal({
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {item ? item.name : "Loading…"}
+            {item ? item.name : "Se încarcă…"}
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
             <X size={18} />
@@ -276,13 +277,13 @@ function GroceryItemEditModal({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Primary unit</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Unitate principală</span>
                 <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg text-gray-500 dark:text-[#7c756a]">
                   {item.unit ?? "—"}
                 </div>
               </div>
               <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">2nd unit</span>
+                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">A 2-a unitate</span>
                 <input
                   value={unit2}
                   onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
@@ -295,7 +296,7 @@ function GroceryItemEditModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
+                  Conversie (1 {unit2 || "a 2-a unitate"} = ? {item.unit ?? "principală"})
                 </span>
                 <button
                   type="button"
@@ -312,7 +313,7 @@ function GroceryItemEditModal({
                 type="number" step="0.001" min="0"
                 value={conversion}
                 onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
-                placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
+                placeholder={`ex: 240 dacă 1 cup = 240 ${item.unit ?? "g"}`}
                 className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
               />
               {aiConvNote != null && (
@@ -328,7 +329,7 @@ function GroceryItemEditModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
+                  Nutriție (per 100{item.unit === "ml" ? "ml" : "g"})
                 </span>
                 <button
                   type="button"
@@ -340,7 +341,7 @@ function GroceryItemEditModal({
                   {fetchingNutrition
                     ? <Loader2 size={11} className="animate-spin" />
                     : <span>↓</span>}
-                  {fetchingNutrition ? "Se caută..." : "Auto-fill"}
+                  {fetchingNutrition ? "Se caută..." : "Auto-completare"}
                 </button>
               </div>
               {nutritionError && (
@@ -349,9 +350,9 @@ function GroceryItemEditModal({
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: "kcal", value: kcal, set: setKcal },
-                  { label: "carbs g", value: carbs, set: setCarbs },
-                  { label: "fat g", value: fat, set: setFat },
-                  { label: "protein g", value: protein, set: setProtein },
+                  { label: "glucide g", value: carbs, set: setCarbs },
+                  { label: "grăsimi g", value: fat, set: setFat },
+                  { label: "proteine g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
@@ -376,14 +377,14 @@ function GroceryItemEditModal({
             className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
           >
             {saving && <Loader2 size={14} className="animate-spin" />}
-            Save
+            Salvează
           </button>
           <button
             type="button"
             onClick={onClose}
             className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
           >
-            Cancel
+            Anulează
           </button>
         </div>
       </div>
@@ -409,7 +410,7 @@ function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: 
       value={value}
       onChange={(e) => { onChange(e.target.value); autoResize(); }}
       onFocus={autoResize}
-      placeholder={"## Steps\n1. First step\n2. Second step\n\n## Tips\n- Use cold butter\n- Or plain text"}
+      placeholder={"## Pași\n1. Primul pas\n2. Al doilea pas\n\n## Sfaturi\n- Folosește unt rece\n- Sau text simplu"}
       rows={8}
       className="w-full px-4 py-3 text-sm bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#3a352e] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c4bcb0] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] leading-relaxed font-mono"
     />
@@ -457,7 +458,7 @@ function UnitSelect({
     >
       <option value="">—</option>
       {units.map((u) => <option key={u} value={u}>{u}</option>)}
-      {showAddUnit && <option value="__add_unit__">+ Add unit…</option>}
+      {showAddUnit && <option value="__add_unit__">+ Adaugă unitate…</option>}
     </select>
   );
 }
@@ -517,7 +518,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
   const [name, setName] = useState(initial?.name ?? "");
   const [nameRo, setNameRo] = useState(initial?.nameRo ?? "");
-  const [categories, setCategories] = useState<string[]>(initial?.categories ?? []);
+  const [categories, setCategorii] = useState<string[]>(initial?.categories ?? []);
   const [newTag, setNewTag] = useState("");
   const [addingTag, setAddingTag] = useState(false);
   const [servings, setServings] = useState(initial?.servings ?? "");
@@ -558,7 +559,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const imageInputRef = useRef<HTMLInputElement>(null);
 
   function toggleCategory(cat: string) {
-    setCategories((prev) =>
+    setCategorii((prev) =>
       prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
   }
@@ -570,7 +571,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     setNewTag("");
     if (!t) return;
     const exists = [...CATEGORIES, ...categories].some((c) => c.toLowerCase() === t.toLowerCase());
-    if (!exists) setCategories((prev) => [...prev, t]);
+    if (!exists) setCategorii((prev) => [...prev, t]);
   }
 
   // ── Servings scaler (batch ↔ per-serving) ──────────────────────────
@@ -658,7 +659,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   // ── Group operations ──────────────────────────────────────────────────────
 
   function addGroup() {
-    setGroups((gs) => [...gs, defaultGroup(`Group ${gs.length + 1}`)]);
+    setGroups((gs) => [...gs, defaultGroup(`Grup ${gs.length + 1}`)]);
   }
 
   function removeGroup(groupId: string) {
@@ -755,7 +756,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) { setError("Recipe name is required"); return; }
+    if (!name.trim()) { setError("Numele rețetei este obligatoriu"); return; }
     setSaving(true);
     setError(null);
 
@@ -814,14 +815,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         router.push(`/recipes/${id}`);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      setError(err instanceof Error ? err.message : "A apărut o eroare");
       setSaving(false);
     }
   }
 
   async function handleDelete() {
     if (!initial?.id) return;
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    if (!confirm(`Ștergi "${name}"? Această acțiune nu poate fi anulată.`)) return;
     setDeleting(true);
     await deleteRecipe(initial.id);
     router.push("/recipes");
@@ -838,7 +839,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Recipe name…"
+          placeholder="Nume rețetă…"
           required
           className="w-full text-2xl font-bold text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] bg-transparent border-0 border-b-2 border-gray-200 dark:border-[#3a352e] focus:border-orange-500 focus:outline-none pb-2 transition-colors"
         />
@@ -851,9 +852,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         />
       </div>
 
-      {/* Cover image */}
+      {/* Imagine copertă */}
       <div>
-        <Label>Cover image</Label>
+        <Label>Imagine copertă</Label>
         <input
           ref={imageInputRef}
           type="file"
@@ -881,14 +882,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 onClick={() => imageInputRef.current?.click()}
                 className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-800 shadow"
               >
-                Change
+                Schimbă
               </button>
               <button
                 type="button"
                 onClick={() => setImageUrl("")}
                 className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white shadow"
               >
-                Remove
+                Elimină
               </button>
             </div>
           </div>
@@ -921,7 +922,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       {/* Meta */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div>
-          <Label>Time (min)</Label>
+          <Label>Timp (min)</Label>
           <input
             type="number" min="1"
             value={time}
@@ -931,21 +932,21 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           />
         </div>
         <div>
-          <Label>Difficulty</Label>
+          <Label>Dificultate</Label>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
             className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
           >
             <option value="">—</option>
-            {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+            {DIFFICULTIES.map((d) => <option key={d} value={d}>{difficultyLabel(d)}</option>)}
             {difficulty && !DIFFICULTIES.includes(difficulty) && (
               <option value={difficulty}>{difficulty}</option>
             )}
           </select>
         </div>
         <div className="flex flex-col">
-          <Label>Favourite</Label>
+          <Label>Favorită</Label>
           <button
             type="button"
             onClick={() => setFavorite((f) => !f)}
@@ -956,14 +957,14 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             }`}
           >
             <Star size={13} className={favorite ? "fill-amber-400 text-amber-400" : "text-gray-400"} />
-            {favorite ? "Yes" : "No"}
+            {favorite ? "Da" : "Nu"}
           </button>
         </div>
       </div>
 
-      {/* Categories */}
+      {/* Categorii */}
       <div>
-        <Label>Categories</Label>
+        <Label>Categorii</Label>
         <div className="flex flex-wrap gap-1.5">
           {[...CATEGORIES, ...categories.filter((c) => !CATEGORIES.includes(c))].map((cat) => (
             <button
@@ -976,7 +977,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   : "bg-gray-100 dark:bg-[#2a2620] text-gray-600 dark:text-[#a49c90] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
-              {cat}
+              {categoryLabel(cat)}
             </button>
           ))}
 
@@ -1011,7 +1012,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       {/* Link + Notes */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <Label>Source URL</Label>
+          <Label>URL sursă</Label>
           <input
             type="url"
             value={link}
@@ -1037,7 +1038,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
               }`}
             >
-              Batch{mode === "batch" ? ` — ${curServings} porții` : ""}
+              Lot{mode === "batch" ? ` — ${curServings} porții` : ""}
             </button>
             <button
               type="button"
@@ -1111,7 +1112,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             onClick={addGroup}
             className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] border border-gray-200 dark:border-[#3a352e] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
-            <Plus size={13} /> Add group
+            <Plus size={13} /> Adaugă grup
           </button>
         </div>
 
@@ -1123,7 +1124,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 <input
                   value={group.name}
                   onChange={(e) => updateGroupName(group.id, e.target.value)}
-                  placeholder="Group name"
+                  placeholder="Nume grup"
                   className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#bab2a6] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#5c554b]"
                 />
                 <div className="flex items-center gap-0.5 shrink-0">
@@ -1148,7 +1149,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               <div className="p-3 space-y-3">
                 {/* Column headers — desktop only */}
                 <div className="hidden sm:grid grid-cols-[64px_80px_1fr_64px] gap-2 mb-1 px-0.5">
-                  {["Qty", "Unit", "Ingredient", ""].map((h) => (
+                  {["Cant.", "Unitate", "Ingredient", ""].map((h) => (
                     <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
                   ))}
                 </div>
@@ -1162,7 +1163,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Qty"
+                          placeholder="Cant."
                           className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
@@ -1201,7 +1202,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                         type="text"
                         value={ing.notes}
                         onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                        placeholder="obs. (ex: roughly chopped)"
+                        placeholder="obs. (ex: tocat grosier)"
                         className="w-full px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                       />
                     </div>
@@ -1213,7 +1214,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           type="number" min="0" step="0.001"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Qty"
+                          placeholder="Cant."
                           className="px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                         />
                         <UnitSelect
@@ -1256,7 +1257,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                           type="text"
                           value={ing.notes}
                           onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                          placeholder="obs. (ex: roughly chopped)"
+                          placeholder="obs. (ex: tocat grosier)"
                           className="px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
                         />
                         <div />
@@ -1270,7 +1271,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                   onClick={() => addIngredient(group.id)}
                   className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
                 >
-                  <Plus size={12} /> Add ingredient
+                  <Plus size={12} /> Adaugă ingredient
                 </button>
               </div>
             </div>
@@ -1298,7 +1299,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors"
         >
           {saving && <Loader2 size={14} className="animate-spin" />}
-          {imageUploading ? "Se încarcă imaginea…" : initial?.id ? "Save changes" : "Create recipe"}
+          {imageUploading ? "Se încarcă imaginea…" : initial?.id ? "Salvează modificările" : "Creează rețeta"}
         </button>
         <button
           type="button"
@@ -1308,7 +1309,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           }}
           className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
         >
-          Cancel
+          Anulează
         </button>
         {initial?.id && (
           <button
@@ -1318,7 +1319,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             className="ml-auto flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
           >
             {deleting && <Loader2 size={13} className="animate-spin" />}
-            Delete recipe
+            Șterge rețeta
           </button>
         )}
       </div>

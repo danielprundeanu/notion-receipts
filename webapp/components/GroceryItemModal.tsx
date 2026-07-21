@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Loader2, Trash2, X, Sparkles } from "lucide-react";
 import { createGroceryItem, updateGroceryItem, deleteGroceryItem, getGroceryItemDetails, getRecipesUsingGroceryItem } from "@/lib/actions";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { groceryCategoryLabel } from "@/lib/labels";
 
 export type GroceryItemResult = {
   id: string;
@@ -209,7 +210,7 @@ export default function GroceryItemModal({
       <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {isEdit ? "Edit ingredient" : "Ingredient nou"}
+            {isEdit ? "Editează ingredient" : "Ingredient nou"}
           </h3>
           <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 p-1">
             <X size={18} />
@@ -249,7 +250,7 @@ export default function GroceryItemModal({
               <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
                 <option value="">— selectează —</option>
                 {GROCERY_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c} value={c}>{groceryCategoryLabel(c)}</option>
                 ))}
               </select>
             </div>
@@ -260,7 +261,7 @@ export default function GroceryItemModal({
                 <input
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
-                  placeholder="g, ml, piece…"
+                  placeholder="g, ml, buc…"
                   className={inputCls}
                 />
               </div>
@@ -321,7 +322,7 @@ export default function GroceryItemModal({
                   {fetchingNutrition
                     ? <Loader2 size={11} className="animate-spin" />
                     : <span>↓</span>}
-                  {fetchingNutrition ? "Se caută..." : "Auto-fill"}
+                  {fetchingNutrition ? "Se caută..." : "Auto-completează"}
                 </button>
               </div>
               {nutritionError && (
@@ -330,9 +331,9 @@ export default function GroceryItemModal({
               <div className="grid grid-cols-4 gap-2">
                 {[
                   { label: "kcal", value: kcal, set: setKcal },
-                  { label: "carbs g", value: carbs, set: setCarbs },
-                  { label: "fat g", value: fat, set: setFat },
-                  { label: "protein g", value: protein, set: setProtein },
+                  { label: "glucide g", value: carbs, set: setCarbs },
+                  { label: "grăsimi g", value: fat, set: setFat },
+                  { label: "proteine g", value: protein, set: setProtein },
                 ].map(({ label, value, set }) => (
                   <div key={label}>
                     <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
@@ -452,7 +453,7 @@ export default function GroceryItemModal({
               className="px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
             >
               {saving && <Loader2 size={14} className="animate-spin" />}
-              {isEdit ? "Save" : "Creează ingredient"}
+              {isEdit ? "Salvează" : "Creează ingredient"}
             </button>
           </div>
         </div>

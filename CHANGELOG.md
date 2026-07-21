@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.23.0] — 2026-07-21
+
+### 🌍 i18n / UI
+- **Interfața complet în română** — planner, listă de cumpărături, detaliu rețetă, listă rețete, ingrediente și formularul de rețetă au fost traduse (titluri, butoane, placeholdere, mesaje, capete de tabel, stări goale, nutriție). Datele apar acum localizate (`ro-RO`, ex. „20 iul.").
+- **Etichete vs. valori (fără regresii)** — categoriile, tipul de masă (`mealType`) și dificultatea rămân stocate în engleză (filtrarea, URL-urile `?cat=` și rețetele existente nu se schimbă), dar se afișează în română printr-un modul comun de etichete (`lib/labels.ts`: `mealLabel`/`categoryLabel`/`difficultyLabel`/`groceryCategoryLabel`).
+
+### 📄 Docs
+- `webapp/UX_CONVENTIONS.md` — regulile UX & i18n pentru dezvoltare (mobil-first & touch targets, fără eșecuri silențioase, map-urile de etichete pentru valorile-DB, anti-flash temă, imagini pe blob), cu pointer în `CLAUDE.md` ca să fie respectate la update-urile viitoare.
+
 ## [0.22.0] — 2026-07-21
 
 ### 🎨 UI / UX
