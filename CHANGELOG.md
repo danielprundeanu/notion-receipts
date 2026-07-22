@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.28.0] — 2026-07-22
+
+### ✨ Features
+- **Editare în masă a rețetelor** — în modul de selecție din pagina Recipes apare acum butonul „Edit N", care deschide un modal de batch edit. Fiecare câmp are un toggle de activare, așa că se modifică doar câmpurile pe care le activezi — restul rămân neatinse pe fiecare rețetă. Editabile: **favorite**, **time**, **difficulty**, **categories** (moduri add / remove / replace) și **source URL**. Acțiune nouă `updateRecipesBatch` (scalari prin `updateMany`; add/remove la categorii îmbină tag-urile fiecărei rețete, totul într-o tranzacție).
+
 ## [0.27.0] — 2026-07-22
 
 ### ✨ Features
