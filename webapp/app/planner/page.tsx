@@ -22,6 +22,7 @@ import {
   addToWeekPlan,
   removeFromWeekPlan,
   updateWeekPlanServings,
+  moveWeekPlanEntry,
   getRecipesPanel,
   getRecipeCategories,
 } from "@/lib/actions";
@@ -145,10 +146,12 @@ function RecipeCard({
   entry,
   onRemove,
   onServingsChange,
+  draggable = false,
 }: {
   entry: PlanEntry;
   onRemove: () => void;
   onServingsChange: (n: number) => void;
+  draggable?: boolean;
 }) {
   const [swipeX, setSwipeX] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -158,6 +161,25 @@ function RecipeCard({
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const isHorizontal = useRef(false);
+  const draggingRef = useRef(false);
+
+  // Long-press to drag (mobile move between slots). `disabled` keeps desktop slot
+  // cards non-draggable — nothing about the desktop flow changes.
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `entry-${entry.id}`,
+    data: { entry },
+    disabled: !draggable,
+  });
+
+  // While a drag is active, freeze the swipe gesture so the source card doesn't
+  // slide under the drag overlay.
+  useEffect(() => {
+    draggingRef.current = isDragging;
+    if (isDragging) {
+      setSwipeX(0);
+      swipeXRef.current = 0;
+    }
+  }, [isDragging]);
 
   useEffect(() => {
     const el = contentRef.current;
@@ -170,6 +192,7 @@ function RecipeCard({
     }
 
     function onTouchMove(e: TouchEvent) {
+      if (draggingRef.current) return;
       const dx = e.touches[0].clientX - touchStartX.current;
       const dy = e.touches[0].clientY - touchStartY.current;
       if (!isHorizontal.current) {
@@ -211,7 +234,12 @@ function RecipeCard({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-xl">
+    <div
+      ref={draggable ? setNodeRef : undefined}
+      {...(draggable ? listeners : {})}
+      {...(draggable ? attributes : {})}
+      className={`relative overflow-hidden rounded-xl ${isDragging ? "opacity-30" : ""}`}
+    >
       {/* Delete button — mobile only, hidden until swipe */}
       <div
         className="md:hidden absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500 rounded-r-xl"
@@ -293,7 +321,7 @@ function RecipeCard({
           aria-label="Remove from planner"
           className="md:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-orange-300 dark:text-orange-700/70 active:text-red-500 hover:text-red-500 transition-colors"
         >
-          <Trash2 size={15} />
+          <X size={17} />
         </button>
 
         {/* X — desktop hover only */}
@@ -442,6 +470,61 @@ function DroppableMealSlot({
           className="text-gray-300 group-hover:text-orange-400"
         />
       </button>
+    </div>
+  );
+}
+
+// ─── Mobile Meal Section (droppable — long-press a card to move it here) ───────
+
+function MobileMealSection({
+  dayIdx,
+  meal,
+  entries,
+  onRemove,
+  onServingsChange,
+  onAddClick,
+}: {
+  dayIdx: number;
+  meal: MealType;
+  entries: PlanEntry[];
+  onRemove: (id: string) => void;
+  onServingsChange: (id: string, n: number) => void;
+  onAddClick: () => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `${dayIdx}::${meal}` });
+
+  return (
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b] mb-2">
+        {mealLabel(meal)}
+      </h3>
+      <div
+        ref={setNodeRef}
+        className={`space-y-2 rounded-xl p-1 -m-1 transition-all ${
+          isOver
+            ? "bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-300 dark:ring-orange-700 ring-inset"
+            : ""
+        }`}
+      >
+        {entries.map((entry) => (
+          <RecipeCard
+            key={entry.id}
+            entry={entry}
+            draggable
+            onRemove={() => onRemove(entry.id)}
+            onServingsChange={(n) => onServingsChange(entry.id, n)}
+          />
+        ))}
+        <button
+          onClick={onAddClick}
+          className="w-full min-h-[44px] py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
+        >
+          <Plus
+            size={15}
+            className="text-gray-300 group-hover:text-orange-400"
+          />
+        </button>
+      </div>
     </div>
   );
 }
@@ -857,7 +940,8 @@ export default function PlannerPage() {
   }
 
   function handleDragStart(event: DragStartEvent) {
-    setDragActive(event.active.data.current?.recipe ?? null);
+    const data = event.active.data.current;
+    setDragActive(data?.recipe ?? data?.entry?.recipe ?? null);
     // Haptic feedback when card "locks in" to drag
     if (typeof navigator !== "undefined" && navigator.vibrate) {
       navigator.vibrate(12);
@@ -869,14 +953,36 @@ export default function PlannerPage() {
     const { active, over } = event;
     if (!over) return;
 
-    const recipe = active.data.current?.recipe as RecipeRef | undefined;
-    if (!recipe) return;
-
     const parts = (over.id as string).split("::");
     if (parts.length !== 2) return;
     const dayIdx = parseInt(parts[0]);
     const meal = parts[1] as MealType;
     if (isNaN(dayIdx) || !MEALS.includes(meal)) return;
+
+    // Moving an existing plan entry between slots (mobile drag-and-drop).
+    const dragged = active.data.current?.entry as PlanEntry | undefined;
+    if (dragged) {
+      // A still-saving optimistic entry has no real DB id yet — can't move it.
+      if (dragged.id.startsWith("temp-")) return;
+      if (dragged.dayOfWeek === dayIdx && dragged.mealType === meal) return; // dropped on itself
+      const snapshot = plans;
+      setPlans((prev) =>
+        prev.map((p) =>
+          p.id === dragged.id ? { ...p, dayOfWeek: dayIdx, mealType: meal } : p
+        )
+      );
+      try {
+        await moveWeekPlanEntry(dragged.id, dayIdx, meal);
+        getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
+      } catch {
+        setPlans(snapshot); // rollback — the move didn't persist
+        showError("Couldn't move the recipe. Please try again.");
+      }
+      return;
+    }
+
+    const recipe = active.data.current?.recipe as RecipeRef | undefined;
+    if (!recipe) return;
 
     const servings = recipe.servings ?? 1;
     const tempId = `temp-${Math.random()}`;
@@ -1027,38 +1133,21 @@ export default function PlannerPage() {
               </div>
 
               <div className="space-y-4">
-                {MEALS.map((meal) => {
-                  const entries = getEntries(mobileDay, meal);
-                  return (
-                    <div key={meal}>
-                      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b] mb-2">
-                        {mealLabel(meal)}
-                      </h3>
-                      <div className="space-y-2">
-                        {entries.map((entry) => (
-                          <RecipeCard
-                            key={entry.id}
-                            entry={entry}
-                            onRemove={() => handleRemove(entry.id)}
-                            onServingsChange={(n) =>
-                              handleServingsChange(entry.id, n)
-                            }
-                          />
-                        ))}
-                        <button
-                          onClick={() => setModal({ day: mobileDay, meal })}
-                          className="w-full min-h-[44px] py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
-                        >
-                          <Plus
-                            size={15}
-                            className="text-gray-300 group-hover:text-orange-400"
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
+                {MEALS.map((meal) => (
+                  <MobileMealSection
+                    key={meal}
+                    dayIdx={mobileDay}
+                    meal={meal}
+                    entries={getEntries(mobileDay, meal)}
+                    onRemove={handleRemove}
+                    onServingsChange={handleServingsChange}
+                    onAddClick={() => setModal({ day: mobileDay, meal })}
+                  />
+                ))}
               </div>
+              <p className="text-xs text-gray-400 dark:text-[#5c554b] text-center">
+                Tip: press &amp; hold a recipe to move it to another meal.
+              </p>
 
             </div>
 

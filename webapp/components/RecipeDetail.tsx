@@ -565,19 +565,19 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       {group.name ?? `Part ${groupOrder}`}
                     </h2>
                   )}
-                  <ul className="space-y-3">
+                  <ul className="space-y-1">
                     {group.items.map((ing) => {
                       const checked = checkedIngredients.has(ing.id);
                       return (
                         <li
                           key={ing.id}
-                          className="flex items-start gap-3 text-sm cursor-pointer select-none"
+                          className="flex items-start gap-3 text-[15px] leading-6 cursor-pointer select-none py-2.5 px-2 -mx-2 rounded-lg active:bg-orange-50 dark:active:bg-orange-950/20 transition-colors"
                           onClick={() => toggleIngredient(ing.id)}
                         >
-                          <span className={`mt-0.5 w-4 h-4 shrink-0 rounded border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
+                          <span className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
                             {checked && (
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
-                                <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
+                                <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             )}
                           </span>

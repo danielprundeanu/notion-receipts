@@ -448,6 +448,24 @@ export async function updateWeekPlanServings(id: string, servings: number): Prom
   revalidatePath("/grocery-list");
 }
 
+// Move an existing plan entry to another day/meal slot (drag-and-drop reorder).
+// Same clamping as addToWeekPlan: dayOfWeek 0–6, so a bad drop target can't corrupt the row.
+export async function moveWeekPlanEntry(
+  id: string,
+  dayOfWeek: number,
+  mealType: string
+): Promise<void> {
+  const safeDay = Number.isFinite(dayOfWeek)
+    ? Math.min(6, Math.max(0, Math.round(dayOfWeek)))
+    : 0;
+  await prisma.weekPlan.update({
+    where: { id },
+    data: { dayOfWeek: safeDay, mealType },
+  });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+}
+
 // ─── Grocery List ─────────────────────────────────────────────────────────────
 
 type GroceryEntry = {
