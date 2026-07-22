@@ -93,6 +93,7 @@ type ConfirmedIngredient = {
     name: string;
     unit: string | null;
     unit2?: string | null;
+    conversion?: number | null;     // 1 unit2 = conversion × unit (when the recipe unit ≠ item unit)
     category: string | null;
   };
 };
@@ -218,6 +219,7 @@ export async function POST(req: NextRequest) {
                   name: ing.newItem.name,
                   unit: ing.newItem.unit,
                   unit2: ing.newItem.unit2 ?? null,
+                  ...(ing.newItem.conversion != null ? { conversion: ing.newItem.conversion } : {}),
                   category: ing.newItem.category,
                 },
               });

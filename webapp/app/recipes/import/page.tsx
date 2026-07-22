@@ -258,7 +258,7 @@ function RecipeReviewCard({
 
 // ─── Unified review row (ingredient conflict + unit conflict) ─────────────────
 
-type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; unit2Conversion?: number | null; newItem?: { name: string; unit: string | null; category: string | null } };
+type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; unit2Conversion?: number | null; newItem?: { name: string; unit: string | null; unit2?: string | null; conversion?: number | null; category: string | null } };
 
 function getAutoFactor(fu: string, tu: string): string {
   const map: Record<string, number> = {
@@ -417,6 +417,10 @@ function ReviewRow({
   const singleUnit = units.length === 1;
   const needsConversion = !!foreign && units.length >= 1 && !matches;
 
+  // New item whose chosen unit differs from the recipe unit → needs a conversion
+  // so the recipe quantity (kept in `foreign`) stays valid on the created item.
+  const newNeedsConversion = isNew && !!foreign && !!newUnit && newUnit !== foreign;
+
   // ── AI suggestion: pre-completează factorul pentru conversiile dependente de
   //     ingredient (unde tabelul static getAutoFactor n-are nimic). Doar prima dată —
   //     odată acceptată, regula se salvează în DB și data viitoare vine auto-resolved. ──
@@ -445,11 +449,45 @@ function ReviewRow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsConversion, sel, target, singleUnit]);
 
+  // New-item conversion: seed the factor from the standard table when the recipe
+  // unit changes; leave empty for ingredient-dependent pairs so AI/manual fills it.
+  useEffect(() => {
+    if (!newNeedsConversion) return;
+    setFactor(getAutoFactor(foreign!, newUnit!));
+    setAiSuggested(false); setAiNote(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newNeedsConversion, newUnit]);
+
+  // New-item conversion: AI suggestion for pairs the static table doesn't cover.
+  useEffect(() => {
+    if (!newNeedsConversion || factor !== "") return;
+    const ingName = newName.trim() || ing.name;
+    if (!ingName) return;
+    let cancelled = false;
+    setAiLoading(true);
+    fetch("/api/import/suggest-conversion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ingredientName: ingName, fromUnit: foreign, toUnit: newUnit }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { factor?: number; note?: string } | null) => {
+        if (cancelled || !d || !d.factor) return;
+        setFactor(String(+Number(d.factor).toFixed(6)));
+        setAiSuggested(true);
+        setAiNote(d.note || null);
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setAiLoading(false); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newNeedsConversion, newUnit, factor === ""]);
+
   const factorNum = parseFloat(factor);
   const factorValid = factor !== "" && !isNaN(factorNum) && factorNum > 0;
 
   const canSave = isNew
-    ? newName.trim().length > 0
+    ? newName.trim().length > 0 && (!newNeedsConversion || factorValid)
     : !sel ? false
     : !needsConversion ? true
     : (singleUnit && addU2) ? true
@@ -498,7 +536,13 @@ function ReviewRow({
         addUnit2: undefined,
         unit2Conversion: undefined,
         match: { ...ing.match, status: "new", groceryItemId: undefined, manuallyMapped: true } as ReviewIngredient["match"] & { manuallyMapped?: boolean },
-        newItem: { name: newName.trim() || ing.name, unit: newUnit, category: newCategory || null },
+        newItem: {
+          name: newName.trim() || ing.name,
+          unit: newUnit,
+          unit2: newNeedsConversion ? foreign : null,
+          conversion: newNeedsConversion && factorValid ? factorNum : null,
+          category: newCategory || null,
+        },
       };
     } else {
       let unitConflict: ReviewIngredient["unitConflict"] = undefined;
@@ -661,6 +705,41 @@ function ReviewRow({
                   </select>
                 </div>
               </div>
+
+              {/* Conversion — recipe unit differs from the new item's unit */}
+              {newNeedsConversion && (
+                <div className="pt-2 border-t border-orange-200/60 dark:border-orange-900/40 space-y-2">
+                  <p className="text-xs text-gray-500 dark:text-[#7c756a]">
+                    The recipe uses <strong>{foreign}</strong> but this item is stored in <strong>{newUnit}</strong> — set the conversion so the quantity is kept:
+                  </p>
+                  <div className="flex items-center gap-2 tabular-nums">
+                    <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">1 {foreign} =</span>
+                    <input type="number" min="0" step="any" value={factor} onChange={(e) => handleFactorChange(e.target.value)}
+                      placeholder="ex: 240"
+                      className="w-24 text-sm text-right border border-gray-200 dark:border-[#3a352e] rounded-lg px-2 py-1.5 bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    <span className="text-sm font-medium text-gray-700 dark:text-[#c4bcb0]">{newUnit}</span>
+                  </div>
+                  {aiLoading && (
+                    <p className="text-xs text-purple-500 dark:text-purple-400 flex items-center gap-1.5">
+                      <Loader2 size={12} className="animate-spin" /> AI is finding a suitable conversion…
+                    </p>
+                  )}
+                  {aiSuggested && !aiLoading && (
+                    <div className="flex items-start gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg px-2.5 py-1.5">
+                      <Sparkles size={12} className="mt-0.5 shrink-0" />
+                      <span><strong>Suggested by AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Review and adjust if needed.</span>
+                    </div>
+                  )}
+                  <div className={`text-xs px-3 py-1.5 rounded-lg tabular-nums ${
+                    factorValid ? "bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/50"
+                    : "bg-gray-50 dark:bg-[#24211c] text-gray-500 dark:text-[#7c756a] border border-gray-200 dark:border-[#3a352e]"
+                  }`}>
+                    {factorValid
+                      ? <>✓ stored as <strong>{qty} {foreign}</strong> · 1 {foreign} = {factorNum} {newUnit}</>
+                      : <>Enter the conversion factor to continue</>}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
