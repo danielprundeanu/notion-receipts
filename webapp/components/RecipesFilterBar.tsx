@@ -131,7 +131,7 @@ export default function RecipesFilterBar({
     document.getElementById("recipes-top")?.scrollIntoView({ block: "start" });
   }, [cat, fav]);
 
-  const chip = "shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors";
+  const chip = "shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors";
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
   const on   = "bg-orange-500 text-white";
 

@@ -283,27 +283,27 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                   className="block"
                   onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
                 >
-                  <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
+                  <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
                     {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
                       <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 50vw, 25vw" />
                     ) : (
-                      <span className="text-3xl opacity-20">🍽️</span>
+                      <span className="text-4xl opacity-20">🍽️</span>
                     )}
                     {cats.length > 0 && (
                       <div className="absolute top-1.5 right-1.5">
                         {cats.map((c) => {
                           const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-                          return <span key={c} className={`px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${cls}`}>{c}</span>;
+                          return <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
                         })}
                       </div>
                     )}
                   </div>
-                  <div className="p-2">
-                    <div className="flex items-start justify-between gap-1">
-                      <h3 className="font-semibold text-gray-900 dark:text-[#eae5de] text-xs leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
+                  <div className="p-2.5">
+                    <div className="flex items-start justify-between gap-1.5">
+                      <h3 className="font-semibold text-gray-900 dark:text-[#eae5de] text-sm leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
                         {recipe.name}
                       </h3>
-                      {recipe.favorite && <Star size={11} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
+                      {recipe.favorite && <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
                     </div>
                   </div>
                 </Link>
