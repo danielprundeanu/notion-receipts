@@ -1165,7 +1165,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     <div className="sm:hidden space-y-1.5">
                       <div className="flex gap-2 items-center">
                         <input
-                          inputMode="decimal" type="number" min="0" step="0.001"
+                          inputMode="decimal" type="number" min="0" step="any"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Qty"
@@ -1216,7 +1216,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                     <div className="hidden sm:block space-y-1">
                       <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2 items-center">
                         <input
-                          inputMode="decimal" type="number" min="0" step="0.001"
+                          inputMode="decimal" type="number" min="0" step="any"
                           value={ing.quantity}
                           onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
                           placeholder="Qty"
