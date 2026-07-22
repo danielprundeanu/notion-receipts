@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.27.0] — 2026-07-22
+
+### ✨ Features
+- **Planner — drag-and-drop pe mobil** — ține apăsat (long-press) pe o rețetă și trage-o într-un alt slot de masă al zilei afișate (ex. Breakfast → Lunch). Secțiunile de masă de pe mobil sunt acum zone „droppable" cu evidențiere la hover; cardurile din slot sunt draggable doar pe mobil (desktopul rămâne neschimbat). Acțiune nouă `moveWeekPlanEntry` cu update optimist + rollback + toast la eroare.
+
+### 🎨 UI / UX
+- **Planner** — swipe-to-delete rămâne ca scurtătură (înghețat în timpul drag-ului); iconița de coș din rândul cardului a devenit un `✕`, afordanță de ștergere vizibilă păstrată.
+- **Recipe detail — ingrediente mai vizibile** — checkbox mărit (16 → 24px) cu bifă mai mare, text 15px, zonă de tap ≥44px (`py-2.5`) cu feedback la apăsare și spațiere care nu mai permite atingerea a două rânduri deodată.
+
 ## [0.26.0] — 2026-07-22
 
 ### ✨ Features
