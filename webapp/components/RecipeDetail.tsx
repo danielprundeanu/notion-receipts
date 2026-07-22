@@ -17,6 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings } from "@/lib/actions";
+import ShareButton from "@/components/ShareButton";
 import { mealLabel, categoryLabel, difficultyLabel } from "@/lib/labels";
 import { ingredientGrams } from "@/lib/nutrition";
 
@@ -418,6 +419,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <ArrowLeft size={15} /> Back to recipes
         </Link>
         <div className="flex items-center gap-2">
+          <ShareButton name={recipe.name} />
           <button
             onClick={() => setShowPlanner(true)}
             title="Add to planner"

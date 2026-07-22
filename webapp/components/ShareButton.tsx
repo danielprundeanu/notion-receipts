@@ -1,0 +1,45 @@
+"use client";
+
+import { useState } from "react";
+import { Share2, Check } from "lucide-react";
+
+export default function ShareButton({ name }: { name: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    if (!url) return;
+
+    // Prefer the native share sheet (mobile); fall back to copying the link.
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: name, url });
+        return;
+      } catch (err) {
+        // User dismissed the share sheet — do nothing.
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        // Otherwise fall through to clipboard.
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard blocked — last resort: prompt so the user can copy manually.
+      window.prompt("Copy recipe link:", url);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      title={copied ? "Link copied" : "Share"}
+      aria-label="Share recipe"
+      className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
+    >
+      {copied ? <Check size={17} className="text-green-600 dark:text-green-400" /> : <Share2 size={16} />}
+    </button>
+  );
+}

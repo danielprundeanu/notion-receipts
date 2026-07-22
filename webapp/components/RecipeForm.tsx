@@ -1298,8 +1298,29 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         </p>
       )}
 
-      {/* Actions */}
+      {/* Actions — Delete (left) · Cancel · Save (right, primary) */}
       <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e2a24]">
+        {initial?.id && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
+          >
+            {deleting && <Loader2 size={13} className="animate-spin" />}
+            Delete recipe
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to leave without saving?")) return;
+            router.back();
+          }}
+          className="ml-auto px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
+        >
+          Cancel
+        </button>
         <button
           type="submit"
           disabled={saving || imageUploading}
@@ -1308,27 +1329,6 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
           {saving && <Loader2 size={14} className="animate-spin" />}
           {imageUploading ? "Uploading image…" : initial?.id ? "Save changes" : "Create recipe"}
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to leave without saving?")) return;
-            router.back();
-          }}
-          className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
-        >
-          Cancel
-        </button>
-        {initial?.id && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="ml-auto flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {deleting && <Loader2 size={13} className="animate-spin" />}
-            Delete recipe
-          </button>
-        )}
       </div>
 
       {/* Grocery item edit modal */}
