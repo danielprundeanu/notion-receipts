@@ -119,17 +119,30 @@ export default function RecipesFilterBar({
     return () => io.disconnect();
   }, []);
 
-  // On category/favorite change, jump to the first recipe card (a deliberate filter
-  // action). NOT on `q` — live search filters in place; re-scrolling on every keystroke
-  // yanks the page (and closed the mobile search) when results shrink.
+  // Keep a ref of `stuck` so the scroll effect reads it without re-subscribing.
+  const stuckRef = useRef(stuck);
+  stuckRef.current = stuck;
+
+  // On a filter change, align the first results just under the sticky bar (scroll to
+  // #recipes-top). Always for category/favorite; for live search only when scrolled
+  // down (stuck), so typing at the top isn't disturbed. #recipes-top has a fixed
+  // offset, so re-aligning while typing never moves an already-aligned page.
   const isFirstRender = useRef(true);
+  const prevFilters = useRef({ cat, fav, q });
   useEffect(() => {
     if (isFirstRender.current) {
       isFirstRender.current = false;
+      prevFilters.current = { cat, fav, q };
       return;
     }
-    document.getElementById("recipes-top")?.scrollIntoView({ block: "start" });
-  }, [cat, fav]);
+    const prev = prevFilters.current;
+    const catFavChanged = prev.cat !== cat || prev.fav !== fav;
+    const qChanged = prev.q !== q;
+    prevFilters.current = { cat, fav, q };
+    if (catFavChanged || (qChanged && stuckRef.current)) {
+      document.getElementById("recipes-top")?.scrollIntoView({ block: "start" });
+    }
+  }, [cat, fav, q]);
 
   const chip = "shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold transition-colors";
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
