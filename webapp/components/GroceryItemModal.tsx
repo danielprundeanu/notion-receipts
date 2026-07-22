@@ -305,7 +305,7 @@ export default function GroceryItemModal({
                 />
                 {aiConvNote != null && (
                   <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
-                    Suggested by AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Review and adjust if it's off.
+                    Suggested by AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Review and adjust if needed.
                   </p>
                 )}
                 {aiConvError && (
@@ -401,7 +401,7 @@ export default function GroceryItemModal({
             {usedIn && usedIn.length > 0 ? (
               <>
                 <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-                  Can't delete <strong>{name}</strong> — it's used in {usedIn.length} {usedIn.length === 1 ? "recipe" : "recipes"} (see the list above). Replace or remove it from them first.
+                  Cannot delete <strong>{name}</strong> — it is used in {usedIn.length} {usedIn.length === 1 ? "recipe" : "recipes"} (see the list above). Replace or remove it from them first.
                 </p>
                 <button
                   type="button"
@@ -418,7 +418,7 @@ export default function GroceryItemModal({
                 </p>
                 {deleteBlocked != null && (
                   <p className="text-sm text-red-700 dark:text-red-400 mb-3">
-                    The item is used in {deleteBlocked} {deleteBlocked === 1 ? "recipe" : "recipes"} — it wasn't deleted.
+                    The item is used in {deleteBlocked} {deleteBlocked === 1 ? "recipe" : "recipes"} — it was not deleted.
                   </p>
                 )}
                 <div className="flex gap-2">

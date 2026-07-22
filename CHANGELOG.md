@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.26.0] — 2026-07-22
+
+### ✨ Features
+- **English UI** — the entire interface was translated from Romanian to English: navigation, recipes, planner, grocery list, ingredients, the import wizard, settings, and all user-facing error messages. `lib/labels.ts` was simplified (display labels are now near-identity over the already-English DB values; `groceryCategoryLabel` just strips the emoji prefix). Stored DB values, `?cat=` filters and comparisons are untouched.
+- **Manual grocery-list items** — add products by hand to a given week, alongside the ones generated from the planner.
+- **Ingredients table/list view** — toggle between the editable table and a compact card list.
+
+### 🐛 Fixes
+- Nutrition and import flow fixes.
+
+### 🎨 UI / UX
+- **Planner** — week days now fill the full width on mobile (7 equal columns instead of a scrolling row).
+- **Recipes** — the "New recipe" button is now a compact "+" icon.
+- **Recipe detail** — "Add to planner" and "Edit" are now icon buttons.
+- Dates use the `en-US` locale; day abbreviations are Mon–Sun.
+
+### ⚙️ Internals
+- Docs (`CLAUDE.md`, `webapp/UX_CONVENTIONS.md`) updated to state the UI is English and to describe the label helpers' new role.
+
 ## [0.25.0] — 2026-07-21
 
 ### ♿ Accesibilitate & mobil

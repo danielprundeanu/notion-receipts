@@ -749,7 +749,7 @@ function ReviewRow({
               <div className="flex items-start gap-1.5 text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900/50 rounded-lg px-2.5 py-1.5">
                 <Sparkles size={12} className="mt-0.5 shrink-0" />
                 <span>
-                  <strong>Suggested by AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Review and adjust if it's off.
+                  <strong>Suggested by AI</strong>{aiNote ? ` · ${aiNote}` : ""}. Review and adjust if needed.
                 </span>
               </div>
             )}
@@ -1273,7 +1273,7 @@ export default function ImportPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-sm text-gray-600 dark:text-[#a49c90]">
-                {validRecipes.length} recipes found · review and remove any you don't want
+                {validRecipes.length} recipes found · review and remove any you do not want
               </p>
             </div>
 
@@ -1407,7 +1407,7 @@ export default function ImportPage() {
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>
-                  <strong>{unitConflictIngredients.length} unresolved units</strong> will be imported as “piece”. If the item has no weight per piece (g/pc), nutrition won't be correct — you can fill them in anytime from <strong>Ingredients → Unit audit</strong>.
+                  <strong>{unitConflictIngredients.length} unresolved units</strong> will be imported as “piece”. If the item has no weight per piece (g/pc), nutrition will not be correct — you can fill them in anytime from <strong>Ingredients → Unit audit</strong>.
                 </span>
               </div>
             )}
