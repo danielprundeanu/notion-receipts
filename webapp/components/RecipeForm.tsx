@@ -581,7 +581,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
   // ── Servings scaler (batch ↔ per-serving) ──────────────────────────
   function fmtQty(n: number): string {
-    return (Math.round(n * 1000) / 1000).toString();
+    // 6-decimal precision so fine fractional quantities (e.g. 0.0625) survive
+    // rescaling; trailing float noise is trimmed by Number()/toString().
+    return Number((n).toFixed(6)).toString();
   }
 
   // Multiply every numeric ingredient quantity by `factor` (proportional rescale).
