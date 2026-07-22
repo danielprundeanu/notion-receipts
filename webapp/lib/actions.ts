@@ -218,6 +218,74 @@ export async function deleteRecipes(ids: string[]): Promise<void> {
   revalidatePath("/recipes");
 }
 
+// Fields a batch edit can touch. Only keys actually present are written, so an
+// omitted field is left untouched (vs. explicitly cleared to null). Categories
+// carry a mode so a batch can replace, add, or remove tags without clobbering
+// the distinct tags each recipe already has.
+export type RecipeBatchPatch = {
+  time?: number | null;
+  difficulty?: string | null;
+  favorite?: boolean;
+  link?: string | null;
+  categories?: { mode: "replace" | "add" | "remove"; values: string[] };
+};
+
+export async function updateRecipesBatch(
+  ids: string[],
+  patch: RecipeBatchPatch
+): Promise<void> {
+  if (ids.length === 0) return;
+
+  const scalar: {
+    time?: number | null;
+    difficulty?: string | null;
+    favorite?: boolean;
+    link?: string | null;
+  } = {};
+  if ("time" in patch) {
+    scalar.time = patch.time == null ? null : Math.max(1, Math.round(patch.time));
+  }
+  if ("difficulty" in patch) scalar.difficulty = patch.difficulty || null;
+  if ("favorite" in patch) scalar.favorite = !!patch.favorite;
+  if ("link" in patch) scalar.link = patch.link?.trim() || null;
+
+  await prisma.$transaction(async (tx) => {
+    if (Object.keys(scalar).length > 0) {
+      await tx.recipe.updateMany({ where: { id: { in: ids } }, data: scalar });
+    }
+
+    if (patch.categories) {
+      const { mode } = patch.categories;
+      const values = patch.categories.values.map((v) => v.trim()).filter(Boolean);
+      if (mode === "replace") {
+        await tx.recipe.updateMany({
+          where: { id: { in: ids } },
+          data: { category: values.length ? values.join(", ") : null },
+        });
+      } else {
+        // add / remove need each recipe's current tags, so merge per row.
+        const rows = await tx.recipe.findMany({
+          where: { id: { in: ids } },
+          select: { id: true, category: true },
+        });
+        for (const row of rows) {
+          const cur = (row.category ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+          const next =
+            mode === "add"
+              ? [...cur, ...values.filter((v) => !cur.some((c) => c.toLowerCase() === v.toLowerCase()))]
+              : cur.filter((c) => !values.some((v) => v.toLowerCase() === c.toLowerCase()));
+          await tx.recipe.update({
+            where: { id: row.id },
+            data: { category: next.length ? next.join(", ") : null },
+          });
+        }
+      }
+    }
+  });
+
+  revalidatePath("/recipes");
+}
+
 export async function toggleFavorite(id: string, favorite: boolean): Promise<void> {
   await prisma.recipe.update({ where: { id }, data: { favorite } });
   revalidatePath(`/recipes/${id}`);

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useTransition, useSyncExternalStore } from "react";
+import { useState, useEffect, useMemo, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Star, Trash2, Clock, ChevronRight } from "lucide-react";
-import { deleteRecipes } from "@/lib/actions";
+import { Star, Trash2, Clock, ChevronRight, Pencil } from "lucide-react";
+import { deleteRecipes, updateRecipesBatch, type RecipeBatchPatch } from "@/lib/actions";
+import RecipeBatchEditModal from "./RecipeBatchEditModal";
 import { useRouter } from "next/navigation";
 
 type Recipe = {
@@ -62,6 +63,20 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+
+  // Category tags present on the current list — merged with the defaults in the
+  // batch modal so the chip picker offers what's actually in use.
+  const knownCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of recipes) {
+      for (const c of (r.category ?? "").split(",")) {
+        const t = c.trim();
+        if (t) set.add(t);
+      }
+    }
+    return [...set];
+  }, [recipes]);
 
   // Select mode is toggled from the filter bar (SortSelect) via a window event.
   // When it turns off, drop the current selection.
@@ -69,7 +84,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
     function onSel(e: Event) {
       const v = (e as CustomEvent<boolean>).detail;
       setSelectMode(v);
-      if (!v) { setSelected(new Set()); setConfirmDelete(false); }
+      if (!v) { setSelected(new Set()); setConfirmDelete(false); setShowEdit(false); }
     }
     window.addEventListener("selectmodechange", onSel);
     return () => window.removeEventListener("selectmodechange", onSel);
@@ -103,6 +118,15 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
     });
   }
 
+  // Runs inside the modal's try/catch — it rethrows on failure so the modal keeps
+  // itself open and shows an error (shared data → no false "saved").
+  async function handleBatchApply(patch: RecipeBatchPatch) {
+    await updateRecipesBatch([...selected], patch);
+    setSelected(new Set());
+    window.dispatchEvent(new CustomEvent("selectmodechange", { detail: false }));
+    router.refresh();
+  }
+
   const isSelecting = selected.size > 0;
 
   return (
@@ -120,6 +144,14 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
             <span className="text-xs text-gray-400 dark:text-[#5c554b]">{selected.size} selected</span>
           </div>
           <div className="flex items-center gap-2">
+            {selected.size > 0 && !confirmDelete && (
+              <button
+                onClick={() => setShowEdit(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 border border-orange-200 dark:border-orange-900 rounded-lg transition-colors"
+              >
+                <Pencil size={13} /> Edit {selected.size}
+              </button>
+            )}
             {selected.size > 0 && !confirmDelete && (
               <button
                 onClick={() => setConfirmDelete(true)}
@@ -279,6 +311,15 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
             );
           })}
         </div>
+      )}
+
+      {showEdit && selected.size > 0 && (
+        <RecipeBatchEditModal
+          count={selected.size}
+          knownCategories={knownCategories}
+          onClose={() => setShowEdit(false)}
+          onApply={handleBatchApply}
+        />
       )}
 
       {/* List view */}
