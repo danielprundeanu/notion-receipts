@@ -24,10 +24,11 @@ export default async function RecipesPage({
         <div className="flex items-center gap-2">
           <Link
             href="/recipes/import"
-            className="p-2 text-gray-500 dark:text-[#7c756a] hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
+            aria-label="Import recipes"
             title="Import recipes"
+            className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
           >
-            <Download size={18} />
+            <Download size={17} />
           </Link>
           <Link
             href="/recipes/new"
