@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.29.2] — 2026-07-23
+
+### 🐛 Fixes
+- **Search fără „snap" pe mobil** — cât timp căutarea e deschisă, bara de filtre devine un header `fixed` (ancorat sus), decuplat de scroll. Filtrarea la puține rezultate nu mai clampează scroll-ul și nu mai smucește bara spre top: rămâne pe loc, rezultatele se actualizează dedesubt. Căutarea rămâne maximizată cât ai un query activ și se resetează pe X. Desktop-ul e neschimbat.
+
 ## [0.29.1] — 2026-07-23
 
 ### 🐛 Fixes
