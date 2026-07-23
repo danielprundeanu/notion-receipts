@@ -70,11 +70,10 @@ export default async function RecipesPage({
           sticky filter bar so the first card lands right beneath it. */}
       <div id="recipes-top" aria-hidden className="scroll-mt-14 md:scroll-mt-4" />
 
-      {/* Content — reserve a viewport of height on mobile so filtering to few
-          results doesn't shrink the page below the sticky scroll position (which
-          would clamp the scroll back to the top and flicker the sticky bar). The
-          scroll position is kept and the user can still scroll up to the top. */}
-      <div className="min-h-[100dvh] md:min-h-0">
+      {/* Content — height follows the actual results. (Previously reserved a full
+          viewport on mobile to avoid a sticky-bar reflow when filtering to few
+          results, but that left an empty, scrollable gap under short lists.) */}
+      <div>
         {recipes.length === 0 ? (
           <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
             <p className="text-lg font-semibold">No recipes found</p>

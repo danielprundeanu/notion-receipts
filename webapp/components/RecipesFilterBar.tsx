@@ -131,6 +131,13 @@ export default function RecipesFilterBar({
     return () => io.disconnect();
   }, []);
 
+  // When there's an active query, keep the search maximized whenever we're stuck:
+  // scrolling to the top and back down should re-show the input, not the icon.
+  // (The IO still collapses it at the top; this re-opens it on the way back down.)
+  useEffect(() => {
+    if (stuck && q) setSearchOpen(true);
+  }, [stuck, q]);
+
   // Keep a ref of `stuck` so the scroll effect reads it without re-subscribing.
   const stuckRef = useRef(stuck);
   stuckRef.current = stuck;
