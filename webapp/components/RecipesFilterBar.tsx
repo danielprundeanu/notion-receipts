@@ -88,6 +88,10 @@ export default function RecipesFilterBar({
     pushQ("");
   }
 
+  // Whether there's an active search term. When there is, the sticky bar keeps the
+  // full input visible (maximized); when empty, it minimizes to the search icon.
+  const hasValue = value.trim().length > 0;
+
   // Search chip (sticky bar) → smooth-scroll to the top and focus the in-flow input.
   // focus({ preventScroll }) avoids a competing jump-scroll; focusing inside the click
   // keeps the mobile keyboard opening (iOS only opens it from a user gesture).
@@ -193,15 +197,41 @@ export default function RecipesFilterBar({
 
       {/* ── Filter chips bar (sticky) ── */}
       <div className={barCls}>
+        {/* Maximized search input (mobile) — kept in the sticky bar while there's an
+            active query, so scrolling keeps the input + filters together. Clearing it
+            (X) minimizes back to the search icon + chips. */}
+        {stuck && hasValue && (
+          <form
+            className="md:hidden relative mb-2"
+            onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
+          >
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
+            <input
+              value={value}
+              onChange={(e) => onSearchInput(e.target.value)}
+              placeholder="Search recipes…"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
+            />
+            <button
+              type="button"
+              onClick={clearSearch}
+              title="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
+            >
+              <X size={14} />
+            </button>
+          </form>
+        )}
         <div className="flex items-center">
-          {/* Search chip — mobile only; scrolls to the top and focuses the input */}
+          {/* Search chip — mobile only; only when there's no active query. Scrolls to
+              the top and focuses the input. */}
           <button
             onClick={goToSearch}
             title="Search"
-            aria-hidden={!stuck}
-            tabIndex={stuck ? 0 : -1}
+            aria-hidden={!stuck || hasValue}
+            tabIndex={stuck && !hasValue ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
-              stuck ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
+              stuck && !hasValue ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
             } ${q ? on : off}`}
           >
             <Search size={13} />
