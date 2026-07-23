@@ -1,8 +1,15 @@
 import Link from "next/link";
-import { getRecipes } from "@/lib/actions";
+import { getRecipes, getRecipeCategories } from "@/lib/actions";
 import { Plus, Download } from "lucide-react";
 import RecipesFilterBar from "@/components/RecipesFilterBar";
 import RecipesGrid from "@/components/RecipesGrid";
+
+// Preferred display order for the well-known categories; anything else (custom
+// categories added to recipes) is appended alphabetically after these.
+const PREFERRED_ORDER = [
+  "Breakfast", "Lunch", "Dinner", "Snack",
+  "Smoothie", "Smoothie Bowl", "Soup", "High Protein",
+];
 
 export default async function RecipesPage({
   searchParams,
@@ -11,7 +18,20 @@ export default async function RecipesPage({
 }) {
   const { q, cat, fav, sort } = await searchParams;
   const favOnly = fav === "1";
-  const recipes = await getRecipes(q, cat, favOnly, sort ?? "date_desc");
+  const [recipes, dbCategories] = await Promise.all([
+    getRecipes(q, cat, favOnly, sort ?? "date_desc"),
+    getRecipeCategories(),
+  ]);
+
+  // Chips reflect the categories that actually exist on recipes — so any new
+  // category shows up automatically — ordered by PREFERRED_ORDER, extras last.
+  // Keep the currently-selected category even if the filtered set hid it.
+  const present = new Set(dbCategories);
+  if (cat) present.add(cat);
+  const categories = [
+    ...PREFERRED_ORDER.filter((c) => present.has(c)),
+    ...[...present].filter((c) => !PREFERRED_ORDER.includes(c)).sort(),
+  ];
 
   return (
     <div className="px-4 pt-4 md:p-8">
@@ -42,7 +62,7 @@ export default async function RecipesPage({
       </div>
 
       {/* Search + filter chips (sticky on mobile) */}
-      <RecipesFilterBar q={q} cat={cat} fav={fav} sort={sort} />
+      <RecipesFilterBar q={q} cat={cat} fav={fav} sort={sort} categories={categories} />
 
       {/* Scroll anchor — on filter change we scroll here; scroll-margin clears the
           sticky filter bar so the first card lands right beneath it. */}

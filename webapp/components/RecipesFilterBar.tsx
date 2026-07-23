@@ -7,14 +7,9 @@ import { Search, Star, X } from "lucide-react";
 import SortSelect from "./SortSelect";
 import { categoryLabel } from "@/lib/labels";
 
-const CATEGORIES = [
-  "Breakfast", "Lunch", "Dinner", "Snack",
-  "Smoothie", "Smoothie Bowl", "Soup", "High Protein",
-];
-
 export default function RecipesFilterBar({
-  q, cat, fav, sort,
-}: { q?: string; cat?: string; fav?: string; sort?: string }) {
+  q, cat, fav, sort, categories,
+}: { q?: string; cat?: string; fav?: string; sort?: string; categories: string[] }) {
   const [stuck, setStuck] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -248,7 +243,7 @@ export default function RecipesFilterBar({
               Favorites
             </Link>
 
-            {CATEGORIES.map((c) => (
+            {categories.map((c) => (
               <Link
                 key={c}
                 scroll={false}
