@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.29.0] — 2026-07-23
+
+### ✨ Features
+- **Filtre multi-select pe Recipes** — chip-urile de categorie sunt acum toggle-uri multi-select: poți selecta mai multe tag-uri deodată, iar o rețetă apare dacă are *oricare* dintre ele (OR). Favorites e toggle real, „All" resetează. Selecția e ținută în URL ca listă (`?cat=Breakfast,High Protein`).
+- **Search sticky care se mărește** — în modul sticky, apăsarea pe search mărește bara și afișează input-ul (cu textul căutat) deasupra chip-urilor, ca filtrele să rămână vizibile — în locul overlay-ului care acoperea chip-urile.
+- **Buton de share pentru rețete** + rută publică `/r/[id]` pentru preview bogat la link-urile partajate.
+- **Chip-urile de filtrare reflectă categoriile reale** ale rețetelor (orice categorie nouă apare automat).
+
+### 🐛 Fixes
+- Cantități de ingrediente cu precizie zecimală fină (ex. `0.0625`) și păstrarea preciziei la rescalare.
+- La crearea unui ingredient nou cu altă unitate, se oferă conversia de unitate.
+- Ordinea acțiunilor din formularul de editare rețetă, corectată.
+- Alinierea primelor rezultate sub bara sticky când cauți în timp ce ești derulat.
+- Eliminat flicker-ul barei sticky de filtre când filtrarea lasă puține rezultate.
+
+### 🎨 UI / UX
+- **Grocery list consistent cu rețeta** — checkbox-urile + label-urile din lista de cumpărături arată identic cu cele de ingrediente din rețetă (casetă 24px, aceeași bifă, orange-400). Item-ele bifate rămân lizibile (fără estomparea la 40% opacitate), ca să vezi ce ai cumpărat.
+- Text mai mare la ingrediente & instrucțiuni pe pagina de rețetă.
+- Chip-uri de filtrare mai mari + carduri de rețetă pe 2 coloane mai lizibile.
+- Butonul de import aliniat la stilul icon-button (share/edit/planner).
+
 ## [0.28.0] — 2026-07-22
 
 ### ✨ Features
