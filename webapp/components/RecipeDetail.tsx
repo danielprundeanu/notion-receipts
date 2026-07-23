@@ -573,7 +573,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       return (
                         <li
                           key={ing.id}
-                          className="flex items-start gap-3 text-[15px] leading-6 cursor-pointer select-none py-2.5 px-2 -mx-2 rounded-lg active:bg-orange-50 dark:active:bg-orange-950/20 transition-colors"
+                          className="flex items-start gap-3 text-base leading-7 cursor-pointer select-none py-2.5 px-2 -mx-2 rounded-lg active:bg-orange-50 dark:active:bg-orange-950/20 transition-colors"
                           onClick={() => toggleIngredient(ing.id)}
                         >
                           <span className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
@@ -658,7 +658,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                     return (
                       <div key={i} className="flex gap-3 items-start">
                         <span className="flex-shrink-0 w-6 text-center text-gray-400 dark:text-[#5c554b] font-bold mt-0.5">•</span>
-                        <p className="text-sm text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
+                        <p className="text-base text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
                       </div>
                     );
                   }
@@ -674,7 +674,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       <span className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center mt-0.5">
                         {numCounter}
                       </span>
-                      <p className="text-sm text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
+                      <p className="text-base text-gray-800 dark:text-[#d8d0c4] leading-relaxed">{inst.text}</p>
                     </div>
                   );
                 });
