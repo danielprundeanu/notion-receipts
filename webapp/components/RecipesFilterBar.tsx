@@ -16,6 +16,28 @@ export default function RecipesFilterBar({
   const favOnly = fav === "1";
   const router = useRouter();
 
+  // When the search is open on mobile the bar is pinned as a fixed header (see
+  // barCls) so a shrinking result list can't yank it around / snap the page to
+  // the top. `barH` reserves its height in flow via a spacer so nothing jumps.
+  const pinned = searchOpen;
+  const barRef = useRef<HTMLDivElement>(null);
+  const [barH, setBarH] = useState(0);
+  // Latest q / searchOpen for effects that run off scroll events (stale-closure safe).
+  const qRef = useRef(q);
+  const searchOpenRef = useRef(searchOpen);
+  useEffect(() => { qRef.current = q; }, [q]);
+  useEffect(() => { searchOpenRef.current = searchOpen; }, [searchOpen]);
+
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const update = () => setBarH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
   // Search as you type (debounced), like the planner's add-recipe panel.
   const [value, setValue] = useState(q ?? "");
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,6 +107,7 @@ export default function RecipesFilterBar({
   function clearSearch() {
     setValue("");
     if (debRef.current) clearTimeout(debRef.current);
+    setSearchOpen(false); // X resets the bar out of the pinned/maximized state
     pushQ("");
   }
 
@@ -121,9 +144,10 @@ export default function RecipesFilterBar({
     const io = new IntersectionObserver(
       ([e]) => {
         setStuck(!e.isIntersecting);
-        // Collapse the mobile search overlay back into the in-flow input once we reach
-        // the top (the intuitive behaviour). The query is kept — the in-flow box shows it.
-        if (e.isIntersecting) setSearchOpen(false);
+        // At the top, collapse back to the in-flow input — BUT only when there's no
+        // active query. With a query we keep the search pinned so a content-shrink
+        // (few results) that clamps the scroll to the top can't snap the bar away.
+        if (e.isIntersecting && !qRef.current) setSearchOpen(false);
       },
       { root: root ?? null, threshold: 0 }
     );
@@ -158,6 +182,10 @@ export default function RecipesFilterBar({
     const catFavChanged = prev.cat !== cat || prev.fav !== fav;
     const qChanged = prev.q !== q;
     prevFilters.current = { cat, fav, q };
+    // Skip the realign entirely while the search is pinned (fixed header): the
+    // spacer already keeps results anchored under it, and scrolling on every
+    // keystroke would fight the fixed bar.
+    if (searchOpenRef.current) return;
     if (catFavChanged || (qChanged && stuckRef.current)) {
       document.getElementById("recipes-top")?.scrollIntoView({ block: "start" });
     }
@@ -167,23 +195,26 @@ export default function RecipesFilterBar({
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
   const on   = "bg-orange-500 text-white";
 
-  // Bar is ALWAYS sticky + opaque (page-bg colour, so invisible at rest and it
-  // cleanly covers content scrolling behind it). Only the border + shadow fade
-  // in when stuck — flow height never changes, so nothing jumps.
+  // Bar is opaque (page-bg colour) so it cleanly covers content scrolling behind it.
+  // Normally it's `sticky top-0`. When the search is open on mobile it becomes a
+  // `fixed` header (pinned to the viewport top) — decoupled from scroll, so a
+  // shrinking result list can't snap it away. A spacer (barH) holds its place in
+  // flow. Border + shadow show when stuck or pinned. Desktop stays a plain row.
   const barCls = [
-    "sticky top-0 z-30 -mx-4 px-4 py-2",
-    "bg-[var(--color-bg-base)]",
+    "py-2 bg-[var(--color-bg-base)]",
     "border-b transition-[border-color,box-shadow] duration-200 ease-out",
-    stuck ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
-    // desktop: plain static row, no sticky chrome; add a gap before the grid
+    stuck || pinned ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
+    pinned
+      ? "max-md:fixed max-md:top-0 max-md:inset-x-0 max-md:z-40 max-md:px-4"
+      : "sticky top-0 z-30 -mx-4 px-4",
     "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:mb-4 md:bg-transparent md:border-none md:shadow-none",
   ].join(" ");
 
   return (
     <>
-      {/* ── Search input (always in flow — scrolls away). When scrolled, the sticky bar's
-             chip opens the overlay below; back at the top this is the only search box. ── */}
-      <form className="relative mb-3 md:max-w-sm" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+      {/* ── Search input (in flow — scrolls away). Hidden on mobile while pinned,
+             since the pinned bar shows its own input. ── */}
+      <form className={`relative mb-3 md:max-w-sm ${pinned ? "max-md:hidden" : ""}`} onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
         <input
           value={value}
@@ -206,12 +237,15 @@ export default function RecipesFilterBar({
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Filter chips bar (sticky) ── */}
-      <div className={barCls}>
-        {/* Expanded search input (mobile, sticky mode) — grows the bar so the input
-            AND the chips below are both visible. Collapses back to the in-flow input
-            when you scroll to the top (handled in the IntersectionObserver). */}
-        {stuck && searchOpen && (
+      {/* ── Spacer: reserves the pinned (fixed) bar's height in flow so the grid
+             doesn't jump up under it (mobile only). ── */}
+      {pinned && <div aria-hidden className="md:hidden" style={{ height: barH }} />}
+
+      {/* ── Filter chips bar (sticky, or fixed when pinned) ── */}
+      <div ref={barRef} className={barCls}>
+        {/* Expanded search input (mobile) — shown whenever the search is open. The
+            bar is pinned (fixed) in this state so it and the chips stay put. */}
+        {searchOpen && (
           <form
             className="md:hidden relative mb-2"
             onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
@@ -239,14 +273,14 @@ export default function RecipesFilterBar({
         <div className="flex items-center">
           {/* Search chip — mobile only; pinned left, stays fixed while chips scroll */}
           <button
-            onClick={() => setSearchOpen((v) => !v)}
+            onClick={() => setSearchOpen(true)}
             title="Search"
-            aria-hidden={!stuck}
+            aria-hidden={!stuck || searchOpen}
             aria-expanded={searchOpen}
-            tabIndex={stuck ? 0 : -1}
+            tabIndex={stuck && !searchOpen ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
-              stuck ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
-            } ${searchOpen || q ? on : off}`}
+              stuck && !searchOpen ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
+            } ${q ? on : off}`}
           >
             <Search size={13} />
           </button>
@@ -302,8 +336,8 @@ export default function RecipesFilterBar({
       </div>
 
       {/* ── Sort/view row (mobile 2-row default) — kept in flow when stuck to avoid
-             any layout jump; just hidden from view (it's covered/scrolled anyway) ── */}
-      <div className={`justify-end mb-4 md:hidden ${stuck ? "invisible" : "flex"}`}>
+             any layout jump; hidden entirely while pinned (fixed bar owns the top) ── */}
+      <div className={`justify-end mb-4 md:hidden ${pinned ? "hidden" : stuck ? "invisible" : "flex"}`}>
         <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
       </div>
     </>
