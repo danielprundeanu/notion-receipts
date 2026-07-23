@@ -11,6 +11,7 @@ export default function RecipesFilterBar({
   q, cat, fav, sort, categories,
 }: { q?: string; cat?: string; fav?: string; sort?: string; categories: string[] }) {
   const [stuck, setStuck] = useState(false);
+  const [passedMin, setPassedMin] = useState(false); // scrolled ~40px past the stick point
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const favOnly = fav === "1";
@@ -97,10 +98,10 @@ export default function RecipesFilterBar({
     (scroller ?? window).scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Active search term? When empty, the stuck section minimizes (input row collapses
-  // to the search icon); when it has a value, the section stays full (input + chips).
+  // Active search term? When empty, the section minimizes (input row collapses to the
+  // search icon) once scrolled ~40px past the stick point; with a value it stays full.
   const hasValue = value.trim().length > 0;
-  const minimized = stuck && !hasValue;
+  const minimized = passedMin && !hasValue;
 
   // Remember the last-used filters and restore them when landing on a bare
   // /recipes (e.g. via the nav/sidebar or a "back to recipes" link), so a
@@ -132,12 +133,20 @@ export default function RecipesFilterBar({
     const el = sentinelRef.current;
     if (!el) return;
     const root = el.closest<HTMLElement>("main");
-    const io = new IntersectionObserver(
+    // Stuck: the section reached the top. Chrome (border/shadow) turns on here.
+    const ioStuck = new IntersectionObserver(
       ([e]) => setStuck(!e.isIntersecting),
       { root: root ?? null, threshold: 0 }
     );
-    io.observe(el);
-    return () => io.disconnect();
+    // Minimize threshold: a positive top rootMargin grows the root 40px above the
+    // top, so this only fires once the sentinel is ~40px past the stick point.
+    const ioMin = new IntersectionObserver(
+      ([e]) => setPassedMin(!e.isIntersecting),
+      { root: root ?? null, threshold: 0, rootMargin: "40px 0px 0px 0px" }
+    );
+    ioStuck.observe(el);
+    ioMin.observe(el);
+    return () => { ioStuck.disconnect(); ioMin.disconnect(); };
   }, []);
 
   // On a category/favorite change, align the first results just under the sticky bar
@@ -175,18 +184,18 @@ export default function RecipesFilterBar({
         {/* Search input — collapses (animated) into the search icon when the section
             is stuck AND empty; stays full while it has a value. Always full on desktop. */}
         <form
-          className={`relative md:max-w-sm overflow-hidden transition-all duration-200 ease-out md:!max-h-none md:!opacity-100 md:!mb-3 ${
+          className={`relative md:max-w-sm overflow-hidden transition-all duration-300 ease-in-out md:!max-h-none md:!opacity-100 md:!mb-3 ${
             minimized ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-16 opacity-100 mb-2"
           }`}
           onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
         >
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a] z-10" />
           <input
             ref={searchInputRef}
             value={value}
             onChange={(e) => onSearchInput(e.target.value)}
             placeholder="Search recipes…"
-            className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
+            className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
           />
           {value && (
             <button
@@ -209,7 +218,7 @@ export default function RecipesFilterBar({
             title="Search"
             aria-hidden={!minimized}
             tabIndex={minimized ? 0 : -1}
-            className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
+            className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-300 ease-in-out md:hidden ${
               minimized ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
             } ${q ? on : off}`}
           >
