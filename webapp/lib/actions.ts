@@ -313,7 +313,13 @@ export async function getRecipes(search?: string, category?: string, favorites?:
               ],
             }
           : {},
-        category ? { category: { contains: category, mode: "insensitive" } } : {},
+        // `category` may be a comma-separated multi-select ("Breakfast,High Protein").
+        // A recipe matches if its (comma-joined) category string contains ANY of them (OR).
+        (() => {
+          const cats = (category ?? "").split(",").map((c) => c.trim()).filter(Boolean);
+          if (cats.length === 0) return {};
+          return { OR: cats.map((c) => ({ category: { contains: c, mode: "insensitive" as const } })) };
+        })(),
         favorites ? { favorite: true } : {},
       ],
     },

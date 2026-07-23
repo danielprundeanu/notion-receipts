@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
 import { getGroceryList, addGroceryListItem, deleteGroceryListItem } from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
-import { ChevronLeft, ChevronRight, ShoppingCart, Check, Loader2, Trash2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "🍎 Fruits": "🍎",
@@ -352,24 +352,27 @@ export default function GroceryListPage() {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => toggleCheck(item.id)}
-                            className={`flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                              done ? "opacity-40" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                            }`}
+                            className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-gray-50 dark:hover:bg-[#2c2822] active:bg-orange-50 dark:active:bg-orange-950/20"
                           >
-                            <div
-                              className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            {/* Checkbox — matches the recipe ingredient checkbox (RecipeDetail) */}
+                            <span
+                              className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${
                                 done
-                                  ? "bg-orange-500 border-orange-500"
-                                  : "border-gray-300 dark:border-[#46403a]"
+                                  ? "bg-orange-400 border-orange-400"
+                                  : "border-gray-300 dark:border-[#5c554b]"
                               }`}
                             >
-                              {done && <Check size={10} className="text-white" strokeWidth={3} />}
-                            </div>
-                            <span className={`flex-1 min-w-0 truncate text-[15px] ${done ? "line-through decoration-gray-400/60 dark:decoration-white/50 text-gray-400 dark:text-[#5c554b]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
+                              {done && (
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
+                                  <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </span>
+                            <span className={`flex-1 min-w-0 truncate text-base ${done ? "line-through text-gray-400 dark:text-[#ffffff]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
                               {item.name}
                             </span>
                             {item.quantity > 0 && (
-                              <span className={`shrink-0 text-[15px] font-medium ${done ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-900 dark:text-[#eae5de]"}`}>
+                              <span className={`shrink-0 text-base font-medium ${done ? "line-through text-gray-400 dark:text-[#eae5de]" : "text-gray-900 dark:text-[#eae5de]"}`}>
                                 {item.quantity}
                                 {item.unit && ` ${item.unit}`}
                               </span>

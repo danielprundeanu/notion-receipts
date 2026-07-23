@@ -27,7 +27,9 @@ export default async function RecipesPage({
   // category shows up automatically — ordered by PREFERRED_ORDER, extras last.
   // Keep the currently-selected category even if the filtered set hid it.
   const present = new Set(dbCategories);
-  if (cat) present.add(cat);
+  // `cat` may be a comma-separated multi-select — keep every selected tag visible
+  // even if the filtered result set no longer contains it.
+  if (cat) for (const c of cat.split(",").map((s) => s.trim()).filter(Boolean)) present.add(c);
   const categories = [
     ...PREFERRED_ORDER.filter((c) => present.has(c)),
     ...[...present].filter((c) => !PREFERRED_ORDER.includes(c)).sort(),

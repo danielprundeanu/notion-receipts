@@ -47,16 +47,33 @@ export default function RecipesFilterBar({
     }
   }
 
-  // Build a chip href via URLSearchParams so q is always encoded (a query with
+  // Currently-selected categories (multi-select). `cat` is a comma-separated list.
+  const selectedCats = (cat ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+
+  // Build a filter URL via URLSearchParams so q is always encoded (a query with
   // `&` or `#` no longer breaks the URL) and the current sort is preserved.
-  function chipHref(next: { cat?: string; fav?: string }): string {
+  function buildHref(nextCats: string[], nextFav: boolean): string {
     const params = new URLSearchParams();
     if (q) params.set("q", q);
-    if (next.cat) params.set("cat", next.cat);
-    if (next.fav) params.set("fav", next.fav);
+    if (nextCats.length) params.set("cat", nextCats.join(","));
+    if (nextFav) params.set("fav", "1");
     if (sort) params.set("sort", sort);
     const qs = params.toString();
     return qs ? `/recipes?${qs}` : "/recipes";
+  }
+
+  // Category chips toggle: add the tag if it's off, remove it if it's on.
+  function toggleCatHref(c: string): string {
+    const nextCats = selectedCats.includes(c)
+      ? selectedCats.filter((x) => x !== c)
+      : [...selectedCats, c];
+    return buildHref(nextCats, favOnly);
+  }
+
+  // When a toggle lands on a bare /recipes, flag it so the saved-filters restore
+  // (see the persistence effect) doesn't immediately bring the filters back.
+  function markIfCleared(href: string) {
+    if (href === "/recipes") sessionStorage.setItem("recipesFiltersCleared", "1");
   }
 
   function onSearchInput(next: string) {
@@ -182,77 +199,92 @@ export default function RecipesFilterBar({
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Expanded search overlay (mobile, sticky mode) — collapses back to the in-flow
-             input when you scroll to the top (handled in the IntersectionObserver). ── */}
-      {stuck && searchOpen && (
-        <div className="fixed inset-x-0 top-0 z-40 px-4 py-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#2e2a24] shadow-sm md:hidden">
-          <form className="relative" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+      {/* ── Filter chips bar (sticky) ── */}
+      <div className={barCls}>
+        {/* Expanded search input (mobile, sticky mode) — grows the bar so the input
+            AND the chips below are both visible. Collapses back to the in-flow input
+            when you scroll to the top (handled in the IntersectionObserver). */}
+        {stuck && searchOpen && (
+          <form
+            className="md:hidden relative mb-2"
+            onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
+          >
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
             <input
               autoFocus
               value={value}
               onChange={(e) => onSearchInput(e.target.value)}
               placeholder="Search recipes…"
-              className="w-full pl-9 pr-8 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
+              className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
             />
-            <button
-              type="button"
-              onClick={() => { clearSearch(); setSearchOpen(false); }}
-              title="Close"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
-            >
-              <X size={14} />
-            </button>
+            {value && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                title="Clear search"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
+              >
+                <X size={14} />
+              </button>
+            )}
           </form>
-        </div>
-      )}
-
-      {/* ── Filter chips bar (sticky) ── */}
-      <div className={barCls}>
+        )}
         <div className="flex items-center">
           {/* Search chip — mobile only; pinned left, stays fixed while chips scroll */}
           <button
-            onClick={() => setSearchOpen(true)}
+            onClick={() => setSearchOpen((v) => !v)}
             title="Search"
             aria-hidden={!stuck}
+            aria-expanded={searchOpen}
             tabIndex={stuck ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
               stuck ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
-            } ${q ? on : off}`}
+            } ${searchOpen || q ? on : off}`}
           >
             <Search size={13} />
           </button>
 
-          {/* Scrolling chips */}
+          {/* Scrolling chips — categories are multi-select toggles */}
           <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto scrollbar-none flex-nowrap items-center">
-            <Link
-              scroll={false}
-              href={chipHref({})}
-              onClick={() => sessionStorage.setItem("recipesFiltersCleared", "1")}
-              className={`${chip} ${!cat && !favOnly ? on : off}`}
-            >
-              All
-            </Link>
-
-            <Link
-              scroll={false}
-              href={chipHref({ fav: "1" })}
-              className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
-            >
-              <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-              Favorites
-            </Link>
-
-            {categories.map((c) => (
+            {(() => { const href = buildHref([], false); return (
               <Link
-                key={c}
                 scroll={false}
-                href={chipHref({ cat: c })}
-                className={`${chip} ${cat === c ? on : off}`}
+                href={href}
+                onClick={() => markIfCleared(href)}
+                className={`${chip} ${selectedCats.length === 0 && !favOnly ? on : off}`}
               >
-                {categoryLabel(c)}
+                All
               </Link>
-            ))}
+            ); })()}
+
+            {(() => { const href = buildHref(selectedCats, !favOnly); return (
+              <Link
+                scroll={false}
+                href={href}
+                onClick={() => markIfCleared(href)}
+                className={`${chip} flex items-center gap-1 ${favOnly ? "bg-amber-400 text-white" : off}`}
+              >
+                <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
+                Favorites
+              </Link>
+            ); })()}
+
+            {categories.map((c) => {
+              const active = selectedCats.includes(c);
+              const href = toggleCatHref(c);
+              return (
+                <Link
+                  key={c}
+                  scroll={false}
+                  href={href}
+                  onClick={() => markIfCleared(href)}
+                  aria-pressed={active}
+                  className={`${chip} ${active ? on : off}`}
+                >
+                  {categoryLabel(c)}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Sort/view — desktop only, pinned right (outside the scroll, not in the sticky mobile bar) */}
