@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Share2, Check } from "lucide-react";
 
-export default function ShareButton({ name }: { name: string }) {
+export default function ShareButton({ id, name }: { id: string; name: string }) {
   const [copied, setCopied] = useState(false);
 
   async function handleShare() {
-    const url = typeof window !== "undefined" ? window.location.href : "";
+    // Share the public preview URL (/r/[id]) so link previews render a rich
+    // Open Graph card even though the full recipe requires login.
+    const url = typeof window !== "undefined" ? `${window.location.origin}/r/${id}` : "";
     if (!url) return;
 
     // Prefer the native share sheet (mobile); fall back to copying the link.

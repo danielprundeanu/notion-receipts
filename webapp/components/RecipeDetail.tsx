@@ -419,7 +419,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <ArrowLeft size={15} /> Back to recipes
         </Link>
         <div className="flex items-center gap-2">
-          <ShareButton name={recipe.name} />
+          <ShareButton id={recipe.id} name={recipe.name} />
           <button
             onClick={() => setShowPlanner(true)}
             title="Add to planner"
