@@ -70,11 +70,10 @@ export default async function RecipesPage({
           sticky filter bar so the first card lands right beneath it. */}
       <div id="recipes-top" aria-hidden className="scroll-mt-14 md:scroll-mt-4" />
 
-      {/* Content — height follows the actual results, EXCEPT while a search term is
-          active: then reserve a viewport on mobile so editing the (maximized, sticky)
-          search box can't shrink the page below the sticky scroll position and snap
-          the bar around. No query → no reserved gap under short lists. */}
-      <div className={q ? "min-h-[100dvh] md:min-h-0" : ""}>
+      {/* Content — height follows the actual results. The search bar is a fixed
+          header while a query is active (decoupled from scroll), so no min-height
+          reservation is needed to keep it stable. */}
+      <div>
         {recipes.length === 0 ? (
           <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
             <p className="text-lg font-semibold">No recipes found</p>

@@ -12,7 +12,9 @@ export default function RecipesFilterBar({
 }: { q?: string; cat?: string; fav?: string; sort?: string; categories: string[] }) {
   const [stuck, setStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);   // in-flow input (top)
+  const pinnedInputRef = useRef<HTMLInputElement>(null);   // input inside the pinned bar
+  const barRef = useRef<HTMLDivElement>(null);
   const favOnly = fav === "1";
   const router = useRouter();
 
@@ -21,6 +23,7 @@ export default function RecipesFilterBar({
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pending, setPending] = useState<string | null>(null); // q value WE last requested
   const [prevQ, setPrevQ] = useState(q);
+  const userTypedRef = useRef(false); // distinguish typing-driven pin from a shared ?q= load
 
   // Adjust the box when q changes from outside our own typing (persistence
   // restore / shared ?q= link). setState-during-render is the React pattern.
@@ -77,6 +80,7 @@ export default function RecipesFilterBar({
   }
 
   function onSearchInput(next: string) {
+    userTypedRef.current = true;
     setValue(next);
     if (debRef.current) clearTimeout(debRef.current);
     debRef.current = setTimeout(() => pushQ(next), 250);
@@ -88,18 +92,46 @@ export default function RecipesFilterBar({
     pushQ("");
   }
 
-  // Whether there's an active search term. When there is, the sticky bar keeps the
-  // full input visible (maximized); when empty, it minimizes to the search icon.
-  const hasValue = value.trim().length > 0;
-
-  // Search chip (sticky bar) → smooth-scroll to the top and focus the in-flow input.
-  // focus({ preventScroll }) avoids a competing jump-scroll; focusing inside the click
-  // keeps the mobile keyboard opening (iOS only opens it from a user gesture).
+  // Search chip (sticky bar, no active query) → smooth-scroll to the top and focus the
+  // in-flow input. focus({ preventScroll }) avoids a competing jump-scroll; focusing
+  // inside the click keeps the mobile keyboard opening (iOS only opens it from a gesture).
   function goToSearch() {
     searchInputRef.current?.focus({ preventScroll: true });
     const scroller = searchInputRef.current?.closest<HTMLElement>("main");
     (scroller ?? window).scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  // Whether there's an active search term. When there is, the bar is "pinned" as a
+  // fixed header on mobile (input + filters stay together while scrolling); when empty
+  // it's a normal sticky row that minimizes to the search icon once scrolled.
+  const hasValue = value.trim().length > 0;
+  const pinned = hasValue;
+
+  // Measure the bar so a spacer can reserve its height in flow while it's pinned
+  // (fixed → out of flow), keeping the grid from jumping up under it.
+  const [barH, setBarH] = useState(0);
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+    const update = () => setBarH(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // When the pin is entered by typing (not a shared ?q= load), move focus to the
+  // pinned input so the keyboard stays and typing continues seamlessly.
+  useEffect(() => {
+    if (pinned && userTypedRef.current) {
+      const el = pinnedInputRef.current;
+      if (el) {
+        el.focus({ preventScroll: true });
+        const len = el.value.length;
+        try { el.setSelectionRange(len, len); } catch { /* number/date inputs can't */ }
+      }
+    }
+  }, [pinned]);
 
   // Remember the last-used filters and restore them when landing on a bare
   // /recipes (e.g. via the nav/sidebar or a "back to recipes" link), so a
@@ -140,8 +172,7 @@ export default function RecipesFilterBar({
   }, []);
 
   // On a category/favorite change, align the first results just under the sticky bar
-  // (scroll to #recipes-top). Not on `q`: search now happens from the top (the search
-  // chip scrolls up and focuses the input), so results simply appear below.
+  // (scroll to #recipes-top). Not on `q`: search happens from the top / the pinned bar.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -155,23 +186,24 @@ export default function RecipesFilterBar({
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
   const on   = "bg-orange-500 text-white";
 
-  // Bar is ALWAYS sticky + opaque (page-bg colour, so invisible at rest and it
-  // cleanly covers content scrolling behind it). Only the border + shadow fade
-  // in when stuck — flow height never changes, so nothing jumps.
+  // Opaque (page-bg) so it cleanly covers content behind it. Normally `sticky top-0`;
+  // while pinned (active query) it's a `fixed` header on mobile — decoupled from scroll,
+  // so nothing shifts as the input stays put. Border/shadow show when stuck or pinned.
   const barCls = [
-    "sticky top-0 z-30 -mx-4 px-4 py-2",
-    "bg-[var(--color-bg-base)]",
+    "py-2 bg-[var(--color-bg-base)]",
     "border-b transition-[border-color,box-shadow] duration-200 ease-out",
-    stuck ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
-    // desktop: plain static row, no sticky chrome; add a gap before the grid
+    stuck || pinned ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
+    pinned
+      ? "max-md:fixed max-md:top-0 max-md:inset-x-0 max-md:z-40 max-md:px-4"
+      : "sticky top-0 z-30 -mx-4 px-4",
     "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:mb-4 md:bg-transparent md:border-none md:shadow-none",
   ].join(" ");
 
   return (
     <>
-      {/* ── Search input (always in flow — scrolls away). When scrolled, the sticky bar's
-             chip scrolls back up and focuses this input; at the top it's the search box. ── */}
-      <form className="relative mb-3 md:max-w-sm" onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
+      {/* ── In-flow search input. Hidden on mobile while pinned (the pinned bar shows
+             its own input); always visible on desktop. ── */}
+      <form className={`relative mb-3 md:max-w-sm ${pinned ? "max-md:hidden" : ""}`} onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
         <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
         <input
           ref={searchInputRef}
@@ -195,18 +227,23 @@ export default function RecipesFilterBar({
       {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Filter chips bar (sticky) ── */}
-      <div className={barCls}>
-        {/* Maximized search input (mobile) — kept in the sticky bar while there's an
-            active query, so scrolling keeps the input + filters together. Clearing it
-            (X) minimizes back to the search icon + chips. */}
-        {stuck && hasValue && (
+      {/* ── Spacer: reserves the pinned (fixed) bar's height in flow so the grid
+             doesn't jump up under it (mobile only). ── */}
+      {pinned && <div aria-hidden className="md:hidden" style={{ height: barH }} />}
+
+      {/* ── Filter chips bar (sticky, or fixed when pinned) ── */}
+      <div ref={barRef} className={barCls}>
+        {/* Maximized search input (mobile) — shown while a query is active, so the
+            input + filters stay together while scrolling. Clearing it (X) minimizes
+            back to the search icon + chips. */}
+        {pinned && (
           <form
             className="md:hidden relative mb-2"
             onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
           >
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
             <input
+              ref={pinnedInputRef}
               value={value}
               onChange={(e) => onSearchInput(e.target.value)}
               placeholder="Search recipes…"
@@ -223,15 +260,15 @@ export default function RecipesFilterBar({
           </form>
         )}
         <div className="flex items-center">
-          {/* Search chip — mobile only; only when there's no active query. Scrolls to
-              the top and focuses the input. */}
+          {/* Search chip — mobile only; shown when scrolled with no active query.
+              Scrolls to the top and focuses the input. */}
           <button
             onClick={goToSearch}
             title="Search"
-            aria-hidden={!stuck || hasValue}
-            tabIndex={stuck && !hasValue ? 0 : -1}
+            aria-hidden={!stuck || pinned}
+            tabIndex={stuck && !pinned ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
-              stuck && !hasValue ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
+              stuck && !pinned ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
             } ${q ? on : off}`}
           >
             <Search size={13} />
@@ -287,9 +324,9 @@ export default function RecipesFilterBar({
         </div>
       </div>
 
-      {/* ── Sort/view row (mobile 2-row default) — kept in flow when stuck to avoid
-             any layout jump; just hidden from view (it's covered/scrolled anyway) ── */}
-      <div className={`justify-end mb-4 md:hidden ${stuck ? "invisible" : "flex"}`}>
+      {/* ── Sort/view row (mobile 2-row default) — invisible (keeps its space) when
+             stuck; hidden entirely while pinned (the fixed bar owns the top). ── */}
+      <div className={`justify-end mb-4 md:hidden ${pinned ? "hidden" : stuck ? "invisible" : "flex"}`}>
         <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
       </div>
     </>
