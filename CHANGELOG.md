@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.1] — 2026-07-23
+
+### 🐛 Fixes
+- **Search sticky rămâne maximizat** — când ai o căutare activă, revenirea sus și scroll din nou în jos re-afișează input-ul (bara maximizată), nu doar iconița.
+- **Fără spațiu gol scrollabil** — s-a eliminat `min-h-[100dvh]` de pe containerul de rezultate, care lăsa o zonă goală scrollabilă sub listele scurte; înălțimea paginii urmează acum rezultatele reale.
+
 ## [0.29.0] — 2026-07-23
 
 ### ✨ Features
