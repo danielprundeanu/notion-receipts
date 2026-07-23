@@ -12,9 +12,7 @@ export default function RecipesFilterBar({
 }: { q?: string; cat?: string; fav?: string; sort?: string; categories: string[] }) {
   const [stuck, setStuck] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);   // in-flow input (top)
-  const pinnedInputRef = useRef<HTMLInputElement>(null);   // input inside the pinned bar
-  const barRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const favOnly = fav === "1";
   const router = useRouter();
 
@@ -23,7 +21,6 @@ export default function RecipesFilterBar({
   const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [pending, setPending] = useState<string | null>(null); // q value WE last requested
   const [prevQ, setPrevQ] = useState(q);
-  const userTypedRef = useRef(false); // distinguish typing-driven pin from a shared ?q= load
 
   // Adjust the box when q changes from outside our own typing (persistence
   // restore / shared ?q= link). setState-during-render is the React pattern.
@@ -80,7 +77,6 @@ export default function RecipesFilterBar({
   }
 
   function onSearchInput(next: string) {
-    userTypedRef.current = true;
     setValue(next);
     if (debRef.current) clearTimeout(debRef.current);
     debRef.current = setTimeout(() => pushQ(next), 250);
@@ -92,46 +88,19 @@ export default function RecipesFilterBar({
     pushQ("");
   }
 
-  // Search chip (sticky bar, no active query) → smooth-scroll to the top and focus the
-  // in-flow input. focus({ preventScroll }) avoids a competing jump-scroll; focusing
-  // inside the click keeps the mobile keyboard opening (iOS only opens it from a gesture).
+  // Search chip (minimized state) → smooth-scroll to the top and focus the input.
+  // focus({ preventScroll }) avoids a competing jump-scroll; focusing inside the click
+  // keeps the mobile keyboard opening (iOS only opens it from a user gesture).
   function goToSearch() {
     searchInputRef.current?.focus({ preventScroll: true });
     const scroller = searchInputRef.current?.closest<HTMLElement>("main");
     (scroller ?? window).scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  // Whether there's an active search term. When there is, the bar is "pinned" as a
-  // fixed header on mobile (input + filters stay together while scrolling); when empty
-  // it's a normal sticky row that minimizes to the search icon once scrolled.
+  // Active search term? When empty, the stuck section minimizes (input row collapses
+  // to the search icon); when it has a value, the section stays full (input + chips).
   const hasValue = value.trim().length > 0;
-  const pinned = hasValue;
-
-  // Measure the bar so a spacer can reserve its height in flow while it's pinned
-  // (fixed → out of flow), keeping the grid from jumping up under it.
-  const [barH, setBarH] = useState(0);
-  useEffect(() => {
-    const el = barRef.current;
-    if (!el) return;
-    const update = () => setBarH(el.offsetHeight);
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  // When the pin is entered by typing (not a shared ?q= load), move focus to the
-  // pinned input so the keyboard stays and typing continues seamlessly.
-  useEffect(() => {
-    if (pinned && userTypedRef.current) {
-      const el = pinnedInputRef.current;
-      if (el) {
-        el.focus({ preventScroll: true });
-        const len = el.value.length;
-        try { el.setSelectionRange(len, len); } catch { /* number/date inputs can't */ }
-      }
-    }
-  }, [pinned]);
+  const minimized = stuck && !hasValue;
 
   // Remember the last-used filters and restore them when landing on a bare
   // /recipes (e.g. via the nav/sidebar or a "back to recipes" link), so a
@@ -172,7 +141,7 @@ export default function RecipesFilterBar({
   }, []);
 
   // On a category/favorite change, align the first results just under the sticky bar
-  // (scroll to #recipes-top). Not on `q`: search happens from the top / the pinned bar.
+  // (scroll to #recipes-top). Not on `q`: search happens from the top / the sticky input.
   const isFirstRender = useRef(true);
   useEffect(() => {
     if (isFirstRender.current) {
@@ -186,69 +155,40 @@ export default function RecipesFilterBar({
   const off  = "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
   const on   = "bg-orange-500 text-white";
 
-  // Opaque (page-bg) so it cleanly covers content behind it. Normally `sticky top-0`;
-  // while pinned (active query) it's a `fixed` header on mobile — decoupled from scroll,
-  // so nothing shifts as the input stays put. Border/shadow show when stuck or pinned.
-  const barCls = [
-    "py-2 bg-[var(--color-bg-base)]",
+  // The WHOLE section (search input + filter chips) is one sticky unit. It sticks as
+  // a block when the sentinel above it scrolls out of view. Opaque (page-bg) so it
+  // covers content behind it; border/shadow fade in when stuck. Desktop: plain row.
+  const sectionCls = [
+    "sticky top-0 z-30 -mx-4 px-4 py-2 bg-[var(--color-bg-base)]",
     "border-b transition-[border-color,box-shadow] duration-200 ease-out",
-    stuck || pinned ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
-    pinned
-      ? "max-md:fixed max-md:top-0 max-md:inset-x-0 max-md:z-40 max-md:px-4"
-      : "sticky top-0 z-30 -mx-4 px-4",
+    stuck ? "border-gray-100 dark:border-[#2e2a24] shadow-sm" : "border-transparent shadow-none",
     "md:static md:z-auto md:mx-0 md:px-0 md:py-0 md:mb-4 md:bg-transparent md:border-none md:shadow-none",
   ].join(" ");
 
   return (
     <>
-      {/* ── In-flow search input. Hidden on mobile while pinned (the pinned bar shows
-             its own input); always visible on desktop. ── */}
-      <form className={`relative mb-3 md:max-w-sm ${pinned ? "max-md:hidden" : ""}`} onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}>
-        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
-        <input
-          ref={searchInputRef}
-          value={value}
-          onChange={(e) => onSearchInput(e.target.value)}
-          placeholder="Search recipes…"
-          className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
-        />
-        {value && (
-          <button
-            type="button"
-            onClick={clearSearch}
-            title="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-[#bab2a6]"
-          >
-            <X size={14} />
-          </button>
-        )}
-      </form>
-
-      {/* ── Sentinel: sticky kicks in when this exits main's viewport ── */}
+      {/* ── Sentinel: the section below sticks as a block once this scrolls away ── */}
       <div ref={sentinelRef} className="h-px pointer-events-none" aria-hidden />
 
-      {/* ── Spacer: reserves the pinned (fixed) bar's height in flow so the grid
-             doesn't jump up under it (mobile only). ── */}
-      {pinned && <div aria-hidden className="md:hidden" style={{ height: barH }} />}
-
-      {/* ── Filter chips bar (sticky, or fixed when pinned) ── */}
-      <div ref={barRef} className={barCls}>
-        {/* Maximized search input (mobile) — shown while a query is active, so the
-            input + filters stay together while scrolling. Clearing it (X) minimizes
-            back to the search icon + chips. */}
-        {pinned && (
-          <form
-            className="md:hidden relative mb-2"
-            onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
-          >
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
-            <input
-              ref={pinnedInputRef}
-              value={value}
-              onChange={(e) => onSearchInput(e.target.value)}
-              placeholder="Search recipes…"
-              className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
-            />
+      {/* ── Sticky section: search input + filter chips, stuck together ── */}
+      <div className={sectionCls}>
+        {/* Search input — collapses (animated) into the search icon when the section
+            is stuck AND empty; stays full while it has a value. Always full on desktop. */}
+        <form
+          className={`relative md:max-w-sm overflow-hidden transition-all duration-200 ease-out md:!max-h-none md:!opacity-100 md:!mb-3 ${
+            minimized ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-16 opacity-100 mb-2"
+          }`}
+          onSubmit={(e) => { e.preventDefault(); if (debRef.current) clearTimeout(debRef.current); pushQ(value); }}
+        >
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#7c756a]" />
+          <input
+            ref={searchInputRef}
+            value={value}
+            onChange={(e) => onSearchInput(e.target.value)}
+            placeholder="Search recipes…"
+            className="w-full pl-9 pr-9 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b]"
+          />
+          {value && (
             <button
               type="button"
               onClick={clearSearch}
@@ -257,18 +197,20 @@ export default function RecipesFilterBar({
             >
               <X size={14} />
             </button>
-          </form>
-        )}
+          )}
+        </form>
+
+        {/* Filter chips row */}
         <div className="flex items-center">
-          {/* Search chip — mobile only; shown when scrolled with no active query.
-              Scrolls to the top and focuses the input. */}
+          {/* Search chip — mobile only; shown when minimized. Scrolls to the top and
+              re-opens (focuses) the input. */}
           <button
             onClick={goToSearch}
             title="Search"
-            aria-hidden={!stuck || pinned}
-            tabIndex={stuck && !pinned ? 0 : -1}
+            aria-hidden={!minimized}
+            tabIndex={minimized ? 0 : -1}
             className={`shrink-0 h-8 rounded-full flex items-center justify-center overflow-hidden transition-all duration-200 ease-out md:hidden ${
-              stuck && !pinned ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
+              minimized ? "w-8 opacity-100 mr-1.5" : "w-0 opacity-0 pointer-events-none"
             } ${q ? on : off}`}
           >
             <Search size={13} />
@@ -325,8 +267,8 @@ export default function RecipesFilterBar({
       </div>
 
       {/* ── Sort/view row (mobile 2-row default) — invisible (keeps its space) when
-             stuck; hidden entirely while pinned (the fixed bar owns the top). ── */}
-      <div className={`justify-end mb-4 md:hidden ${pinned ? "hidden" : stuck ? "invisible" : "flex"}`}>
+             stuck so the layout doesn't jump. ── */}
+      <div className={`justify-end mb-4 md:hidden ${stuck ? "invisible" : "flex"}`}>
         <SortSelect current={sort || "date_desc"} q={q} cat={cat} fav={fav} />
       </div>
     </>
