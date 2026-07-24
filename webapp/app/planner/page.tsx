@@ -242,7 +242,7 @@ function RecipeCard({
   return (
     <div
       ref={draggable ? setNodeRef : undefined}
-      className={`relative overflow-hidden rounded-xl ${isDragging ? "opacity-30" : ""}`}
+      className={`relative overflow-hidden rounded-xl ${isDragging ? "opacity-30" : ""} ${draggable ? "select-none [-webkit-touch-callout:none]" : ""}`}
     >
       {/* Delete button — mobile only, hidden until swipe */}
       <div
@@ -272,7 +272,7 @@ function RecipeCard({
             {...attributes}
             data-drag-handle
             aria-label="Drag to move"
-            className="md:hidden shrink-0 -ml-1 self-stretch flex items-center px-0.5 touch-none cursor-grab active:cursor-grabbing text-orange-300 dark:text-orange-700/70 active:text-orange-500 transition-colors"
+            className="md:hidden shrink-0 -ml-1 self-stretch flex items-center px-0.5 touch-none select-none [-webkit-touch-callout:none] [-webkit-user-select:none] cursor-grab active:cursor-grabbing text-orange-300 dark:text-orange-700/70 active:text-orange-500 transition-colors"
           >
             <GripVertical size={16} />
           </div>
