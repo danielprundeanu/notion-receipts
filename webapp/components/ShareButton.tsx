@@ -1,7 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { Share2, Check } from "lucide-react";
+import { Check } from "lucide-react";
+
+// iOS-style share glyph (SF Symbols "square.and.arrow.up") — a box with an up
+// arrow out of the top, rather than lucide's Android-style connected-nodes icon.
+function IosShareIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 2v13" />
+      <path d="m8 6 4-4 4 4" />
+      <path d="M9 11H7a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-2" />
+    </svg>
+  );
+}
 
 export default function ShareButton({ id, name }: { id: string; name: string }) {
   const [copied, setCopied] = useState(false);
@@ -41,7 +63,7 @@ export default function ShareButton({ id, name }: { id: string; name: string }) 
       aria-label="Share recipe"
       className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
     >
-      {copied ? <Check size={17} className="text-green-600 dark:text-green-400" /> : <Share2 size={16} />}
+      {copied ? <Check size={17} className="text-green-600 dark:text-green-400" /> : <IosShareIcon size={17} />}
     </button>
   );
 }
