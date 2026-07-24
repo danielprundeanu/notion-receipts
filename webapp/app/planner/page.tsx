@@ -37,6 +37,7 @@ import {
   Minus,
   Star,
   Trash2,
+  GripVertical,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -162,6 +163,7 @@ function RecipeCard({
   const touchStartY = useRef(0);
   const isHorizontal = useRef(false);
   const draggingRef = useRef(false);
+  const ignoreSwipeRef = useRef(false); // touch started on the drag handle → not a swipe
 
   // Long-press to drag (mobile move between slots). `disabled` keeps desktop slot
   // cards non-draggable — nothing about the desktop flow changes.
@@ -186,13 +188,16 @@ function RecipeCard({
     if (!el) return;
 
     function onTouchStart(e: TouchEvent) {
+      // Touch that begins on the drag handle is a drag, not a swipe — ignore it here.
+      ignoreSwipeRef.current = !!(e.target as HTMLElement).closest?.("[data-drag-handle]");
+      if (ignoreSwipeRef.current) return;
       touchStartX.current = e.touches[0].clientX;
       touchStartY.current = e.touches[0].clientY;
       isHorizontal.current = false;
     }
 
     function onTouchMove(e: TouchEvent) {
-      if (draggingRef.current) return;
+      if (ignoreSwipeRef.current || draggingRef.current) return;
       const dx = e.touches[0].clientX - touchStartX.current;
       const dy = e.touches[0].clientY - touchStartY.current;
       if (!isHorizontal.current) {
@@ -208,6 +213,7 @@ function RecipeCard({
     }
 
     function onTouchEnd() {
+      if (ignoreSwipeRef.current) { ignoreSwipeRef.current = false; return; }
       if (!isHorizontal.current) return;
       const shouldReveal = swipeXRef.current < -(SWIPE_REVEAL_WIDTH / 2);
       revealedRef.current = shouldReveal;
@@ -236,8 +242,6 @@ function RecipeCard({
   return (
     <div
       ref={draggable ? setNodeRef : undefined}
-      {...(draggable ? listeners : {})}
-      {...(draggable ? attributes : {})}
       className={`relative overflow-hidden rounded-xl ${isDragging ? "opacity-30" : ""}`}
     >
       {/* Delete button — mobile only, hidden until swipe */}
@@ -260,6 +264,19 @@ function RecipeCard({
         onClick={revealed ? collapseSwipe : undefined}
         className="flex items-center gap-2 bg-orange-50 dark:bg-[#2d1a08] border border-orange-100 dark:border-orange-900/40 rounded-xl px-2.5 py-2 group relative"
       >
+        {/* Drag handle (mobile) — the only place drag starts, so it no longer
+            fights the swipe-to-delete gesture on the rest of the card. */}
+        {draggable && (
+          <div
+            {...listeners}
+            {...attributes}
+            data-drag-handle
+            aria-label="Drag to move"
+            className="md:hidden shrink-0 -ml-1 self-stretch flex items-center px-0.5 touch-none cursor-grab active:cursor-grabbing text-orange-300 dark:text-orange-700/70 active:text-orange-500 transition-colors"
+          >
+            <GripVertical size={16} />
+          </div>
+        )}
         <RecipeThumb recipe={entry.recipe} />
 
         {/* Desktop layout: title + servings below */}
