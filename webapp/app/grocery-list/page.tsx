@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
-import { getGroceryList, addGroceryListItem, deleteGroceryListItem } from "@/lib/actions";
+import {
+  getGroceryList,
+  addGroceryListItem,
+  deleteGroceryListItem,
+  copyGroceryListItems,
+  deleteGroceryListItems,
+} from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Copy, ClipboardPaste, X } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, string> = {
   "🍎 Fruits": "🍎",
@@ -41,6 +47,16 @@ function formatWeekRange(monday: Date): string {
 
 type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string; manual?: boolean };
 
+// Copy/paste of hand-added products between weeks. The clipboard is app-internal
+// (localStorage) rather than the OS clipboard: reading the system clipboard needs a
+// user gesture and prompts on iOS, so a "Paste" button couldn't appear reliably —
+// and an unrelated copy elsewhere would silently lose the list. Kept per-device, it
+// also survives a refresh and can be pasted into several weeks in a row.
+const CLIPBOARD_KEY = "grocery-clipboard";
+const COPYABLE_CATEGORY = "Other";
+
+type ClipItem = { name: string; quantity: number; unit: string | null; category: string };
+
 const INPUT_CLS =
   "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
 
@@ -61,6 +77,36 @@ export default function GroceryListPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+
+  // ── Copy / paste of hand-added products between weeks ──
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedForCopy, setSelectedForCopy] = useState<Set<string>>(new Set());
+  const [clipboard, setClipboard] = useState<ClipItem[]>([]);
+  const [pasting, setPasting] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; error?: boolean; undo?: () => void } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function showToast(msg: string, opts?: { error?: boolean; undo?: () => void }) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ msg, error: opts?.error, undo: opts?.undo });
+    // Undo needs longer to be reachable than a plain confirmation.
+    toastTimer.current = setTimeout(() => setToast(null), opts?.undo ? 8000 : 3500);
+  }
+
+  // Restore the clipboard once on mount (kept across weeks and reloads).
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CLIPBOARD_KEY);
+      if (saved) setClipboard(JSON.parse(saved) as ClipItem[]);
+    } catch { /* ignore a corrupt payload */ }
+    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
+  }, []);
+
+  // Leaving select mode whenever the week changes avoids acting on a stale selection.
+  useEffect(() => {
+    setSelectMode(false);
+    setSelectedForCopy(new Set());
+  }, [weekStart]);
 
   const checkedKey = `grocery-checked:${weekStart.toISOString()}`;
 
@@ -148,6 +194,88 @@ export default function GroceryListPage() {
     }
   }
 
+  // Only hand-added products can be copied — recipe-derived lines are computed from
+  // the planner, so copying them would create duplicates that double up once the
+  // recipe is planned in the target week too.
+  const copyableItems = (grouped[COPYABLE_CATEGORY] ?? []).filter((i) => i.manual);
+
+  function handleCopy() {
+    // No explicit selection → copy the whole category (the "copy before select" case).
+    const source = selectMode && selectedForCopy.size > 0
+      ? copyableItems.filter((i) => selectedForCopy.has(i.id))
+      : copyableItems;
+    if (!source.length) {
+      showToast("There are no hand-added products to copy", { error: true });
+      return;
+    }
+    const payload: ClipItem[] = source.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
+    setClipboard(payload);
+    try {
+      localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(payload));
+    } catch { /* quota/private mode — the in-memory copy still works this session */ }
+    setSelectMode(false);
+    setSelectedForCopy(new Set());
+    // "Undo" here discards the copy — the only way to make the Paste button go away
+    // once you're done carrying products over.
+    showToast(
+      `${payload.length} product${payload.length === 1 ? "" : "s"} copied — open another week to paste`,
+      { undo: () => { clearClipboard(); setToast(null); } }
+    );
+  }
+
+  function clearClipboard() {
+    setClipboard([]);
+    try { localStorage.removeItem(CLIPBOARD_KEY); } catch { /* non-fatal */ }
+  }
+
+  async function handlePaste() {
+    if (!clipboard.length || pasting) return;
+    setPasting(true);
+    try {
+      const { added, skipped } = await copyGroceryListItems(weekStart.toISOString(), clipboard);
+      if (added.length) {
+        setGrouped((prev) => {
+          const next = { ...prev };
+          for (const entry of added) {
+            next[entry.category] = [...(next[entry.category] ?? []), entry]
+              .sort((a, b) => a.name.localeCompare(b.name));
+          }
+          return next;
+        });
+      }
+      const parts = [`${added.length} added`];
+      if (skipped) parts.push(`${skipped} already here`);
+      showToast(
+        added.length ? parts.join(" · ") : "All of them were already in this week",
+        added.length ? { undo: () => undoPaste(added.map((e) => e.id)) } : undefined
+      );
+    } catch {
+      showToast("Could not paste the products. Please try again.", { error: true });
+    } finally {
+      setPasting(false);
+    }
+  }
+
+  async function undoPaste(entryIds: string[]) {
+    const prev = grouped;
+    const ids = new Set(entryIds);
+    setToast(null);
+    setGrouped((g) => {
+      const next: Record<string, GroceryEntry[]> = {};
+      for (const [cat, items] of Object.entries(g)) {
+        const filtered = items.filter((i) => !ids.has(i.id));
+        if (filtered.length) next[cat] = filtered;
+      }
+      return next;
+    });
+    try {
+      await deleteGroceryListItems(entryIds.map((id) => id.replace(/^manual::/, "")));
+    } catch {
+      setGrouped(prev); // roll back the rollback — the products are still there
+      showToast("Could not undo. The products are still in the list.", { error: true });
+    }
+  }
+
   const allItems = Object.values(grouped).flat();
   const totalCount = allItems.length;
 
@@ -164,6 +292,12 @@ export default function GroceryListPage() {
     const order = Object.keys(CATEGORY_ICONS);
     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
   });
+
+  // With something copied, always show the target category — otherwise a week that
+  // has no "Other" items yet would offer nowhere to paste.
+  const visibleCategories = clipboard.length && !sortedCategories.includes(COPYABLE_CATEGORY)
+    ? [...sortedCategories, COPYABLE_CATEGORY]
+    : sortedCategories;
 
   const addForm = (
     <form onSubmit={handleAddItem} className="space-y-2">
@@ -219,6 +353,33 @@ export default function GroceryListPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto">
+      {/* Copy/paste feedback — sits above the bottom nav on mobile */}
+      {toast && (
+        <div
+          role="status"
+          className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-lg shadow-lg text-sm font-medium max-w-[92vw] ${
+            toast.error ? "bg-red-600 text-white" : "bg-gray-900 dark:bg-[#3a352e] text-white"
+          }`}
+        >
+          <span className="min-w-0">{toast.msg}</span>
+          {toast.undo && (
+            <button
+              onClick={toast.undo}
+              className="shrink-0 px-2.5 py-1 rounded-md font-semibold text-orange-300 hover:text-orange-200 hover:bg-white/10 transition-colors"
+            >
+              Undo
+            </button>
+          )}
+          <button
+            onClick={() => setToast(null)}
+            aria-label="Dismiss"
+            className="shrink-0 p-1 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -323,16 +484,29 @@ export default function GroceryListPage() {
             <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">No items this week</p>
             <p className="text-sm mt-1">Add recipes to the planner or a product directly below</p>
+            {/* An empty week has no category rows, so surface the paste here too. */}
+            {clipboard.length > 0 && (
+              <button
+                onClick={handlePaste}
+                disabled={pasting}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-40 transition-colors"
+              >
+                {pasting ? <Loader2 size={15} className="animate-spin" /> : <ClipboardPaste size={15} />}
+                Paste {clipboard.length} copied product{clipboard.length === 1 ? "" : "s"}
+              </button>
+            )}
           </div>
           {addForm}
         </div>
       ) : (
         <div className="space-y-6">
-          {sortedCategories.map((cat) => {
-            const items = grouped[cat];
+          {visibleCategories.map((cat) => {
+            const items = grouped[cat] ?? [];
             const icon = CATEGORY_ICONS[cat] ?? "📦";
             const catName = groceryCategoryLabel(cat); // strip emoji prefix
-            const allCatChecked = items.every((i) => checked.has(i.id));
+            const allCatChecked = items.length > 0 && items.every((i) => checked.has(i.id));
+            const isCopyable = cat === COPYABLE_CATEGORY;
+            const allCopySelected = copyableItems.length > 0 && copyableItems.every((i) => selectedForCopy.has(i.id));
 
             return (
               <div key={cat} id={`cat-${cat}`}>
@@ -342,11 +516,119 @@ export default function GroceryListPage() {
                     {catName}
                   </h2>
                   <span className="text-xs text-gray-400 dark:text-[#5c554b]">({items.length})</span>
+
+                  {/* Copy / paste of hand-added products — right-aligned on this category */}
+                  {isCopyable && (
+                    <div className="ml-auto flex items-center gap-0.5">
+                      {selectMode ? (
+                        <>
+                          <button
+                            onClick={() =>
+                              setSelectedForCopy(allCopySelected ? new Set() : new Set(copyableItems.map((i) => i.id)))
+                            }
+                            className="px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
+                          >
+                            {allCopySelected ? "None" : "All"}
+                          </button>
+                          <button
+                            onClick={() => { setSelectMode(false); setSelectedForCopy(new Set()); }}
+                            className="px-2 py-1.5 text-xs font-medium text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        copyableItems.length > 0 && (
+                          <button
+                            onClick={() => setSelectMode(true)}
+                            className="px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+                          >
+                            Select
+                          </button>
+                        )
+                      )}
+
+                      {copyableItems.length > 0 && (
+                        <button
+                          onClick={handleCopy}
+                          aria-label={
+                            selectMode && selectedForCopy.size > 0
+                              ? `Copy ${selectedForCopy.size} selected products`
+                              : `Copy all ${copyableItems.length} products`
+                          }
+                          title={
+                            selectMode && selectedForCopy.size > 0
+                              ? `Copy ${selectedForCopy.size} selected`
+                              : `Copy all ${copyableItems.length}`
+                          }
+                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-gray-400 dark:text-[#5c554b] hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
+                        >
+                          <Copy size={16} />
+                        </button>
+                      )}
+
+                      {clipboard.length > 0 && (
+                        <button
+                          onClick={handlePaste}
+                          disabled={pasting}
+                          aria-label={`Paste ${clipboard.length} copied products`}
+                          title={`Paste ${clipboard.length} copied`}
+                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-40 transition-colors"
+                        >
+                          {pasting ? <Loader2 size={16} className="animate-spin" /> : <ClipboardPaste size={16} />}
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <ul className="space-y-1">
                   {items.map((item) => {
                     const done = checked.has(item.id);
+                    // In select mode this category's hand-added rows pick items for
+                    // copying instead of ticking them off the shopping list.
+                    const selectable = isCopyable && selectMode && !!item.manual;
+                    const picked = selectedForCopy.has(item.id);
+                    if (selectable) {
+                      return (
+                        <li key={item.id}>
+                          <button
+                            onClick={() =>
+                              setSelectedForCopy((prev) => {
+                                const n = new Set(prev);
+                                if (n.has(item.id)) n.delete(item.id); else n.add(item.id);
+                                return n;
+                              })
+                            }
+                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
+                              picked ? "bg-orange-50 dark:bg-orange-950/20" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
+                            }`}
+                          >
+                            {/* Round checkbox — signals "selecting to copy", not "bought" */}
+                            <span
+                              className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                picked ? "bg-orange-500 border-orange-500" : "border-gray-300 dark:border-[#5c554b]"
+                              }`}
+                            >
+                              {picked && (
+                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
+                                  <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate text-base text-gray-700 dark:text-[#bab2a6]">
+                              {item.name}
+                            </span>
+                            {item.quantity > 0 && (
+                              <span className="shrink-0 text-base font-medium text-gray-900 dark:text-[#eae5de]">
+                                {item.quantity}
+                                {item.unit && ` ${item.unit}`}
+                              </span>
+                            )}
+                          </button>
+                        </li>
+                      );
+                    }
                     return (
                       <li key={item.id}>
                         <div className="flex items-center gap-1">

@@ -678,6 +678,70 @@ export async function deleteGroceryListItem(id: string): Promise<void> {
   revalidatePath("/grocery-list");
 }
 
+// Copy hand-added products into a week's list (the "paste" half of the shopping
+// list's copy/paste). Only manual products travel this way — recipe-derived lines
+// are computed from the planner, so copying them would create phantom duplicates.
+// Products already present that week (same name + unit) are skipped rather than
+// duplicated, so pasting the same set twice is harmless.
+export async function copyGroceryListItems(
+  targetWeekIso: string,
+  items: Array<{ name: string; quantity?: number | null; unit?: string | null; category?: string | null }>
+): Promise<{ added: GroceryEntry[]; skipped: number }> {
+  const weekStart = new Date(targetWeekIso);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+
+  const dupKey = (name: string, unit?: string | null) =>
+    `${name.trim().toLowerCase()}::${(unit ?? "").trim().toLowerCase()}`;
+
+  const existing = await prisma.groceryListItem.findMany({
+    where: { weekStart: { gte: weekStart, lt: weekEnd } },
+    select: { name: true, unit: true },
+  });
+  const seen = new Set(existing.map((e) => dupKey(e.name, e.unit)));
+
+  const added: GroceryEntry[] = [];
+  let skipped = 0;
+
+  for (const it of items) {
+    const name = it.name?.trim();
+    if (!name) continue;
+    const key = dupKey(name, it.unit);
+    if (seen.has(key)) {
+      skipped++;
+      continue;
+    }
+    seen.add(key); // also de-dupes repeats within the pasted set itself
+    const created = await prisma.groceryListItem.create({
+      data: {
+        weekStart,
+        name,
+        quantity: it.quantity != null && it.quantity > 0 ? it.quantity : null,
+        unit: it.unit?.trim() || null,
+        category: it.category?.trim() || "Other",
+      },
+    });
+    added.push({
+      id: `manual::${created.id}`,
+      name: created.name,
+      quantity: created.quantity ?? 0,
+      unit: created.unit,
+      category: created.category,
+      manual: true,
+    });
+  }
+
+  revalidatePath("/grocery-list");
+  return { added, skipped };
+}
+
+// Bulk delete of hand-added products — backs the "Undo" on a paste.
+export async function deleteGroceryListItems(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await prisma.groceryListItem.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath("/grocery-list");
+}
+
 // ─── Ingredients Page ─────────────────────────────────────────────────────────
 
 export async function createGroceryItem(data: {
