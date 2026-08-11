@@ -227,55 +227,92 @@ export default function AuditPage() {
                 {catSavedCount > 0 ? "Done — everything is categorised now 🎉" : "Everything is categorised 🎉"}
               </p>
             ) : (
-              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
-                      <th className="px-3 py-2 font-medium">Item</th>
-                      <th className="px-3 py-2 font-medium">Current</th>
-                      <th className="hidden md:table-cell px-3 py-2 font-medium text-right">Uses</th>
-                      <th className="hidden md:table-cell px-3 py-2 font-medium">Example recipes</th>
-                      <th className="px-3 py-2 font-medium text-right">Category</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {uncategorized.map((r) => (
-                      <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2620]">
-                        <td className="px-3 py-2">
-                          <Link
-                            href={`/ingredients?edit=${r.id}`}
-                            className="text-teal-700 dark:text-teal-400 hover:underline"
-                          >
-                            {r.name}
-                          </Link>
-                          {r.nameRo && (
-                            <span className="text-xs text-gray-400 dark:text-[#6e675c] ml-1.5">({r.nameRo})</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {r.category?.trim() ? (
-                            // The legacy value, kept visible so the right replacement is obvious.
-                            <span className="text-orange-600 dark:text-orange-400">{r.category}</span>
-                          ) : (
-                            <span className="text-gray-300 dark:text-[#4a443c]">— none —</span>
-                          )}
-                        </td>
-                        <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
-                          {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} recipes)</span>
-                        </td>
-                        <td className="hidden md:table-cell px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
-                          {r.sampleRecipes.join(", ")}
-                        </td>
-                        <td className="px-3 py-2">
-                          <div className="flex justify-end">
-                            <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
-                          </div>
-                        </td>
+              <>
+                {/* Mobile: cards — in a table the picker sat in the last column of a
+                    horizontally scrolling row, so it was off-screen and unreachable. */}
+                <ul className="md:hidden space-y-2">
+                  {uncategorized.map((r) => (
+                    <li
+                      key={r.id}
+                      className="rounded-xl border border-gray-200 dark:border-[#2e2a24] bg-white dark:bg-[#24211c] px-3 py-3"
+                    >
+                      <Link
+                        href={`/ingredients?edit=${r.id}`}
+                        className="font-medium text-teal-700 dark:text-teal-400 hover:underline"
+                      >
+                        {r.name}
+                      </Link>
+                      {r.nameRo && (
+                        <span className="text-xs text-gray-400 dark:text-[#6e675c] ml-1.5">({r.nameRo})</span>
+                      )}
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 text-xs">
+                        {r.category?.trim() ? (
+                          <span className="text-orange-600 dark:text-orange-400">{r.category}</span>
+                        ) : (
+                          <span className="text-gray-400 dark:text-[#5c554b]">no category</span>
+                        )}
+                        <span className="text-gray-400 dark:text-[#6e675c]">
+                          · {r.uses} uses ({r.recipes} recipes)
+                        </span>
+                      </div>
+                      <div className="mt-2.5">
+                        <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* Desktop: full table with the usage context */}
+                <div className="hidden md:block overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
+                        <th className="px-3 py-2 font-medium">Item</th>
+                        <th className="px-3 py-2 font-medium">Current</th>
+                        <th className="px-3 py-2 font-medium text-right">Uses</th>
+                        <th className="px-3 py-2 font-medium">Example recipes</th>
+                        <th className="px-3 py-2 font-medium text-right">Category</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {uncategorized.map((r) => (
+                        <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2620]">
+                          <td className="px-3 py-2">
+                            <Link
+                              href={`/ingredients?edit=${r.id}`}
+                              className="text-teal-700 dark:text-teal-400 hover:underline"
+                            >
+                              {r.name}
+                            </Link>
+                            {r.nameRo && (
+                              <span className="text-xs text-gray-400 dark:text-[#6e675c] ml-1.5">({r.nameRo})</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {r.category?.trim() ? (
+                              // The legacy value, kept visible so the right replacement is obvious.
+                              <span className="text-orange-600 dark:text-orange-400">{r.category}</span>
+                            ) : (
+                              <span className="text-gray-300 dark:text-[#4a443c]">— none —</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
+                            {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} recipes)</span>
+                          </td>
+                          <td className="px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
+                            {r.sampleRecipes.join(", ")}
+                          </td>
+                          <td className="px-3 py-2">
+                            <div className="flex justify-end">
+                              <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </section>
 
