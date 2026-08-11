@@ -82,6 +82,11 @@ export type IngredientNameMapping = Prisma.IngredientNameMappingModel
  */
 export type GroceryListItem = Prisma.GroceryListItemModel
 /**
+ * Model GroceryCategory
+ * 
+ */
+export type GroceryCategory = Prisma.GroceryCategoryModel
+/**
  * Model UnitRule
  * 
  */

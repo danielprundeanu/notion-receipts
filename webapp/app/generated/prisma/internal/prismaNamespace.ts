@@ -392,6 +392,7 @@ export const ModelName = {
   WeekPlan: 'WeekPlan',
   IngredientNameMapping: 'IngredientNameMapping',
   GroceryListItem: 'GroceryListItem',
+  GroceryCategory: 'GroceryCategory',
   UnitRule: 'UnitRule'
 } as const
 
@@ -408,7 +409,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "recipe" | "groceryItem" | "ingredient" | "instruction" | "weekPlan" | "ingredientNameMapping" | "groceryListItem" | "unitRule"
+    modelProps: "user" | "recipe" | "groceryItem" | "ingredient" | "instruction" | "weekPlan" | "ingredientNameMapping" | "groceryListItem" | "groceryCategory" | "unitRule"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1004,6 +1005,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    GroceryCategory: {
+      payload: Prisma.$GroceryCategoryPayload<ExtArgs>
+      fields: Prisma.GroceryCategoryFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.GroceryCategoryFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.GroceryCategoryFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        findFirst: {
+          args: Prisma.GroceryCategoryFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.GroceryCategoryFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        findMany: {
+          args: Prisma.GroceryCategoryFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>[]
+        }
+        create: {
+          args: Prisma.GroceryCategoryCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        createMany: {
+          args: Prisma.GroceryCategoryCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.GroceryCategoryCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>[]
+        }
+        delete: {
+          args: Prisma.GroceryCategoryDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        update: {
+          args: Prisma.GroceryCategoryUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        deleteMany: {
+          args: Prisma.GroceryCategoryDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.GroceryCategoryUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.GroceryCategoryUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>[]
+        }
+        upsert: {
+          args: Prisma.GroceryCategoryUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$GroceryCategoryPayload>
+        }
+        aggregate: {
+          args: Prisma.GroceryCategoryAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateGroceryCategory>
+        }
+        groupBy: {
+          args: Prisma.GroceryCategoryGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroceryCategoryGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.GroceryCategoryCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.GroceryCategoryCountAggregateOutputType> | number
+        }
+      }
+    }
     UnitRule: {
       payload: Prisma.$UnitRulePayload<ExtArgs>
       fields: Prisma.UnitRuleFieldRefs
@@ -1234,6 +1309,15 @@ export const GroceryListItemScalarFieldEnum = {
 export type GroceryListItemScalarFieldEnum = (typeof GroceryListItemScalarFieldEnum)[keyof typeof GroceryListItemScalarFieldEnum]
 
 
+export const GroceryCategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  createdAt: 'createdAt'
+} as const
+
+export type GroceryCategoryScalarFieldEnum = (typeof GroceryCategoryScalarFieldEnum)[keyof typeof GroceryCategoryScalarFieldEnum]
+
+
 export const UnitRuleScalarFieldEnum = {
   id: 'id',
   key: 'key',
@@ -1442,6 +1526,7 @@ export type GlobalOmitConfig = {
   weekPlan?: Prisma.WeekPlanOmit
   ingredientNameMapping?: Prisma.IngredientNameMappingOmit
   groceryListItem?: Prisma.GroceryListItemOmit
+  groceryCategory?: Prisma.GroceryCategoryOmit
   unitRule?: Prisma.UnitRuleOmit
 }
 

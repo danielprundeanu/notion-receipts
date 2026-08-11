@@ -7,6 +7,8 @@ import {
   updateGroceryItem,
   deleteGroceryItems,
   setGroceryItemsCategory,
+  getKnownCategories,
+  addGroceryCategory,
 } from "@/lib/actions";
 import {
   Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch,
@@ -247,11 +249,35 @@ export default function IngredientsPage() {
   const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [bulkMsg, setBulkMsg] = useState<string | null>(null);
   const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
+  // Categories offered in the pickers: the built-in list plus any the user added.
+  const [knownCategories, setKnownCategories] = useState<string[]>(GROCERY_CATEGORIES);
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatBusy, setNewCatBusy] = useState(false);
   // Transient error toast for inline-edit saves that fail (otherwise silent).
   const [toast, setToast] = useState<string | null>(null);
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
+  }
+
+  useEffect(() => {
+    getKnownCategories().then(setKnownCategories).catch(() => { /* keep the built-ins */ });
+  }, []);
+
+  async function handleAddCategory() {
+    const name = newCatName.trim();
+    if (!name || newCatBusy) return;
+    setNewCatBusy(true);
+    try {
+      setKnownCategories(await addGroceryCategory(name));
+      setNewCatName("");
+      setNewCatOpen(false);
+    } catch {
+      showToast("Couldn't add the category. Please try again.");
+    } finally {
+      setNewCatBusy(false);
+    }
   }
 
   useEffect(() => {
@@ -542,6 +568,47 @@ export default function IngredientsPage() {
           ))}
           {hasUnmapped && <option value={UNMAPPED_CATEGORY}>⚠️ Needs a category</option>}
         </select>
+
+        {/* Add a category of your own, on top of the built-in list */}
+        {newCatOpen ? (
+          <div className="flex items-center gap-1.5">
+            <input
+              autoFocus
+              value={newCatName}
+              onChange={(e) => setNewCatName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddCategory();
+                if (e.key === "Escape") { setNewCatOpen(false); setNewCatName(""); }
+              }}
+              placeholder="e.g. 🍫 Snacks"
+              aria-label="New category name"
+              className="w-40 px-2.5 py-2 text-sm border border-orange-400 rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            <button
+              onClick={handleAddCategory}
+              disabled={newCatBusy || !newCatName.trim()}
+              aria-label="Save category"
+              className="p-2 rounded-lg text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-40 transition-colors"
+            >
+              {newCatBusy ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+            </button>
+            <button
+              onClick={() => { setNewCatOpen(false); setNewCatName(""); }}
+              aria-label="Cancel"
+              className="p-2 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
+            >
+              <X size={15} />
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setNewCatOpen(true)}
+            title="Add a new category"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 dark:text-[#a49c90] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+          >
+            <Plus size={15} /> Category
+          </button>
+        )}
         <button
           onClick={toggleSelectMode}
           className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
@@ -598,7 +665,7 @@ export default function IngredientsPage() {
                 className="px-2.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
               >
                 <option value="">Set category…</option>
-                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                {knownCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
 
               <button
@@ -787,7 +854,7 @@ export default function IngredientsPage() {
                         <EditableCell value={item.nameRo} onSave={(v) => handleSave(item.id, "nameRo", v)} placeholder="—" />
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-[#a49c90] min-w-[9rem]">
-                        <SelectCell value={item.category} options={GROCERY_CATEGORIES} onSave={(v) => handleSave(item.id, "category", v)} />
+                        <SelectCell value={item.category} options={knownCategories} onSave={(v) => handleSave(item.id, "category", v)} />
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-[#a49c90]">
                         <EditableCell value={item.unit} onSave={(v) => handleSave(item.id, "unit", v)} />

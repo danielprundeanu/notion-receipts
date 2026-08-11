@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Check, TriangleAlert, Sparkles, Tags } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TriangleAlert, Sparkles, Tags, Wand2 } from "lucide-react";
 import {
   getUnitAudit,
   getCategoryAudit,
+  getKnownCategories,
   updateGroceryItem,
   type MissingUnitWeightRow,
   type UnitMismatchRow,
@@ -18,32 +19,41 @@ import { GROCERY_CATEGORIES, canonicalCategory } from "@/lib/constants";
 // value has a known modern equivalent it comes pre-selected, so the common case
 // ("Grains" → "Grains & Legumes") is a single confirmation.
 function CategoryFix({
-  suggested,
-  onSave,
+  value,
+  categories,
+  saving,
+  aiFilled,
+  onChange,
+  onApply,
 }: {
-  suggested: string | null;
-  onSave: (category: string) => void;
+  value: string;
+  categories: string[];
+  saving: boolean;
+  aiFilled: boolean;
+  onChange: (v: string) => void;
+  onApply: () => void;
 }) {
-  const [value, setValue] = useState(suggested ?? "");
-  const [saving, setSaving] = useState(false);
-
   return (
     <div className="flex items-center gap-1.5 justify-end">
       <select
         value={value}
         disabled={saving}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         aria-label="Set category"
-        className="w-full md:w-52 px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
+        className={`w-full md:w-52 px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50 text-gray-900 dark:text-[#eae5de] ${
+          aiFilled
+            ? "border-purple-300 dark:border-purple-800"
+            : "border-gray-200 dark:border-[#3a352e]"
+        }`}
       >
         <option value="">Set category…</option>
-        {GROCERY_CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
       </select>
       <button
         type="button"
-        onClick={() => { if (!value) return; setSaving(true); onSave(value); }}
+        onClick={onApply}
         disabled={saving || !value}
         aria-label="Apply category"
         className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-40 transition-colors"
@@ -148,14 +158,98 @@ export default function AuditPage() {
   const [catSavedCount, setCatSavedCount] = useState(0);
   const [catError, setCatError] = useState<string | null>(null);
 
+  // Category picks live here (not in each row) so "Match all" can fill them at once.
+  const [categories, setCategories] = useState<string[]>(GROCERY_CATEGORIES);
+  const [picks, setPicks] = useState<Record<string, string>>({});
+  const [aiFilled, setAiFilled] = useState<Set<string>>(new Set());
+  const [savingIds, setSavingIds] = useState<Set<string>>(new Set());
+  const [matching, setMatching] = useState(false);
+  const [applyingAll, setApplyingAll] = useState(false);
+
   useEffect(() => {
-    Promise.all([getUnitAudit(), getCategoryAudit()]).then(([units, cats]) => {
-      setMissing(units.missingUnitWeight);
-      setMismatches(units.mismatches);
-      setUncategorized(cats);
-      setLoading(false);
-    });
+    Promise.all([getUnitAudit(), getCategoryAudit(), getKnownCategories()]).then(
+      ([units, cats, known]) => {
+        setMissing(units.missingUnitWeight);
+        setMismatches(units.mismatches);
+        setUncategorized(cats);
+        setCategories(known);
+        // Legacy values with a known modern equivalent start pre-filled; the rest
+        // stay empty until the user picks one (or "Match all" suggests it).
+        const seed: Record<string, string> = {};
+        for (const r of cats) {
+          const s = canonicalCategory(r.category);
+          if (s) seed[r.id] = s;
+        }
+        setPicks(seed);
+        setLoading(false);
+      }
+    );
   }, []);
+
+  const pendingCount = uncategorized.filter((r) => !picks[r.id]).length; // still need a suggestion
+  const readyCount = uncategorized.filter((r) => picks[r.id]).length;    // have one, not saved yet
+
+  // Ask the AI to fill in every row that still has no pick, in one batch call.
+  async function handleMatchAll() {
+    const pending = uncategorized.filter((r) => !picks[r.id]);
+    if (!pending.length || matching) return;
+    setMatching(true);
+    setCatError(null);
+    try {
+      const res = await fetch("/api/suggest-category", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: pending.map((r) => ({ id: r.id, name: r.name })),
+          categories,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.suggestions) {
+        setCatError(
+          res.status === 503
+            ? "AI suggestions are unavailable (ANTHROPIC_API_KEY is not set)."
+            : "Could not get AI suggestions. Please try again."
+        );
+        return;
+      }
+      const suggestions = data.suggestions as Record<string, string>;
+      const ids = Object.keys(suggestions);
+      if (!ids.length) {
+        setCatError("The AI returned no usable suggestions.");
+        return;
+      }
+      setPicks((p) => ({ ...p, ...suggestions }));
+      setAiFilled((prev) => new Set([...prev, ...ids]));
+    } catch {
+      setCatError("Could not get AI suggestions. Please try again.");
+    } finally {
+      setMatching(false);
+    }
+  }
+
+  // Save every row that has a pick. Suggestions are never written without the user
+  // triggering this (or the per-row ✓), so nothing is auto-categorised behind them.
+  async function handleApplyAll() {
+    const ready = uncategorized.filter((r) => picks[r.id]);
+    if (!ready.length || applyingAll) return;
+    setApplyingAll(true);
+    setCatError(null);
+    const failed: string[] = [];
+    for (const row of ready) {
+      try {
+        await updateGroceryItem(row.id, { category: picks[row.id] });
+        setUncategorized((rows) => rows.filter((r) => r.id !== row.id));
+        setCatSavedCount((c) => c + 1);
+      } catch {
+        failed.push(row.name);
+      }
+    }
+    if (failed.length) {
+      setCatError(`Could not save ${failed.length} item(s): ${failed.slice(0, 3).join(", ")}${failed.length > 3 ? "…" : ""}`);
+    }
+    setApplyingAll(false);
+  }
 
   async function handleFix(id: string, field: "conversion" | "unitWeight", value: number) {
     // Optimistically drop — the fix resolves the flag for this item.
@@ -164,18 +258,20 @@ export default function AuditPage() {
     await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
   }
 
-  async function handleCategoryFix(row: UncategorizedRow, category: string) {
-    const prev = uncategorized;
+  async function handleCategoryFix(row: UncategorizedRow) {
+    const category = picks[row.id];
+    if (!category) return;
     setCatError(null);
-    setUncategorized((rows) => rows.filter((r) => r.id !== row.id));
-    setCatSavedCount((c) => c + 1);
+    setSavingIds((s) => new Set(s).add(row.id));
     try {
       await updateGroceryItem(row.id, { category });
+      setUncategorized((rows) => rows.filter((r) => r.id !== row.id));
+      setCatSavedCount((c) => c + 1);
     } catch {
-      // Put the row back — a silently dropped row would look fixed when it isn't.
-      setUncategorized(prev);
-      setCatSavedCount((c) => Math.max(0, c - 1));
+      // Keep the row — a silently dropped row would look fixed when it isn't.
       setCatError(`Could not set the category for “${row.name}”. Please try again.`);
+    } finally {
+      setSavingIds((s) => { const n = new Set(s); n.delete(row.id); return n; });
     }
   }
 
@@ -218,6 +314,33 @@ export default function AuditPage() {
               list. Pick the matching category to file them correctly.
             </p>
 
+            {uncategorized.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={handleMatchAll}
+                  disabled={matching || pendingCount === 0}
+                  title={pendingCount === 0 ? "Every item already has a suggestion" : "Suggest a category for the remaining items"}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900/60 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950/30 disabled:opacity-40 transition-colors"
+                >
+                  {matching ? <Loader2 size={15} className="animate-spin" /> : <Wand2 size={15} />}
+                  Match all with AI{pendingCount > 0 ? ` (${pendingCount})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyAll}
+                  disabled={applyingAll || readyCount === 0}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-orange-500 rounded-lg hover:bg-orange-600 disabled:opacity-40 transition-colors"
+                >
+                  {applyingAll ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                  Apply all{readyCount > 0 ? ` (${readyCount})` : ""}
+                </button>
+                <span className="text-xs text-gray-400 dark:text-[#6e675c]">
+                  Suggestions are only filled in — nothing is saved until you apply.
+                </span>
+              </div>
+            )}
+
             {catError && (
               <p className="mb-3 text-sm text-red-600 dark:text-red-400">{catError}</p>
             )}
@@ -256,7 +379,14 @@ export default function AuditPage() {
                         </span>
                       </div>
                       <div className="mt-2.5">
-                        <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
+                        <CategoryFix
+                          value={picks[r.id] ?? ""}
+                          categories={categories}
+                          saving={savingIds.has(r.id)}
+                          aiFilled={aiFilled.has(r.id)}
+                          onChange={(v) => setPicks((p) => ({ ...p, [r.id]: v }))}
+                          onApply={() => handleCategoryFix(r)}
+                        />
                       </div>
                     </li>
                   ))}
@@ -304,7 +434,14 @@ export default function AuditPage() {
                           </td>
                           <td className="px-3 py-2">
                             <div className="flex justify-end">
-                              <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
+                              <CategoryFix
+                          value={picks[r.id] ?? ""}
+                          categories={categories}
+                          saving={savingIds.has(r.id)}
+                          aiFilled={aiFilled.has(r.id)}
+                          onChange={(v) => setPicks((p) => ({ ...p, [r.id]: v }))}
+                          onApply={() => handleCategoryFix(r)}
+                        />
                             </div>
                           </td>
                         </tr>

@@ -964,13 +964,47 @@ export type UncategorizedRow = {
   sampleRecipes: string[];
 };
 
+// The full set of categories a user can pick: the built-in list plus any they
+// added themselves. Falls back to the built-ins if the GroceryCategory table isn't
+// there yet, so the app keeps working before the migration is applied.
+export async function getKnownCategories(): Promise<string[]> {
+  let custom: string[] = [];
+  try {
+    const rows = await prisma.groceryCategory.findMany({ orderBy: { name: "asc" } });
+    custom = rows.map((r) => r.name.trim()).filter(Boolean);
+  } catch {
+    custom = [];
+  }
+  const seen = new Set(GROCERY_CATEGORIES);
+  return [...GROCERY_CATEGORIES, ...custom.filter((c) => !seen.has(c))];
+}
+
+// Add a user-defined category. Returns the updated known list. Idempotent — adding
+// an existing name (built-in or custom) just returns the current list.
+export async function addGroceryCategory(name: string): Promise<string[]> {
+  const clean = name.trim();
+  if (!clean) throw new Error("The category name is missing");
+  if (!GROCERY_CATEGORIES.includes(clean)) {
+    await prisma.groceryCategory.upsert({
+      where: { name: clean },
+      update: {},
+      create: { name: clean },
+    });
+  }
+  revalidatePath("/ingredients");
+  return getKnownCategories();
+}
+
 export async function getCategoryAudit(): Promise<UncategorizedRow[]> {
+  // Categories the user added on purpose count as valid — only missing values and
+  // leftovers from the old list are worth reporting.
+  const known = await getKnownCategories();
   const items = await prisma.groceryItem.findMany({
     where: {
       OR: [
         { category: null },
         { category: "" },
-        { category: { notIn: GROCERY_CATEGORIES } },
+        { category: { notIn: known } },
       ],
     },
     select: { id: true, name: true, nameRo: true, category: true },
