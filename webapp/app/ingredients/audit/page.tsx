@@ -11,29 +11,46 @@ import {
   type UnitMismatchRow,
   type UncategorizedRow,
 } from "@/lib/actions";
-import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { GROCERY_CATEGORIES, canonicalCategory } from "@/lib/constants";
 
 // Inline category picker for an item that has none (or a legacy value). Saving is
-// a single write on the item and propagates everywhere it's used.
-function CategoryFix({ onSave }: { onSave: (category: string) => void }) {
+// a single write on the item and propagates everywhere it's used. When the legacy
+// value has a known modern equivalent it comes pre-selected, so the common case
+// ("Grains" → "Grains & Legumes") is a single confirmation.
+function CategoryFix({
+  suggested,
+  onSave,
+}: {
+  suggested: string | null;
+  onSave: (category: string) => void;
+}) {
+  const [value, setValue] = useState(suggested ?? "");
   const [saving, setSaving] = useState(false);
+
   return (
-    <select
-      defaultValue=""
-      disabled={saving}
-      onChange={(e) => {
-        if (!e.target.value) return;
-        setSaving(true);
-        onSave(e.target.value);
-      }}
-      aria-label="Set category"
-      className="w-full md:w-52 px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
-    >
-      <option value="">Set category…</option>
-      {GROCERY_CATEGORIES.map((c) => (
-        <option key={c} value={c}>{c}</option>
-      ))}
-    </select>
+    <div className="flex items-center gap-1.5 justify-end">
+      <select
+        value={value}
+        disabled={saving}
+        onChange={(e) => setValue(e.target.value)}
+        aria-label="Set category"
+        className="w-full md:w-52 px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
+      >
+        <option value="">Set category…</option>
+        {GROCERY_CATEGORIES.map((c) => (
+          <option key={c} value={c}>{c}</option>
+        ))}
+      </select>
+      <button
+        type="button"
+        onClick={() => { if (!value) return; setSaving(true); onSave(value); }}
+        disabled={saving || !value}
+        aria-label="Apply category"
+        className="p-1.5 rounded-lg text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-950/30 disabled:opacity-40 transition-colors"
+      >
+        {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+      </button>
+    </div>
   );
 }
 
@@ -251,7 +268,7 @@ export default function AuditPage() {
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end">
-                            <CategoryFix onSave={(c) => handleCategoryFix(r, c)} />
+                            <CategoryFix suggested={canonicalCategory(r.category)} onSave={(c) => handleCategoryFix(r, c)} />
                           </div>
                         </td>
                       </tr>

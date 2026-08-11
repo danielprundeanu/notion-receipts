@@ -13,7 +13,10 @@ import {
   X, Trash2, Sparkles, ListChecks, Loader2, List, Table,
 } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
-import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { GROCERY_CATEGORIES, canonicalCategory } from "@/lib/constants";
+
+// Sentinel filter value for items whose stored category maps to nothing canonical.
+const UNMAPPED_CATEGORY = "__unmapped__";
 
 type GroceryItem = {
   id: string;
@@ -282,7 +285,14 @@ export default function IngredientsPage() {
     try { localStorage.setItem("ingredients-view", v); } catch { /* non-fatal */ }
   }
 
-  const categories = [...new Set(items.map((i) => i.category).filter(Boolean) as string[])].sort();
+  // Filter by canonical category: legacy values resolve to their modern equivalent,
+  // so the dropdown never lists "Grains" next to "Grains & Legumes" as if they were
+  // different things. Values nothing maps to are reachable via a single catch-all
+  // option (and are listed for fixing in the Audit page).
+  const categories = [
+    ...new Set(items.map((i) => canonicalCategory(i.category)).filter(Boolean) as string[]),
+  ].sort((a, b) => GROCERY_CATEGORIES.indexOf(a) - GROCERY_CATEGORIES.indexOf(b));
+  const hasUnmapped = items.some((i) => !canonicalCategory(i.category));
 
   function handleSort(field: SortField) {
     if (sortField !== field) {
@@ -301,7 +311,10 @@ export default function IngredientsPage() {
     const matchSearch = !search
       || item.name.toLowerCase().includes(q)
       || (item.nameRo?.toLowerCase().includes(q) ?? false);
-    const matchCat = !category || item.category === category;
+    const canon = canonicalCategory(item.category);
+    const matchCat =
+      !category ||
+      (category === UNMAPPED_CATEGORY ? !canon : canon === category);
     return matchSearch && matchCat;
   });
 
@@ -527,6 +540,7 @@ export default function IngredientsPage() {
           {categories.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
+          {hasUnmapped && <option value={UNMAPPED_CATEGORY}>⚠️ Needs a category</option>}
         </select>
         <button
           onClick={toggleSelectMode}
