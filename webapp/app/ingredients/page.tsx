@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
-import { groceryCategoryLabel } from "@/lib/labels";
 
 type GroceryItem = {
   id: string;
@@ -155,7 +154,7 @@ function SelectCell({
         className="w-full px-1.5 py-0.5 text-sm border border-orange-400 rounded focus:outline-none bg-white dark:bg-[#2a2620] text-gray-900 dark:text-[#eae5de]"
       >
         <option value="">{placeholder}</option>
-        {opts.map((o) => <option key={o} value={o}>{groceryCategoryLabel(o)}</option>)}
+        {opts.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     );
   }
@@ -168,7 +167,7 @@ function SelectCell({
         !value ? "text-gray-300" : ""
       }`}
     >
-      {value ? groceryCategoryLabel(value) : placeholder}
+      {value ? value : placeholder}
     </span>
   );
 }
@@ -487,7 +486,7 @@ export default function IngredientsPage() {
             href="/ingredients/audit"
             className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-900/50 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-950/30 transition-colors"
           >
-            <ScanSearch size={15} /> Unit audit
+            <ScanSearch size={15} /> Audit
           </Link>
           <button
             onClick={() => setCreatingNew(true)}
@@ -526,7 +525,7 @@ export default function IngredientsPage() {
         >
           <option value="">All categories</option>
           {categories.map((c) => (
-            <option key={c} value={c}>{groceryCategoryLabel(c)}</option>
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
         <button
@@ -585,7 +584,7 @@ export default function IngredientsPage() {
                 className="px-2.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
               >
                 <option value="">Set category…</option>
-                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{groceryCategoryLabel(c)}</option>)}
+                {GROCERY_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
 
               <button
@@ -679,7 +678,7 @@ export default function IngredientsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 dark:text-[#eae5de] truncate">{item.name}</div>
                     <div className="text-xs text-gray-500 dark:text-[#7c756a] truncate">
-                      {[item.nameRo, groceryCategoryLabel(item.category), item.unit].filter(Boolean).join(" · ") || "—"}
+                      {[item.nameRo, item.category, item.unit].filter(Boolean).join(" · ") || "—"}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-600 dark:text-[#a49c90]">
                       <span className="font-medium text-gray-700 dark:text-[#bab2a6]">{item.kcal != null ? `${fmt(item.kcal)} kcal` : "— kcal"}</span>

@@ -1486,7 +1486,7 @@ export default function ImportPage() {
               <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl px-4 py-3 text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>
-                  <strong>{unitConflictIngredients.length} unresolved units</strong> will be imported as “piece”. If the item has no weight per piece (g/pc), nutrition will not be correct — you can fill them in anytime from <strong>Ingredients → Unit audit</strong>.
+                  <strong>{unitConflictIngredients.length} unresolved units</strong> will be imported as “piece”. If the item has no weight per piece (g/pc), nutrition will not be correct — you can fill them in anytime from <strong>Ingredients → Audit</strong>.
                 </span>
               </div>
             )}

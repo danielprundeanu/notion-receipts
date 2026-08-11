@@ -9,26 +9,13 @@ import {
   deleteGroceryListItems,
 } from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
+import { GROCERY_CATEGORIES, categoryIcon } from "@/lib/constants";
 import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Copy, ClipboardPaste, X } from "lucide-react";
 
-const CATEGORY_ICONS: Record<string, string> = {
-  "🍎 Fruits": "🍎",
-  "🥕 Veg & Legumes": "🥕",
-  "🌾 Grains": "🌾",
-  "🫙 Pantry": "🫙",
-  "🥩 Meat & Alt": "🥩",
-  "🥛 Dairy": "🥛",
-  "🥫 Canned": "🥫",
-  "🫕 Sauces & Condiments": "🫕",
-  "🥜 Nuts & Seeds": "🥜",
-  "🧂Fresh Herbs & Spices": "🧂",
-  "🌵 Dried Herbs & Spices": "🌵",
-  "🥑 Healthy Fats": "🥑",
-  "🍸 Drinks": "🍸",
-  "🥘 Homemade Receipts": "🥘",
-  "🧴 Supplies": "🧴",
-  Other: "📦",
-};
+// Categories come from the one canonical list (lib/constants) — this page used to
+// keep its own, older copy, so hand-added products were filed under names that no
+// longer existed elsewhere and silently ended up grouped under "Other".
+const CATEGORY_ORDER = GROCERY_CATEGORIES;
 
 function getMondayOf(date: Date): Date {
   const d = new Date(date);
@@ -285,7 +272,7 @@ export default function GroceryListPage() {
   const checkedCount = allItems.filter((i) => checked.has(i.id)).length;
 
   const sortedCategories = Object.keys(grouped).sort((a, b) => {
-    const order = Object.keys(CATEGORY_ICONS);
+    const order = CATEGORY_ORDER;
     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
   });
 
@@ -326,9 +313,9 @@ export default function GroceryListPage() {
           aria-label="Category"
           className={`flex-1 min-w-0 ${INPUT_CLS}`}
         >
-          {Object.keys(CATEGORY_ICONS).map((cat) => (
+          {CATEGORY_ORDER.map((cat) => (
             <option key={cat} value={cat}>
-              {CATEGORY_ICONS[cat]} {groceryCategoryLabel(cat)}
+              {categoryIcon(cat)} {groceryCategoryLabel(cat)}
             </option>
           ))}
         </select>
@@ -429,7 +416,7 @@ export default function GroceryListPage() {
             {/* Chips row */}
             <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 md:px-8 pt-2 pb-2">
               {sortedCategories.map((cat) => {
-                const icon = CATEGORY_ICONS[cat] ?? "📦";
+                const icon = categoryIcon(cat);
                 const catName = groceryCategoryLabel(cat);
                 const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
                 return (
@@ -498,7 +485,7 @@ export default function GroceryListPage() {
         <div className="space-y-6">
           {visibleCategories.map((cat) => {
             const items = grouped[cat] ?? [];
-            const icon = CATEGORY_ICONS[cat] ?? "📦";
+            const icon = categoryIcon(cat);
             const catName = groceryCategoryLabel(cat); // strip emoji prefix
             const allCatChecked = items.length > 0 && items.every((i) => checked.has(i.id));
             const isCopyable = cat === COPYABLE_CATEGORY;

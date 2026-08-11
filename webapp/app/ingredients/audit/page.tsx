@@ -2,13 +2,40 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Check, TriangleAlert, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Check, TriangleAlert, Sparkles, Tags } from "lucide-react";
 import {
   getUnitAudit,
+  getCategoryAudit,
   updateGroceryItem,
   type MissingUnitWeightRow,
   type UnitMismatchRow,
+  type UncategorizedRow,
 } from "@/lib/actions";
+import { GROCERY_CATEGORIES } from "@/lib/constants";
+
+// Inline category picker for an item that has none (or a legacy value). Saving is
+// a single write on the item and propagates everywhere it's used.
+function CategoryFix({ onSave }: { onSave: (category: string) => void }) {
+  const [saving, setSaving] = useState(false);
+  return (
+    <select
+      defaultValue=""
+      disabled={saving}
+      onChange={(e) => {
+        if (!e.target.value) return;
+        setSaving(true);
+        onSave(e.target.value);
+      }}
+      aria-label="Set category"
+      className="w-full md:w-52 px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 disabled:opacity-50"
+    >
+      <option value="">Set category…</option>
+      {GROCERY_CATEGORIES.map((c) => (
+        <option key={c} value={c}>{c}</option>
+      ))}
+    </select>
+  );
+}
 
 // Inline numeric fix (grams-per-unit conversion, or grams-per-piece weight),
 // with an optional AI estimate button (fills the draft, user reviews then saves).
@@ -95,16 +122,20 @@ function FixInput({
   );
 }
 
-export default function UnitAuditPage() {
+export default function AuditPage() {
   const [loading, setLoading] = useState(true);
   const [missing, setMissing] = useState<MissingUnitWeightRow[]>([]);
   const [mismatches, setMismatches] = useState<UnitMismatchRow[]>([]);
+  const [uncategorized, setUncategorized] = useState<UncategorizedRow[]>([]);
   const [savedCount, setSavedCount] = useState(0);
+  const [catSavedCount, setCatSavedCount] = useState(0);
+  const [catError, setCatError] = useState<string | null>(null);
 
   useEffect(() => {
-    getUnitAudit().then((data) => {
-      setMissing(data.missingUnitWeight);
-      setMismatches(data.mismatches);
+    Promise.all([getUnitAudit(), getCategoryAudit()]).then(([units, cats]) => {
+      setMissing(units.missingUnitWeight);
+      setMismatches(units.mismatches);
+      setUncategorized(cats);
       setLoading(false);
     });
   }, []);
@@ -114,6 +145,21 @@ export default function UnitAuditPage() {
     setMissing((prev) => prev.filter((r) => r.id !== id));
     setSavedCount((c) => c + 1);
     await updateGroceryItem(id, { [field]: value } as Parameters<typeof updateGroceryItem>[1]);
+  }
+
+  async function handleCategoryFix(row: UncategorizedRow, category: string) {
+    const prev = uncategorized;
+    setCatError(null);
+    setUncategorized((rows) => rows.filter((r) => r.id !== row.id));
+    setCatSavedCount((c) => c + 1);
+    try {
+      await updateGroceryItem(row.id, { category });
+    } catch {
+      // Put the row back — a silently dropped row would look fixed when it isn't.
+      setUncategorized(prev);
+      setCatSavedCount((c) => Math.max(0, c - 1));
+      setCatError(`Could not set the category for “${row.name}”. Please try again.`);
+    }
   }
 
   return (
@@ -126,10 +172,11 @@ export default function UnitAuditPage() {
         >
           <ArrowLeft size={15} /> Back to ingredients
         </Link>
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Unit audit</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Audit</h1>
         <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-1">
-          Systematic import issues that break nutrition. The fix is applied once per item
-          and automatically propagates to every recipe that uses it.
+          Systematic data issues — units that break nutrition, and items left without a
+          category. Each fix is applied once per item and automatically propagates to
+          every recipe that uses it.
         </p>
       </div>
 
@@ -139,6 +186,82 @@ export default function UnitAuditPage() {
         </div>
       ) : (
         <div className="space-y-8">
+          {/* ── Categories ─────────────────────────────────────── */}
+          <section>
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-1">
+              <Tags size={15} className="text-teal-600 dark:text-teal-400" />
+              Items without a category
+              <span className="text-xs font-normal text-gray-400 dark:text-[#6e675c]">
+                ({uncategorized.length})
+              </span>
+            </h2>
+            <p className="text-xs text-gray-400 dark:text-[#6e675c] mb-3">
+              Items with no category, or with one left over from before the list was
+              standardised — they all fall under <strong>Other</strong> on the shopping
+              list. Pick the matching category to file them correctly.
+            </p>
+
+            {catError && (
+              <p className="mb-3 text-sm text-red-600 dark:text-red-400">{catError}</p>
+            )}
+
+            {uncategorized.length === 0 ? (
+              <p className="text-sm text-gray-500 dark:text-[#7c756a] bg-gray-50 dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] rounded-xl px-4 py-6 text-center">
+                {catSavedCount > 0 ? "Done — everything is categorised now 🎉" : "Everything is categorised 🎉"}
+              </p>
+            ) : (
+              <div className="overflow-auto rounded-xl border border-gray-200 dark:border-[#2e2a24]">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-[#2a2620] text-left text-xs text-gray-500 dark:text-[#7c756a]">
+                      <th className="px-3 py-2 font-medium">Item</th>
+                      <th className="px-3 py-2 font-medium">Current</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium text-right">Uses</th>
+                      <th className="hidden md:table-cell px-3 py-2 font-medium">Example recipes</th>
+                      <th className="px-3 py-2 font-medium text-right">Category</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {uncategorized.map((r) => (
+                      <tr key={r.id} className="border-t border-gray-100 dark:border-[#2a2620]">
+                        <td className="px-3 py-2">
+                          <Link
+                            href={`/ingredients?edit=${r.id}`}
+                            className="text-teal-700 dark:text-teal-400 hover:underline"
+                          >
+                            {r.name}
+                          </Link>
+                          {r.nameRo && (
+                            <span className="text-xs text-gray-400 dark:text-[#6e675c] ml-1.5">({r.nameRo})</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {r.category?.trim() ? (
+                            // The legacy value, kept visible so the right replacement is obvious.
+                            <span className="text-orange-600 dark:text-orange-400">{r.category}</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-[#4a443c]">— none —</span>
+                          )}
+                        </td>
+                        <td className="hidden md:table-cell px-3 py-2 text-right text-gray-500 dark:text-[#a49c90]">
+                          {r.uses} <span className="text-gray-400 dark:text-[#6e675c]">({r.recipes} recipes)</span>
+                        </td>
+                        <td className="hidden md:table-cell px-3 py-2 text-gray-500 dark:text-[#7c756a] text-xs">
+                          {r.sampleRecipes.join(", ")}
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex justify-end">
+                            <CategoryFix onSave={(c) => handleCategoryFix(r, c)} />
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
           {/* ── Non-convertible units ──────────────────────────── */}
           <section>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-[#d8d0c4] mb-1">

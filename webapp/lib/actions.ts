@@ -4,6 +4,7 @@ import { prisma } from "./db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { ingredientGrams } from "./nutrition";
 import { buildRecipeSearchText, normalizeSearch } from "./search";
+import { GROCERY_CATEGORIES } from "./constants";
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 
@@ -946,6 +947,68 @@ export async function getUnitAudit(): Promise<{
   `);
 
   return { missingUnitWeight, mismatches };
+}
+
+// ─── Category audit ───────────────────────────────────────────────────────────
+// Items that fall outside the canonical category list: either never categorised,
+// or carrying a legacy value from before the list was standardised (those items
+// then group under "Other" everywhere). Listed so each can be re-mapped once.
+
+export type UncategorizedRow = {
+  id: string;
+  name: string;
+  nameRo: string | null;
+  category: string | null;  // null/empty, or the legacy value to be replaced
+  uses: number;
+  recipes: number;
+  sampleRecipes: string[];
+};
+
+export async function getCategoryAudit(): Promise<UncategorizedRow[]> {
+  const items = await prisma.groceryItem.findMany({
+    where: {
+      OR: [
+        { category: null },
+        { category: "" },
+        { category: { notIn: GROCERY_CATEGORIES } },
+      ],
+    },
+    select: { id: true, name: true, nameRo: true, category: true },
+    orderBy: { name: "asc" },
+  });
+  if (items.length === 0) return [];
+
+  // Usage context (how many ingredient rows / recipes) so the most-used items can
+  // be fixed first. A LEFT-JOIN shape: unused items still need a category.
+  const ings = await prisma.ingredient.findMany({
+    where: { groceryItemId: { in: items.map((i) => i.id) } },
+    select: { groceryItemId: true, recipeId: true, recipe: { select: { name: true } } },
+  });
+
+  const stats = new Map<string, { uses: number; recipeIds: Set<string>; names: Set<string> }>();
+  for (const ing of ings) {
+    if (!ing.groceryItemId) continue;
+    let s = stats.get(ing.groceryItemId);
+    if (!s) { s = { uses: 0, recipeIds: new Set(), names: new Set() }; stats.set(ing.groceryItemId, s); }
+    s.uses++;
+    s.recipeIds.add(ing.recipeId);
+    if (s.names.size < 3) s.names.add(ing.recipe.name);
+  }
+
+  return items
+    .map((i) => {
+      const s = stats.get(i.id);
+      return {
+        id: i.id,
+        name: i.name,
+        nameRo: i.nameRo,
+        category: i.category,
+        uses: s?.uses ?? 0,
+        recipes: s?.recipeIds.size ?? 0,
+        sampleRecipes: [...(s?.names ?? [])],
+      };
+    })
+    .sort((a, b) => b.uses - a.uses || a.name.localeCompare(b.name));
 }
 
 export async function getRecipeWeekPlanServings(
