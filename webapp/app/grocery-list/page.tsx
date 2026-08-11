@@ -200,14 +200,10 @@ export default function GroceryListPage() {
   const copyableItems = (grouped[COPYABLE_CATEGORY] ?? []).filter((i) => i.manual);
 
   function handleCopy() {
-    // No explicit selection → copy the whole category (the "copy before select" case).
-    const source = selectMode && selectedForCopy.size > 0
-      ? copyableItems.filter((i) => selectedForCopy.has(i.id))
-      : copyableItems;
-    if (!source.length) {
-      showToast("There are no hand-added products to copy", { error: true });
-      return;
-    }
+    // Copy is only offered with an active selection — "copy everything" is
+    // Select → All → Copy, so what gets copied is always what you see ticked.
+    const source = copyableItems.filter((i) => selectedForCopy.has(i.id));
+    if (!source.length) return;
     const payload: ClipItem[] = source.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
     setClipboard(payload);
     try {
@@ -548,20 +544,13 @@ export default function GroceryListPage() {
                         )
                       )}
 
-                      {copyableItems.length > 0 && (
+                      {/* Only with a selection — copying everything is Select → All → Copy */}
+                      {selectMode && selectedForCopy.size > 0 && (
                         <button
                           onClick={handleCopy}
-                          aria-label={
-                            selectMode && selectedForCopy.size > 0
-                              ? `Copy ${selectedForCopy.size} selected products`
-                              : `Copy all ${copyableItems.length} products`
-                          }
-                          title={
-                            selectMode && selectedForCopy.size > 0
-                              ? `Copy ${selectedForCopy.size} selected`
-                              : `Copy all ${copyableItems.length}`
-                          }
-                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-gray-400 dark:text-[#5c554b] hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
+                          aria-label={`Copy ${selectedForCopy.size} selected products`}
+                          title={`Copy ${selectedForCopy.size} selected`}
+                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
                         >
                           <Copy size={16} />
                         </button>
