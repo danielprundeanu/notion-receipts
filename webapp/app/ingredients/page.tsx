@@ -9,12 +9,14 @@ import {
   setGroceryItemsCategory,
   getKnownCategories,
   addGroceryCategory,
+  createGroceryItemsBulk,
 } from "@/lib/actions";
 import {
   Search, Pencil, ChevronUp, ChevronDown, ChevronsUpDown, Plus, ScanSearch,
-  X, Trash2, Sparkles, ListChecks, Loader2, List, Table,
+  X, Trash2, Sparkles, ListChecks, Loader2, List, Table, ListPlus,
 } from "lucide-react";
 import GroceryItemModal from "@/components/GroceryItemModal";
+import { parseItemLines } from "@/lib/parse-item-lines";
 import { GROCERY_CATEGORIES, canonicalCategory } from "@/lib/constants";
 
 // Sentinel filter value for items whose stored category maps to nothing canonical.
@@ -254,6 +256,12 @@ export default function IngredientsPage() {
   const [newCatOpen, setNewCatOpen] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [newCatBusy, setNewCatBusy] = useState(false);
+  // Bulk add: paste a block of lines, review what was parsed, then create.
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkCategory, setBulkCategory] = useState("");
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkAddMsg, setBulkAddMsg] = useState<string | null>(null);
   // Transient error toast for inline-edit saves that fail (otherwise silent).
   const [toast, setToast] = useState<string | null>(null);
   function showToast(msg: string) {
@@ -277,6 +285,31 @@ export default function IngredientsPage() {
       showToast("Couldn't add the category. Please try again.");
     } finally {
       setNewCatBusy(false);
+    }
+  }
+
+  async function handleBulkAdd() {
+    const rows = parsedBulk.filter((r) => !r.exists);
+    if (!rows.length || bulkAdding) return;
+    setBulkAdding(true);
+    setBulkAddMsg(null);
+    try {
+      const { created, skipped } = await createGroceryItemsBulk(
+        rows.map((r) => ({ name: r.name, unit: r.unit, category: bulkCategory || null }))
+      );
+      if (created.length) {
+        setItems((prev) =>
+          [...prev, ...(created as GroceryItem[])].sort((a, b) => a.name.localeCompare(b.name))
+        );
+      }
+      const parts = [`${created.length} added`];
+      if (skipped.length) parts.push(`${skipped.length} already existed`);
+      setBulkAddMsg(parts.join(" · "));
+      setBulkText("");
+    } catch {
+      setBulkAddMsg("Couldn't add the ingredients. Please try again.");
+    } finally {
+      setBulkAdding(false);
     }
   }
 
@@ -319,6 +352,15 @@ export default function IngredientsPage() {
     ...new Set(items.map((i) => canonicalCategory(i.category)).filter(Boolean) as string[]),
   ].sort((a, b) => GROCERY_CATEGORIES.indexOf(a) - GROCERY_CATEGORIES.indexOf(b));
   const hasUnmapped = items.some((i) => !canonicalCategory(i.category));
+
+  // Live preview of the pasted block: what each line parses to, and whether the
+  // catalogue already has it (existing names are shown but not re-created).
+  const existingNames = new Set(items.map((i) => i.name.trim().toLowerCase()));
+  const parsedBulk = parseItemLines(bulkText).map((r) => ({
+    ...r,
+    exists: existingNames.has(r.name.toLowerCase()),
+  }));
+  const bulkNewCount = parsedBulk.filter((r) => !r.exists).length;
 
   function handleSort(field: SortField) {
     if (sortField !== field) {
@@ -528,6 +570,16 @@ export default function IngredientsPage() {
             <ScanSearch size={15} /> Audit
           </Link>
           <button
+            onClick={() => setBulkAddOpen((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border rounded-lg transition-colors ${
+              bulkAddOpen
+                ? "border-orange-300 dark:border-orange-800 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20"
+                : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400"
+            }`}
+          >
+            <ListPlus size={15} /> Bulk add
+          </button>
+          <button
             onClick={() => setCreatingNew(true)}
             className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
           >
@@ -535,6 +587,79 @@ export default function IngredientsPage() {
           </button>
         </div>
       </div>
+
+      {/* Bulk add — paste a block of lines */}
+      {bulkAddOpen && (
+        <div className="mb-5 p-4 rounded-xl border border-orange-200 dark:border-orange-900/40 bg-orange-50/40 dark:bg-orange-950/10">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-[#d8d0c4]">Bulk add</h2>
+              <p className="text-xs text-gray-500 dark:text-[#7c756a] mt-0.5">
+                One ingredient per line. A leading quantity is understood and dropped —
+                this is the product catalogue, amounts live on recipes and the shopping list.
+              </p>
+            </div>
+            <button
+              onClick={() => { setBulkAddOpen(false); setBulkAddMsg(null); }}
+              aria-label="Close bulk add"
+              className="shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <textarea
+            value={bulkText}
+            onChange={(e) => { setBulkText(e.target.value); setBulkAddMsg(null); }}
+            rows={6}
+            placeholder={"paper towels\n2 x napkins\n500 g flour"}
+            aria-label="Ingredients, one per line"
+            className="w-full px-3 py-2 text-sm font-mono bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <select
+              value={bulkCategory}
+              onChange={(e) => setBulkCategory(e.target.value)}
+              aria-label="Category for all"
+              className="px-2.5 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              <option value="">No category</option>
+              {knownCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button
+              onClick={handleBulkAdd}
+              disabled={bulkAdding || bulkNewCount === 0}
+              className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 transition-colors"
+            >
+              {bulkAdding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+              Add {bulkNewCount > 0 ? bulkNewCount : ""} ingredient{bulkNewCount === 1 ? "" : "s"}
+            </button>
+            {bulkAddMsg && (
+              <span className="text-sm text-gray-600 dark:text-[#a49c90]">{bulkAddMsg}</span>
+            )}
+          </div>
+
+          {parsedBulk.length > 0 && (
+            <ul className="mt-3 flex flex-wrap gap-1.5">
+              {parsedBulk.map((r) => (
+                <li
+                  key={r.name}
+                  title={r.exists ? "Already in the catalogue — will be skipped" : r.raw}
+                  className={`px-2.5 py-1 rounded-full text-xs border ${
+                    r.exists
+                      ? "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] line-through"
+                      : "border-orange-200 dark:border-orange-900/50 bg-white dark:bg-[#24211c] text-gray-700 dark:text-[#bab2a6]"
+                  }`}
+                >
+                  {r.name}
+                  {r.unit && <span className="ml-1 text-gray-400 dark:text-[#6e675c]">· {r.unit}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-5">

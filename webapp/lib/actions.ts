@@ -763,6 +763,54 @@ export async function createGroceryItem(data: {
   return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein, unitWeight: item.unitWeight };
 }
 
+// Create several grocery items at once (from a pasted block of lines). Names that
+// already exist are skipped rather than erroring — `name` is unique, and re-pasting
+// a list that partly exists should add only what's missing.
+export type BulkCreateResult = {
+  created: Array<{
+    id: string; name: string; nameRo: string | null; category: string | null;
+    unit: string | null; unit2: string | null; conversion: number | null;
+    kcal: number | null; carbs: number | null; fat: number | null;
+    protein: number | null; unitWeight: number | null; createdAt: Date;
+  }>;
+  skipped: string[]; // names that were already in the catalogue
+};
+
+export async function createGroceryItemsBulk(
+  rows: Array<{ name: string; unit?: string | null; category?: string | null }>
+): Promise<BulkCreateResult> {
+  const cleaned = rows
+    .map((r) => ({ ...r, name: r.name.trim() }))
+    .filter((r) => r.name);
+  if (!cleaned.length) return { created: [], skipped: [] };
+
+  const existing = await prisma.groceryItem.findMany({
+    where: { name: { in: cleaned.map((r) => r.name), mode: "insensitive" } },
+    select: { name: true },
+  });
+  const seen = new Set(existing.map((e) => e.name.trim().toLowerCase()));
+
+  const created: BulkCreateResult["created"] = [];
+  const skipped: string[] = [];
+
+  for (const row of cleaned) {
+    const key = row.name.toLowerCase();
+    if (seen.has(key)) { skipped.push(row.name); continue; }
+    seen.add(key); // also de-dupes repeats inside the pasted block itself
+    const item = await prisma.groceryItem.create({
+      data: {
+        name: row.name,
+        unit: row.unit?.trim() || null,
+        category: row.category?.trim() || null,
+      },
+    });
+    created.push(item);
+  }
+
+  revalidatePath("/ingredients");
+  return { created, skipped };
+}
+
 export async function updateGroceryItem(
   id: string,
   data: {
