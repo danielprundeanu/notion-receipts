@@ -5,12 +5,13 @@ import {
   getGroceryList,
   addGroceryListItem,
   deleteGroceryListItem,
-  copyGroceryListItems,
+  addGroceryListItems,
   deleteGroceryListItems,
 } from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
 import { GROCERY_CATEGORIES, categoryIcon } from "@/lib/constants";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Minus, Copy, CalendarDays, X } from "lucide-react";
+import { parseItemLines } from "@/lib/parse-item-lines";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Minus, Copy, CalendarDays, X, ListPlus } from "lucide-react";
 
 // Categories come from the one canonical list (lib/constants) — this page used to
 // keep its own, older copy, so hand-added products were filed under names that no
@@ -83,6 +84,11 @@ export default function GroceryListPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+  // Bulk add: paste a block of lines instead of filling the form once per product.
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkAdding, setBulkAdding] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
 
   // ── Selection: copy hand-added products to another week, or delete them ──
   const [selectMode, setSelectMode] = useState(false);
@@ -176,6 +182,54 @@ export default function GroceryListPage() {
     }
   }
 
+  // Parsed preview of the pasted block. Unlike the ingredients catalogue, the
+  // quantity is meaningful here, so "2 x napkins" really does add 2.
+  const bulkRows = parseItemLines(bulkText);
+  const weekNames = new Set(
+    Object.values(grouped).flat().map((i) => `${i.name.trim().toLowerCase()}::${(i.unit ?? "").trim().toLowerCase()}`)
+  );
+  const bulkPreview = bulkRows.map((r) => ({
+    ...r,
+    exists: weekNames.has(`${r.name.toLowerCase()}::${(r.unit ?? "").trim().toLowerCase()}`),
+  }));
+  const bulkNewCount = bulkPreview.filter((r) => !r.exists).length;
+
+  async function handleBulkAdd() {
+    const rows = bulkPreview.filter((r) => !r.exists);
+    if (!rows.length || bulkAdding) return;
+    setBulkAdding(true);
+    setBulkMsg(null);
+    try {
+      const { added, skipped } = await addGroceryListItems(
+        weekStart.toISOString(),
+        rows.map((r) => ({
+          name: r.name,
+          quantity: r.qty,
+          unit: r.unit,
+          category: newCategory || "Other",
+        }))
+      );
+      if (added.length) {
+        setGrouped((prev) => {
+          const next = { ...prev };
+          for (const entry of added) {
+            next[entry.category] = [...(next[entry.category] ?? []), entry]
+              .sort((a, b) => a.name.localeCompare(b.name));
+          }
+          return next;
+        });
+      }
+      const parts = [`${added.length} added`];
+      if (skipped) parts.push(`${skipped} already here`);
+      setBulkMsg(parts.join(" · "));
+      setBulkText("");
+    } catch {
+      setBulkMsg("Could not add the products. Please try again.");
+    } finally {
+      setBulkAdding(false);
+    }
+  }
+
   async function handleDeleteItem(entryId: string) {
     const dbId = entryId.replace(/^manual::/, "");
     const prev = grouped;
@@ -219,7 +273,7 @@ export default function GroceryListPage() {
     setCopying(true);
     try {
       const payload = selectedItems.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
-      const { added, skipped } = await copyGroceryListItems(targetWeek.toISOString(), payload);
+      const { added, skipped } = await addGroceryListItems(targetWeek.toISOString(), payload);
 
       // Only merge into the visible list when we copied into the week on screen.
       const sameWeek = targetWeek.getTime() === weekStart.getTime();
@@ -775,10 +829,86 @@ export default function GroceryListPage() {
             );
           })}
 
-          {/* Add a product by hand to this week */}
+          {/* Add a product by hand to this week — one at a time, or a pasted block */}
           <div className="border-t border-gray-100 dark:border-[#2a2620] pt-5">
-            <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6] mb-2.5">Add product</p>
-            {addForm}
+            <div className="flex items-center justify-between gap-3 mb-2.5">
+              <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6]">Add product</p>
+              <button
+                onClick={() => { setBulkOpen((v) => !v); setBulkMsg(null); }}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium border rounded-lg transition-colors ${
+                  bulkOpen
+                    ? "border-orange-300 dark:border-orange-800 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/20"
+                    : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400"
+                }`}
+              >
+                <ListPlus size={14} /> {bulkOpen ? "Single" : "Bulk"}
+              </button>
+            </div>
+
+            {bulkOpen ? (
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 dark:text-[#7c756a]">
+                  One product per line. A leading quantity is used: <code>2 x napkins</code>,
+                  <code className="ml-1">500 g flour</code>, or just a name.
+                </p>
+                <textarea
+                  value={bulkText}
+                  onChange={(e) => { setBulkText(e.target.value); setBulkMsg(null); }}
+                  rows={5}
+                  placeholder={"paper towels\n2 x napkins\n500 g flour"}
+                  aria-label="Products, one per line"
+                  className={`w-full font-mono ${INPUT_CLS}`}
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    aria-label="Category for all"
+                    className={`flex-1 min-w-0 ${INPUT_CLS}`}
+                  >
+                    {CATEGORY_ORDER.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {categoryIcon(cat)} {groceryCategoryLabel(cat)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {bulkPreview.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {bulkPreview.map((r) => (
+                      <li
+                        key={`${r.name}::${r.unit ?? ""}`}
+                        title={r.exists ? "Already in this week — will be skipped" : r.raw}
+                        className={`px-2.5 py-1 rounded-full text-xs border ${
+                          r.exists
+                            ? "border-gray-200 dark:border-[#3a352e] text-gray-400 dark:text-[#5c554b] line-through"
+                            : "border-orange-200 dark:border-orange-900/50 bg-white dark:bg-[#24211c] text-gray-700 dark:text-[#bab2a6]"
+                        }`}
+                      >
+                        {r.qty != null && <span className="font-medium">{r.qty}{r.unit ? ` ${r.unit}` : ""} </span>}
+                        {r.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {bulkMsg && (
+                  <p className="text-sm text-gray-600 dark:text-[#a49c90]">{bulkMsg}</p>
+                )}
+
+                <button
+                  onClick={handleBulkAdd}
+                  disabled={bulkAdding || bulkNewCount === 0}
+                  className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+                >
+                  {bulkAdding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={16} />}
+                  Add {bulkNewCount > 0 ? bulkNewCount : ""} product{bulkNewCount === 1 ? "" : "s"}
+                </button>
+              </div>
+            ) : (
+              addForm
+            )}
           </div>
         </div>
       )}

@@ -679,12 +679,12 @@ export async function deleteGroceryListItem(id: string): Promise<void> {
   revalidatePath("/grocery-list");
 }
 
-// Copy hand-added products into a week's list (the "paste" half of the shopping
-// list's copy/paste). Only manual products travel this way — recipe-derived lines
-// are computed from the planner, so copying them would create phantom duplicates.
-// Products already present that week (same name + unit) are skipped rather than
-// duplicated, so pasting the same set twice is harmless.
-export async function copyGroceryListItems(
+// Add several hand-added products to a week's list at once. Backs both the bulk
+// paste box and copying a selection into another week. Only manual products travel
+// this way — recipe-derived lines are computed from the planner, so duplicating
+// them here would create phantom entries. Products already present that week (same
+// name + unit) are skipped, so re-running either flow is harmless.
+export async function addGroceryListItems(
   targetWeekIso: string,
   items: Array<{ name: string; quantity?: number | null; unit?: string | null; category?: string | null }>
 ): Promise<{ added: GroceryEntry[]; skipped: number }> {
@@ -761,54 +761,6 @@ export async function createGroceryItem(data: {
   const item = await prisma.groceryItem.create({ data });
   revalidatePath("/ingredients");
   return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein, unitWeight: item.unitWeight };
-}
-
-// Create several grocery items at once (from a pasted block of lines). Names that
-// already exist are skipped rather than erroring — `name` is unique, and re-pasting
-// a list that partly exists should add only what's missing.
-export type BulkCreateResult = {
-  created: Array<{
-    id: string; name: string; nameRo: string | null; category: string | null;
-    unit: string | null; unit2: string | null; conversion: number | null;
-    kcal: number | null; carbs: number | null; fat: number | null;
-    protein: number | null; unitWeight: number | null; createdAt: Date;
-  }>;
-  skipped: string[]; // names that were already in the catalogue
-};
-
-export async function createGroceryItemsBulk(
-  rows: Array<{ name: string; unit?: string | null; category?: string | null }>
-): Promise<BulkCreateResult> {
-  const cleaned = rows
-    .map((r) => ({ ...r, name: r.name.trim() }))
-    .filter((r) => r.name);
-  if (!cleaned.length) return { created: [], skipped: [] };
-
-  const existing = await prisma.groceryItem.findMany({
-    where: { name: { in: cleaned.map((r) => r.name), mode: "insensitive" } },
-    select: { name: true },
-  });
-  const seen = new Set(existing.map((e) => e.name.trim().toLowerCase()));
-
-  const created: BulkCreateResult["created"] = [];
-  const skipped: string[] = [];
-
-  for (const row of cleaned) {
-    const key = row.name.toLowerCase();
-    if (seen.has(key)) { skipped.push(row.name); continue; }
-    seen.add(key); // also de-dupes repeats inside the pasted block itself
-    const item = await prisma.groceryItem.create({
-      data: {
-        name: row.name,
-        unit: row.unit?.trim() || null,
-        category: row.category?.trim() || null,
-      },
-    });
-    created.push(item);
-  }
-
-  revalidatePath("/ingredients");
-  return { created, skipped };
 }
 
 export async function updateGroceryItem(
