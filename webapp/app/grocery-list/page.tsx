@@ -10,7 +10,7 @@ import {
 } from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
 import { GROCERY_CATEGORIES, categoryIcon } from "@/lib/constants";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Copy, ClipboardPaste, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Minus, Copy, CalendarDays, X } from "lucide-react";
 
 // Categories come from the one canonical list (lib/constants) — this page used to
 // keep its own, older copy, so hand-added products were filed under names that no
@@ -32,17 +32,36 @@ function formatWeekRange(monday: Date): string {
   return `${monday.toLocaleDateString("en-US", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
+// "Next week" / "In 3 weeks" / "2 weeks ago" — makes the picked week unambiguous
+// next to the date range.
+function weekOffsetLabel(from: Date, to: Date): string {
+  const weeks = Math.round((to.getTime() - from.getTime()) / (7 * 24 * 60 * 60 * 1000));
+  if (weeks === 0) return "This week (the one you are viewing)";
+  if (weeks === 1) return "Next week";
+  if (weeks === -1) return "Last week";
+  return weeks > 0 ? `In ${weeks} weeks` : `${Math.abs(weeks)} weeks ago`;
+}
+
 type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string; manual?: boolean };
 
-// Copy/paste of hand-added products between weeks. The clipboard is app-internal
-// (localStorage) rather than the OS clipboard: reading the system clipboard needs a
-// user gesture and prompts on iOS, so a "Paste" button couldn't appear reliably —
-// and an unrelated copy elsewhere would silently lose the list. Kept per-device, it
-// also survives a refresh and can be pasted into several weeks in a row.
-const CLIPBOARD_KEY = "grocery-clipboard";
+// Hand-added products can be carried to another week: select them, then pick the
+// target week. They are written straight into that week — same app, same database,
+// so there is no clipboard to manage and nothing to remember between screens.
 const COPYABLE_CATEGORY = "Other";
 
-type ClipItem = { name: string; quantity: number; unit: string | null; category: string };
+// Stepper helpers for the quantity box. Steps by whole units for counts and by 0.1
+// below 1, so "0.5 kg" stays adjustable without jumping straight past it.
+function qtyNumber(v: string): number {
+  const n = parseFloat(v);
+  return isFinite(n) ? n : 0;
+}
+
+function stepQty(v: string, dir: 1 | -1): string {
+  const cur = qtyNumber(v);
+  const step = cur < 1 && cur > 0 ? 0.1 : 1;
+  const next = Math.max(0, +(cur + dir * step).toFixed(2));
+  return next === 0 ? "" : String(next);
+}
 
 const INPUT_CLS =
   "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -65,11 +84,14 @@ export default function GroceryListPage() {
   const [addError, setAddError] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
 
-  // ── Copy / paste of hand-added products between weeks ──
+  // ── Selection: copy hand-added products to another week, or delete them ──
   const [selectMode, setSelectMode] = useState(false);
-  const [selectedForCopy, setSelectedForCopy] = useState<Set<string>>(new Set());
-  const [clipboard, setClipboard] = useState<ClipItem[]>([]);
-  const [pasting, setPasting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [targetWeek, setTargetWeek] = useState<Date | null>(null);
+  const [copying, setCopying] = useState(false);
+  const [deletingSelected, setDeletingSelected] = useState(false);
+  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
   const [toast, setToast] = useState<{ msg: string; error?: boolean; undo?: () => void } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -80,19 +102,13 @@ export default function GroceryListPage() {
     toastTimer.current = setTimeout(() => setToast(null), opts?.undo ? 8000 : 3500);
   }
 
-  // Restore the clipboard once on mount (kept across weeks and reloads).
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(CLIPBOARD_KEY);
-      if (saved) setClipboard(JSON.parse(saved) as ClipItem[]);
-    } catch { /* ignore a corrupt payload */ }
-    return () => { if (toastTimer.current) clearTimeout(toastTimer.current); };
-  }, []);
+  useEffect(() => (() => { if (toastTimer.current) clearTimeout(toastTimer.current); }), []);
 
   // Leaving select mode whenever the week changes avoids acting on a stale selection.
   useEffect(() => {
     setSelectMode(false);
-    setSelectedForCopy(new Set());
+    setSelected(new Set());
+    setConfirmDeleteSelected(false);
   }, [weekStart]);
 
   const checkedKey = `grocery-checked:${weekStart.toISOString()}`;
@@ -186,37 +202,28 @@ export default function GroceryListPage() {
   // recipe is planned in the target week too.
   const copyableItems = (grouped[COPYABLE_CATEGORY] ?? []).filter((i) => i.manual);
 
-  function handleCopy() {
-    // Copy is only offered with an active selection — "copy everything" is
-    // Select → All → Copy, so what gets copied is always what you see ticked.
-    const source = copyableItems.filter((i) => selectedForCopy.has(i.id));
-    if (!source.length) return;
-    const payload: ClipItem[] = source.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
-    setClipboard(payload);
-    try {
-      localStorage.setItem(CLIPBOARD_KEY, JSON.stringify(payload));
-    } catch { /* quota/private mode — the in-memory copy still works this session */ }
-    setSelectMode(false);
-    setSelectedForCopy(new Set());
-    // "Undo" here discards the copy — the only way to make the Paste button go away
-    // once you're done carrying products over.
-    showToast(
-      `${payload.length} product${payload.length === 1 ? "" : "s"} copied — open another week to paste`,
-      { undo: () => { clearClipboard(); setToast(null); } }
-    );
+  const selectedItems = copyableItems.filter((i) => selected.has(i.id));
+
+  // Copy opens the week picker; the products are written straight into the week you
+  // pick (same app, same database — no clipboard round-trip, nothing to remember).
+  function openWeekPicker() {
+    if (!selectedItems.length) return;
+    const next = new Date(weekStart);
+    next.setDate(next.getDate() + 7); // next week is the common case
+    setTargetWeek(next);
+    setPickerOpen(true);
   }
 
-  function clearClipboard() {
-    setClipboard([]);
-    try { localStorage.removeItem(CLIPBOARD_KEY); } catch { /* non-fatal */ }
-  }
-
-  async function handlePaste() {
-    if (!clipboard.length || pasting) return;
-    setPasting(true);
+  async function handleCopyToWeek() {
+    if (!targetWeek || !selectedItems.length || copying) return;
+    setCopying(true);
     try {
-      const { added, skipped } = await copyGroceryListItems(weekStart.toISOString(), clipboard);
-      if (added.length) {
+      const payload = selectedItems.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
+      const { added, skipped } = await copyGroceryListItems(targetWeek.toISOString(), payload);
+
+      // Only merge into the visible list when we copied into the week on screen.
+      const sameWeek = targetWeek.getTime() === weekStart.getTime();
+      if (sameWeek && added.length) {
         setGrouped((prev) => {
           const next = { ...prev };
           for (const entry of added) {
@@ -226,36 +233,72 @@ export default function GroceryListPage() {
           return next;
         });
       }
-      const parts = [`${added.length} added`];
-      if (skipped) parts.push(`${skipped} already here`);
+
+      setPickerOpen(false);
+      setSelectMode(false);
+      setSelected(new Set());
+
+      const where = formatWeekRange(targetWeek);
+      const parts = [`${added.length} copied to ${where}`];
+      if (skipped) parts.push(`${skipped} already there`);
       showToast(
-        added.length ? parts.join(" · ") : "All of them were already in this week",
-        added.length ? { undo: () => undoPaste(added.map((e) => e.id)) } : undefined
+        added.length ? parts.join(" · ") : `All of them were already in ${where}`,
+        added.length ? { undo: () => undoCopy(added.map((e) => e.id), sameWeek) } : undefined
       );
     } catch {
-      showToast("Could not paste the products. Please try again.", { error: true });
+      showToast("Could not copy the products. Please try again.", { error: true });
     } finally {
-      setPasting(false);
+      setCopying(false);
     }
   }
 
-  async function undoPaste(entryIds: string[]) {
+  async function undoCopy(entryIds: string[], sameWeek: boolean) {
     const prev = grouped;
     const ids = new Set(entryIds);
     setToast(null);
+    if (sameWeek) {
+      setGrouped((g) => {
+        const next: Record<string, GroceryEntry[]> = {};
+        for (const [cat, items] of Object.entries(g)) {
+          const filtered = items.filter((i) => !ids.has(i.id));
+          if (filtered.length) next[cat] = filtered;
+        }
+        return next;
+      });
+    }
+    try {
+      await deleteGroceryListItems(entryIds.map((id) => id.replace(/^manual::/, "")));
+    } catch {
+      if (sameWeek) setGrouped(prev); // roll back the rollback — they are still there
+      showToast("Could not undo. The products are still in the list.", { error: true });
+    }
+  }
+
+  async function handleDeleteSelected() {
+    if (!selectedItems.length || deletingSelected) return;
+    setDeletingSelected(true);
+    const prev = grouped;
+    const ids = new Set(selectedItems.map((i) => i.id));
+    // Optimistic removal; drop now-empty categories.
     setGrouped((g) => {
       const next: Record<string, GroceryEntry[]> = {};
-      for (const [cat, items] of Object.entries(g)) {
-        const filtered = items.filter((i) => !ids.has(i.id));
+      for (const [cat, list] of Object.entries(g)) {
+        const filtered = list.filter((i) => !ids.has(i.id));
         if (filtered.length) next[cat] = filtered;
       }
       return next;
     });
     try {
-      await deleteGroceryListItems(entryIds.map((id) => id.replace(/^manual::/, "")));
+      await deleteGroceryListItems([...ids].map((id) => id.replace(/^manual::/, "")));
+      showToast(`${ids.size} product${ids.size === 1 ? "" : "s"} deleted`);
+      setSelectMode(false);
+      setSelected(new Set());
     } catch {
-      setGrouped(prev); // roll back the rollback — the products are still there
-      showToast("Could not undo. The products are still in the list.", { error: true });
+      setGrouped(prev); // no silent failure — put them back
+      showToast("Could not delete the products. Please try again.", { error: true });
+    } finally {
+      setDeletingSelected(false);
+      setConfirmDeleteSelected(false);
     }
   }
 
@@ -276,11 +319,7 @@ export default function GroceryListPage() {
     return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
   });
 
-  // With something copied, always show the target category — otherwise a week that
-  // has no "Other" items yet would offer nowhere to paste.
-  const visibleCategories = clipboard.length && !sortedCategories.includes(COPYABLE_CATEGORY)
-    ? [...sortedCategories, COPYABLE_CATEGORY]
-    : sortedCategories;
+
 
   const addForm = (
     <form onSubmit={handleAddItem} className="space-y-2">
@@ -292,14 +331,34 @@ export default function GroceryListPage() {
         className={`w-full ${INPUT_CLS}`}
       />
       <div className="flex gap-2">
-        <input
-          value={newQty}
-          onChange={(e) => setNewQty(e.target.value)}
-          inputMode="decimal" type="number" step="0.1" min="0"
-          placeholder="Qty"
-          aria-label="Quantity"
-          className={`w-20 ${INPUT_CLS}`}
-        />
+        {/* Quantity with steppers — typing still works, the buttons are for thumbs */}
+        <div className="flex items-center shrink-0 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setNewQty(stepQty(newQty, -1))}
+            disabled={qtyNumber(newQty) <= 0}
+            aria-label="Decrease quantity"
+            className="w-10 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] disabled:opacity-30 transition-colors"
+          >
+            <Minus size={15} />
+          </button>
+          <input
+            value={newQty}
+            onChange={(e) => setNewQty(e.target.value)}
+            inputMode="decimal" type="number" step="any" min="0"
+            placeholder="Qty"
+            aria-label="Quantity"
+            className="w-12 h-11 px-1 text-sm text-center bg-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <button
+            type="button"
+            onClick={() => setNewQty(stepQty(newQty, 1))}
+            aria-label="Increase quantity"
+            className="w-10 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
+          >
+            <Plus size={15} />
+          </button>
+        </div>
         <input
           value={newUnit}
           onChange={(e) => setNewUnit(e.target.value)}
@@ -360,6 +419,62 @@ export default function GroceryListPage() {
           >
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {/* Week picker — choose where the selected products go */}
+      {pickerOpen && targetWeek && (
+        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full sm:max-w-sm bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
+                Copy {selected.size} product{selected.size === 1 ? "" : "s"} to…
+              </h3>
+              <button
+                onClick={() => setPickerOpen(false)}
+                aria-label="Close"
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90] rounded-lg transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <button
+                onClick={() => setTargetWeek((d) => { const n = new Date(d!); n.setDate(n.getDate() - 7); return n; })}
+                aria-label="Previous week"
+                className="p-3 rounded-lg text-gray-500 dark:text-[#7c756a] hover:bg-gray-100 dark:hover:bg-[#2a2620] transition-colors"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-[#eae5de]">
+                  <CalendarDays size={15} className="text-orange-500" />
+                  {formatWeekRange(targetWeek)}
+                </div>
+                <p className="text-xs text-gray-400 dark:text-[#6e675c] mt-0.5">{weekOffsetLabel(weekStart, targetWeek)}</p>
+              </div>
+              <button
+                onClick={() => setTargetWeek((d) => { const n = new Date(d!); n.setDate(n.getDate() + 7); return n; })}
+                aria-label="Next week"
+                className="p-3 rounded-lg text-gray-500 dark:text-[#7c756a] hover:bg-gray-100 dark:hover:bg-[#2a2620] transition-colors"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            <button
+              onClick={handleCopyToWeek}
+              disabled={copying}
+              className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+            >
+              {copying ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
+              Copy here
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-400 dark:text-[#6e675c]">
+              Products already in that week are skipped.
+            </p>
+          </div>
         </div>
       )}
 
@@ -467,29 +582,18 @@ export default function GroceryListPage() {
             <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
             <p className="font-medium">No items this week</p>
             <p className="text-sm mt-1">Add recipes to the planner or a product directly below</p>
-            {/* An empty week has no category rows, so surface the paste here too. */}
-            {clipboard.length > 0 && (
-              <button
-                onClick={handlePaste}
-                disabled={pasting}
-                className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-900 rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-40 transition-colors"
-              >
-                {pasting ? <Loader2 size={15} className="animate-spin" /> : <ClipboardPaste size={15} />}
-                Paste {clipboard.length} copied product{clipboard.length === 1 ? "" : "s"}
-              </button>
-            )}
           </div>
           {addForm}
         </div>
       ) : (
         <div className="space-y-6">
-          {visibleCategories.map((cat) => {
+          {sortedCategories.map((cat) => {
             const items = grouped[cat] ?? [];
             const icon = categoryIcon(cat);
             const catName = groceryCategoryLabel(cat); // strip emoji prefix
             const allCatChecked = items.length > 0 && items.every((i) => checked.has(i.id));
             const isCopyable = cat === COPYABLE_CATEGORY;
-            const allCopySelected = copyableItems.length > 0 && copyableItems.every((i) => selectedForCopy.has(i.id));
+            const allCopySelected = copyableItems.length > 0 && copyableItems.every((i) => selected.has(i.id));
 
             return (
               <div key={cat} id={`cat-${cat}`}>
@@ -507,14 +611,14 @@ export default function GroceryListPage() {
                         <>
                           <button
                             onClick={() =>
-                              setSelectedForCopy(allCopySelected ? new Set() : new Set(copyableItems.map((i) => i.id)))
+                              setSelected(allCopySelected ? new Set() : new Set(copyableItems.map((i) => i.id)))
                             }
                             className="px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
                           >
                             {allCopySelected ? "None" : "All"}
                           </button>
                           <button
-                            onClick={() => { setSelectMode(false); setSelectedForCopy(new Set()); }}
+                            onClick={() => { setSelectMode(false); setSelected(new Set()); setConfirmDeleteSelected(false); }}
                             className="px-2 py-1.5 text-xs font-medium text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
                           >
                             Cancel
@@ -531,28 +635,45 @@ export default function GroceryListPage() {
                         )
                       )}
 
-                      {/* Only with a selection — copying everything is Select → All → Copy */}
-                      {selectMode && selectedForCopy.size > 0 && (
-                        <button
-                          onClick={handleCopy}
-                          aria-label={`Copy ${selectedForCopy.size} selected products`}
-                          title={`Copy ${selectedForCopy.size} selected`}
-                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
-                        >
-                          <Copy size={16} />
-                        </button>
-                      )}
-
-                      {clipboard.length > 0 && (
-                        <button
-                          onClick={handlePaste}
-                          disabled={pasting}
-                          aria-label={`Paste ${clipboard.length} copied products`}
-                          title={`Paste ${clipboard.length} copied`}
-                          className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 disabled:opacity-40 transition-colors"
-                        >
-                          {pasting ? <Loader2 size={16} className="animate-spin" /> : <ClipboardPaste size={16} />}
-                        </button>
+                      {/* Actions on the selection — copying everything is Select → All → Copy */}
+                      {selectMode && selected.size > 0 && (
+                        confirmDeleteSelected ? (
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs text-gray-500 dark:text-[#7c756a]">Delete {selected.size}?</span>
+                            <button
+                              onClick={handleDeleteSelected}
+                              disabled={deletingSelected}
+                              className="px-2 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
+                            >
+                              {deletingSelected ? "Deleting…" : "Delete"}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteSelected(false)}
+                              className="px-2 py-1.5 text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={openWeekPicker}
+                              aria-label={`Copy ${selected.size} selected products to another week`}
+                              title="Copy to another week"
+                              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteSelected(true)}
+                              aria-label={`Delete ${selected.size} selected products`}
+                              title="Delete selected"
+                              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-gray-400 dark:text-[#5c554b] hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )
                       )}
                     </div>
                   )}
@@ -564,13 +685,13 @@ export default function GroceryListPage() {
                     // In select mode this category's hand-added rows pick items for
                     // copying instead of ticking them off the shopping list.
                     const selectable = isCopyable && selectMode && !!item.manual;
-                    const picked = selectedForCopy.has(item.id);
+                    const picked = selected.has(item.id);
                     if (selectable) {
                       return (
                         <li key={item.id}>
                           <button
                             onClick={() =>
-                              setSelectedForCopy((prev) => {
+                              setSelected((prev) => {
                                 const n = new Set(prev);
                                 if (n.has(item.id)) n.delete(item.id); else n.add(item.id);
                                 return n;
