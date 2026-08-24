@@ -122,17 +122,79 @@ function normalizeUnit(u: string): string {
 
 // ─── Ingredient parser ────────────────────────────────────────────────────────
 
-/** Parse a qty string like "2", "1/2", "1 1/2", "½" */
+const VULGAR_FRACTIONS: Record<string, string> = {
+  "½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4", "¾": "3/4",
+  "⅕": "1/5", "⅖": "2/5", "⅗": "3/5", "⅘": "4/5", "⅙": "1/6", "⅚": "5/6",
+  "⅐": "1/7", "⅛": "1/8", "⅜": "3/8", "⅝": "5/8", "⅞": "7/8",
+  "⅑": "1/9", "⅒": "1/10",
+};
+const VULGAR_CHARS = Object.keys(VULGAR_FRACTIONS).join("");
+
+/** "⅓ cup" → "1/3 cup"; "1½ cups" → "1 1/2 cups" (mixed numbers keep their whole part) */
+function normalizeFractions(s: string): string {
+  return s
+    .replace(new RegExp(`(\\d)\\s*([${VULGAR_CHARS}])`, "g"), (_, d: string, f: string) => `${d} ${VULGAR_FRACTIONS[f]}`)
+    .replace(new RegExp(`[${VULGAR_CHARS}]`, "g"), (f) => VULGAR_FRACTIONS[f]);
+}
+
+// Ordered longest-first: a plain `\d+` alternative placed first would match just the
+// "1" of "1/3" and leave "/3 cup hummus" behind as the ingredient name.
+const QTY_PATTERN = /^(\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*/;
+
+// A range ("2-3 cloves", "2 to 3 cups") — the second number is dropped and the first
+// is used, which is what a shopping list needs.
+const RANGE_PATTERN = /^(?:-|–|—|to)\s*(?:\d+\s+\d+\/\d+|\d+\/\d+|\d+(?:[.,]\d+)?)\s*/i;
+
+// Count words that trail the name instead of leading it ("8 English cucumber slices",
+// "3 garlic cloves"). Kept deliberately tight: words like "leaves" are part of the
+// product name ("bay leaves") far more often than they are a unit.
+const TRAILING_UNITS = [
+  "slices", "slice", "cloves", "clove", "sprigs", "sprig", "wedges", "wedge",
+  "strips", "strip", "fillets", "fillet", "stalks", "stalk", "cans", "can",
+];
+
+// Preparation/form words that describe how an ingredient is cut, not what it is.
+// Dropping them is what lets "red onion slices" match the "Red onion" item.
+const PREP_WORDS = new Set([
+  "sliced", "slices", "chopped", "diced", "minced", "grated", "shredded",
+  "crumbled", "crushed", "halved", "quartered", "cubed", "cubes", "chunks",
+  "torn", "peeled", "trimmed", "drained", "rinsed", "melted", "softened",
+  "beaten", "toasted", "divided", "mashed", "julienned", "slivered", "pieces",
+  "thinly", "finely", "roughly", "coarsely", "freshly", "lightly", "well",
+  "and", "or",
+]);
+
+// Adverbs that only ever modify a preparation verb ("finely chopped parsley").
+// Stripping the adverb *and* the participle it governs leaves the product name.
+// A bare participle is left alone on purpose: "chopped tomatoes" and "crushed red
+// pepper" are products in their own right, not preparation notes.
+const PREP_ADVERBS = new Set(["thinly", "finely", "roughly", "coarsely", "freshly", "lightly"]);
+const PREP_PARTICIPLES = new Set([
+  "sliced", "chopped", "diced", "minced", "grated", "shredded", "crumbled",
+  "crushed", "torn", "cubed", "beaten", "toasted", "packed", "ground",
+]);
+
+/** Drop preparation words around the product name: "red onion slices" → "red onion" */
+function stripTrailingDescriptors(name: string): string {
+  const words = name.split(/\s+/).filter(Boolean);
+
+  // Leading "finely chopped …" / "thinly sliced …"
+  while (
+    words.length > 2 &&
+    PREP_ADVERBS.has(words[0]) &&
+    PREP_PARTICIPLES.has(words[1])
+  ) {
+    words.splice(0, 2);
+  }
+
+  while (words.length > 1 && PREP_WORDS.has(words[words.length - 1])) words.pop();
+  return words.join(" ");
+}
+
+/** Parse a qty string like "2", "1/2", "1 1/2" (fractions already normalised) */
 function parseQty(s: string): number | null {
   if (!s) return null;
-  // Handle unicode fractions
-  s = s
-    .replace("½", "1/2")
-    .replace("⅓", "1/3")
-    .replace("⅔", "2/3")
-    .replace("¼", "1/4")
-    .replace("¾", "3/4")
-    .trim();
+  s = normalizeFractions(s).trim();
 
   // Mixed fraction: "1 1/2"
   const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
@@ -154,28 +216,42 @@ export function parseIngredientString(raw: string): Pick<RawIngredient, "name" |
   // Remove parenthetical notes: "2 cups flour (about 250g)" → "2 cups flour"
   text = text.replace(/\s*\(.*?\)/g, "").trim();
 
-  // Match optional qty at start
-  const qtyMatch = text.match(/^(\d+(?:[.,]\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+|[½⅓⅔¼¾])\s*/);
+  // "⅓ cup" → "1/3 cup", so the quantity pattern only has to handle ASCII.
+  text = normalizeFractions(text);
+
+  const finish = (name: string, qty: number | null, unit: string | null) => ({
+    name: stripTrailingDescriptors(name.split(",")[0].trim().toLowerCase()),
+    qty,
+    unit,
+  });
+
+  const qtyMatch = text.match(QTY_PATTERN);
   if (!qtyMatch) {
     // No quantity — whole string is name
-    const name = text.split(",")[0].trim().toLowerCase();
-    return { name, qty: null, unit: null };
+    return finish(text, null, null);
   }
 
   const qty = parseQty(qtyMatch[1].replace(",", "."));
-  const afterQty = text.slice(qtyMatch[0].length);
+  let afterQty = text.slice(qtyMatch[0].length);
 
-  // Try to match unit
+  // Drop the upper bound of a range, keeping the first quantity.
+  afterQty = afterQty.replace(RANGE_PATTERN, "");
+
+  // Unit right after the quantity: "2 cups flour"
   const unitMatch = afterQty.match(UNIT_PATTERN);
   if (unitMatch) {
-    const unit = normalizeUnit(unitMatch[1]);
-    const name = afterQty.slice(unitMatch[0].length).split(",")[0].trim().toLowerCase();
-    return { name, qty, unit };
+    return finish(afterQty.slice(unitMatch[0].length), qty, normalizeUnit(unitMatch[1]));
+  }
+
+  // Otherwise the unit may trail the name: "8 English cucumber slices"
+  const head = afterQty.split(",")[0].trim();
+  const trailMatch = head.match(new RegExp(`\\s(${TRAILING_UNITS.join("|")})$`, "i"));
+  if (trailMatch) {
+    return finish(head.slice(0, trailMatch.index), qty, normalizeUnit(trailMatch[1]));
   }
 
   // No unit — the rest is the name
-  const name = afterQty.split(",")[0].trim().toLowerCase();
-  return { name, qty, unit: null };
+  return finish(afterQty, qty, null);
 }
 
 // ─── Duration parser ──────────────────────────────────────────────────────────
