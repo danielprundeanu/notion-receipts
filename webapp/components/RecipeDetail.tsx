@@ -20,11 +20,14 @@ import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings } from "@/lib/
 import ShareButton from "@/components/ShareButton";
 import { mealLabel, categoryLabel, difficultyLabel } from "@/lib/labels";
 import { ingredientGrams } from "@/lib/nutrition";
+import { servingsStepOf, stepServings } from "@/lib/servings";
+import ServingsInput from "@/components/ServingsInput";
 
 export type RecipeData = {
   id: string;
   name: string;
   servings: number | null;
+  servingsStep?: number | null;
   time: number | null;
   difficulty: string | null;
   category: string | null;
@@ -91,12 +94,13 @@ function AddToPlannerModal({
   recipe,
   onClose,
 }: {
-  recipe: { id: string; name: string; servings: number | null };
+  recipe: { id: string; name: string; servings: number | null; servingsStep?: number | null };
   onClose: () => void;
 }) {
   const today = new Date();
   const weekStart = getMondayOf(today);
   const defaultServings = recipe.servings ?? 1;
+  const step = servingsStepOf(recipe);
   const todayIdx = todayDayIndex();
 
   const emptyMeals = (): Record<MealType, number> => ({
@@ -142,12 +146,20 @@ function AddToPlannerModal({
     }
   }
 
-  function setMeal(meal: MealType, delta: number) {
+  function setMeal(meal: MealType, delta: 1 | -1) {
     setDayMealServings((prev) => {
       const cur = prev[activeDayIdx] ?? emptyMeals();
-      const next = Math.max(0, cur[meal] + delta);
+      // Going below 1 turns the meal off (0).
+      const next = cur[meal] <= 1 && delta < 0 ? 0 : stepServings(cur[meal], delta, step);
       const resolved = delta > 0 && cur[meal] === 0 ? defaultServings : next;
       return { ...prev, [activeDayIdx]: { ...cur, [meal]: resolved } };
+    });
+  }
+
+  function setMealExact(meal: MealType, n: number) {
+    setDayMealServings((prev) => {
+      const cur = prev[activeDayIdx] ?? emptyMeals();
+      return { ...prev, [activeDayIdx]: { ...cur, [meal]: Math.max(0, n) } };
     });
   }
 
@@ -291,9 +303,17 @@ function AddToPlannerModal({
                         >
                           −
                         </button>
-                        <span className={`w-5 text-center text-sm font-bold ${active ? "text-orange-900 dark:text-orange-200" : "text-gray-300 dark:text-[#4a443c]"}`}>
-                          {s === 0 ? "—" : s}
-                        </span>
+                        {active ? (
+                          <ServingsInput
+                            value={s}
+                            min={0}
+                            onCommit={(n) => setMealExact(m, n)}
+                            ariaLabel={`${mealLabel(m)} servings`}
+                            className="w-10 h-9 text-sm font-bold text-orange-900 dark:text-orange-200"
+                          />
+                        ) : (
+                          <span className="w-10 text-center text-sm font-bold text-gray-300 dark:text-[#4a443c]">—</span>
+                        )}
                         <button
                           type="button"
                           onClick={() => setMeal(m, 1)}
@@ -336,6 +356,7 @@ function AddToPlannerModal({
 
 export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const defaultServings = recipe.servings ?? 1;
+  const servingsStep = servingsStepOf(recipe);
   const [servings, setServings] = useState(defaultServings);
   const scale = defaultServings > 0 ? servings / defaultServings : 1;
   const [isFavorite, setIsFavorite] = useState(recipe.favorite);
@@ -504,16 +525,20 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Servings</span>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setServings((s) => Math.max(1, s - 1))}
+            onClick={() => setServings((s) => Math.max(1, stepServings(s, -1, servingsStep)))}
+            aria-label="Fewer servings"
             className="w-10 h-10 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Minus size={12} />
           </button>
-          <span className="w-8 text-center text-sm font-bold text-gray-900 dark:text-[#eae5de]">
-            {servings}
-          </span>
+          <ServingsInput
+            value={servings}
+            onCommit={setServings}
+            className="w-12 h-10 text-sm font-bold text-gray-900 dark:text-[#eae5de] border border-gray-200 dark:border-[#3a352e]"
+          />
           <button
-            onClick={() => setServings((s) => s + 1)}
+            onClick={() => setServings((s) => stepServings(s, 1, servingsStep))}
+            aria-label="More servings"
             className="w-10 h-10 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >
             <Plus size={12} />

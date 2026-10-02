@@ -19,6 +19,7 @@ export type RecipeFormInput = {
   nameRo?: string | null;
   categories: string[];
   servings: number | null;
+  servingsStep?: number | null;
   time: number | null;
   difficulty: string | null;
   favorite: boolean;
@@ -145,6 +146,12 @@ async function translateTitleAlt(title: string): Promise<string | null> {
   }
 }
 
+// Step must be a positive integer; 1 (the default) is stored as null.
+function cleanServingsStep(step: number | null | undefined): number | null {
+  const n = Math.round(Number(step));
+  return isFinite(n) && n > 1 ? Math.min(n, 100) : null;
+}
+
 export async function createRecipe(data: RecipeFormInput): Promise<string> {
   // Translation is an external API call — keep it out of the transaction.
   const nameRo = data.nameRo?.trim() || (await translateTitleAlt(data.name));
@@ -156,6 +163,7 @@ export async function createRecipe(data: RecipeFormInput): Promise<string> {
         searchText: buildRecipeSearchText(data.name, nameRo),
         category: data.categories.length > 0 ? data.categories.join(", ") : null,
         servings: data.servings,
+        servingsStep: cleanServingsStep(data.servingsStep),
         time: data.time,
         difficulty: data.difficulty,
         favorite: data.favorite,
@@ -194,6 +202,7 @@ export async function updateRecipe(
         searchText: buildRecipeSearchText(data.name, nameRo),
         category: data.categories.length > 0 ? data.categories.join(", ") : null,
         servings: data.servings,
+        servingsStep: cleanServingsStep(data.servingsStep),
         time: data.time,
         difficulty: data.difficulty,
         favorite: data.favorite,
@@ -374,7 +383,7 @@ export async function searchRecipesForPlanner(query: string) {
     },
     take: 10,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+    select: { id: true, name: true, category: true, servings: true, servingsStep: true, imageUrl: true },
   });
 }
 
@@ -398,7 +407,7 @@ export async function getRecipesPanel(search?: string, category?: string, favori
     },
     take: 80,
     orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, servings: true, imageUrl: true, favorite: true },
+    select: { id: true, name: true, category: true, servings: true, servingsStep: true, imageUrl: true, favorite: true },
   });
 }
 
@@ -432,7 +441,7 @@ export async function getWeekPlan(weekStartIso: string) {
     },
     include: {
       recipe: {
-        select: { id: true, name: true, category: true, servings: true, imageUrl: true },
+        select: { id: true, name: true, category: true, servings: true, servingsStep: true, imageUrl: true },
       },
     },
   });

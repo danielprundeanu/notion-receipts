@@ -61,6 +61,7 @@ export default async function EditRecipePage({
     nameRo: recipe.nameRo ?? "",
     categories: recipe.category?.split(", ").filter(Boolean) ?? [],
     servings: recipe.servings?.toString() ?? "",
+    servingsStep: recipe.servingsStep?.toString() ?? "",
     time: recipe.time?.toString() ?? "",
     difficulty: recipe.difficulty ?? "",
     favorite: recipe.favorite,

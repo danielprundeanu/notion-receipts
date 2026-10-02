@@ -11,6 +11,7 @@ import {
   getGroceryItemDetails,
   updateGroceryItem,
 } from "@/lib/actions";
+import { stepServings } from "@/lib/servings";
 import { categoryLabel, difficultyLabel } from "@/lib/labels";
 import GroceryItemModal from "@/components/GroceryItemModal";
 
@@ -45,6 +46,7 @@ export type InitialRecipeData = {
   nameRo: string;
   categories: string[];
   servings: string;
+  servingsStep?: string;
   time: string;
   difficulty: string;
   favorite: boolean;
@@ -527,6 +529,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   const [newTag, setNewTag] = useState("");
   const [addingTag, setAddingTag] = useState(false);
   const [servings, setServings] = useState(initial?.servings ?? "");
+  const [servingsStep, setServingsStep] = useState(initial?.servingsStep ?? "");
   const [time, setTime] = useState(initial?.time ?? "");
   const [difficulty, setDifficulty] = useState(initial?.difficulty ?? "");
   const [favorite, setFavorite] = useState(initial?.favorite ?? false);
@@ -610,6 +613,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
   }
 
   const curServings = parseInt(servings) || 1;
+  const stepN = parseInt(servingsStep) > 1 ? parseInt(servingsStep) : 1;
 
   function goBatch() {
     setMode("batch");
@@ -803,6 +807,7 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       nameRo: nameRo.trim() || null,
       categories,
       servings: servings ? parseInt(servings) : null,
+      servingsStep: parseInt(servingsStep) > 1 ? parseInt(servingsStep) : null,
       time: time ? parseInt(time) : null,
       difficulty: difficulty || null,
       favorite,
@@ -1065,9 +1070,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             <div className="inline-flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => applyServings(curServings - 1, curServings)}
+                onClick={() => applyServings(Math.max(1, stepServings(curServings, -1, stepN)), curServings)}
                 className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="minus one serving"
+                aria-label="fewer servings"
               >
                 −
               </button>
@@ -1083,9 +1088,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
               />
               <button
                 type="button"
-                onClick={() => applyServings(curServings + 1, curServings)}
+                onClick={() => applyServings(stepServings(curServings, 1, stepN), curServings)}
                 className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="plus one serving"
+                aria-label="more servings"
               >
                 +
               </button>
@@ -1103,11 +1108,26 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
             />
             Scale quantities on change
           </label>
+
+          {/* +/− increment used by the servings steppers (here, recipe page, planner) */}
+          <label className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-[#7c756a]">
+            Step
+            <input
+              type="text"
+              inputMode="numeric"
+              value={servingsStep}
+              onChange={(e) => setServingsStep(e.target.value.replace(/\D/g, ""))}
+              placeholder="1"
+              aria-label="Servings increment step"
+              className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+          </label>
         </div>
         <p className="mt-1.5 text-xs text-gray-400 dark:text-[#6e675c]">
           {mode === "batch"
             ? `Ingredient quantities are for ${curServings} servings.`
             : "Ingredient quantities are for 1 serving."}
+          {" "}Step sets how much − / + change servings (e.g. 2 or 4); you can always type any number.
         </p>
       </div>
 
