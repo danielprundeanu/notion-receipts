@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.30.0] — 2026-10-04
+
+### ✨ Features
+- **AI "Match all" in the Audit page** — match all unmatched items in one go, plus user-defined grocery categories.
+- **Audit page category section** — categories are unified and shown with their emoji.
+- **Copy grocery products between weeks** — Select / Copy / Paste for hand-added products; Copy appears only while a selection is active.
+- **Dedicated drag handle on planner cards** — dragging no longer conflicts with swiping.
+- **Single sticky search section** — the input and filters share one sticky section that minimizes when empty; the search chip scrolls to the top and focuses the input, and the bar stays maximized as a fixed header while a query is active (no scroll shift).
+
+### 🐛 Fixes
+- Category picker in the Audit page was unreachable on mobile.
+- Duplicate categories in the ingredients filter are unified.
+- iOS long-press text selection no longer hijacks the planner drag handle.
+
+### 🎨 UI / UX
+- iOS-style share glyph instead of the Android share icon.
+- Search bar minimizes ~40px after sticking, with a smoother transition and a fixed focus ring.
+
+### ⚙️ Internals
+- Track the generated `GroceryCategory` Prisma model.
+- Added the separate `revolut-notion/` app (Revolut screenshot → Notion importer) to the repo.
+
 ## [0.29.2] — 2026-07-23
 
 ### 🐛 Fixes
