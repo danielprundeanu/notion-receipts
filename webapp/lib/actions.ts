@@ -679,12 +679,13 @@ export async function deleteGroceryListItem(id: string): Promise<void> {
   revalidatePath("/grocery-list");
 }
 
-// Copy hand-added products into a week's list (the "paste" half of the shopping
-// list's copy/paste). Only manual products travel this way — recipe-derived lines
-// are computed from the planner, so copying them would create phantom duplicates.
+// Add several hand-added products to a week's list at once. Backs both the "paste"
+// half of the shopping list's copy/paste and the bulk paste-a-list form — only manual
+// products go through here, since recipe-derived lines are computed from the planner
+// and storing copies of them would create phantom duplicates.
 // Products already present that week (same name + unit) are skipped rather than
-// duplicated, so pasting the same set twice is harmless.
-export async function copyGroceryListItems(
+// duplicated, so submitting the same set twice is harmless.
+export async function addGroceryListItems(
   targetWeekIso: string,
   items: Array<{ name: string; quantity?: number | null; unit?: string | null; category?: string | null }>
 ): Promise<{ added: GroceryEntry[]; skipped: number }> {

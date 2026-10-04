@@ -5,12 +5,13 @@ import {
   getGroceryList,
   addGroceryListItem,
   deleteGroceryListItem,
-  copyGroceryListItems,
+  addGroceryListItems,
   deleteGroceryListItems,
 } from "@/lib/actions";
 import { groceryCategoryLabel } from "@/lib/labels";
 import { GROCERY_CATEGORIES, categoryIcon } from "@/lib/constants";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Copy, ClipboardPaste, X } from "lucide-react";
+import BulkGroceryAdd, { type BulkProductRow } from "@/components/BulkGroceryAdd";
+import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Copy, ClipboardPaste, X, ClipboardList } from "lucide-react";
 
 // Categories come from the one canonical list (lib/constants) — this page used to
 // keep its own, older copy, so hand-added products were filed under names that no
@@ -64,6 +65,8 @@ export default function GroceryListPage() {
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState(false);
   const [deleteError, setDeleteError] = useState(false);
+  // "Paste a list" mode — adds many products at once instead of one at a time.
+  const [bulkMode, setBulkMode] = useState(false);
 
   // ── Copy / paste of hand-added products between weeks ──
   const [selectMode, setSelectMode] = useState(false);
@@ -211,31 +214,50 @@ export default function GroceryListPage() {
     try { localStorage.removeItem(CLIPBOARD_KEY); } catch { /* non-fatal */ }
   }
 
+  // Both bulk paths — the week-to-week paste and the "paste a list" form — land here.
+  function mergeAdded(added: GroceryEntry[]) {
+    setGrouped((prev) => {
+      const next = { ...prev };
+      for (const entry of added) {
+        next[entry.category] = [...(next[entry.category] ?? []), entry]
+          .sort((a, b) => a.name.localeCompare(b.name));
+      }
+      return next;
+    });
+  }
+
+  function reportAdded(added: GroceryEntry[], skipped: number) {
+    const parts = [`${added.length} added`];
+    if (skipped) parts.push(`${skipped} already here`);
+    showToast(
+      added.length ? parts.join(" · ") : "All of them were already in this week",
+      added.length ? { undo: () => undoPaste(added.map((e) => e.id)) } : undefined
+    );
+  }
+
   async function handlePaste() {
     if (!clipboard.length || pasting) return;
     setPasting(true);
     try {
-      const { added, skipped } = await copyGroceryListItems(weekStart.toISOString(), clipboard);
-      if (added.length) {
-        setGrouped((prev) => {
-          const next = { ...prev };
-          for (const entry of added) {
-            next[entry.category] = [...(next[entry.category] ?? []), entry]
-              .sort((a, b) => a.name.localeCompare(b.name));
-          }
-          return next;
-        });
-      }
-      const parts = [`${added.length} added`];
-      if (skipped) parts.push(`${skipped} already here`);
-      showToast(
-        added.length ? parts.join(" · ") : "All of them were already in this week",
-        added.length ? { undo: () => undoPaste(added.map((e) => e.id)) } : undefined
-      );
+      const { added, skipped } = await addGroceryListItems(weekStart.toISOString(), clipboard);
+      if (added.length) mergeAdded(added);
+      reportAdded(added, skipped);
     } catch {
       showToast("Could not paste the products. Please try again.", { error: true });
     } finally {
       setPasting(false);
+    }
+  }
+
+  // Returns false so the bulk form keeps what was typed and shows its own error.
+  async function handleBulkAdd(rows: BulkProductRow[]): Promise<boolean> {
+    try {
+      const { added, skipped } = await addGroceryListItems(weekStart.toISOString(), rows);
+      if (added.length) mergeAdded(added);
+      reportAdded(added, skipped);
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -261,6 +283,8 @@ export default function GroceryListPage() {
 
   const allItems = Object.values(grouped).flat();
   const totalCount = allItems.length;
+  // Only hand-added rows are stored, so only those can collide with a bulk add.
+  const manualItems = allItems.filter((i) => i.manual);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -332,6 +356,33 @@ export default function GroceryListPage() {
         Add product
       </button>
     </form>
+  );
+
+  // One product at a time, or a whole pasted list — same place, same styling.
+  const addSection = (
+    <div>
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6]">Add product</p>
+        <button
+          type="button"
+          onClick={() => setBulkMode((v) => !v)}
+          className="flex items-center gap-1.5 px-3 py-2 -mr-1 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+        >
+          {bulkMode ? <Plus size={14} /> : <ClipboardList size={14} />}
+          {bulkMode ? "One at a time" : "Paste a list"}
+        </button>
+      </div>
+      {bulkMode ? (
+        <BulkGroceryAdd
+          categories={CATEGORY_ORDER}
+          existing={manualItems.map((i) => ({ name: i.name, unit: i.unit }))}
+          inputCls={INPUT_CLS}
+          onAdd={handleBulkAdd}
+        />
+      ) : (
+        addForm
+      )}
+    </div>
   );
 
   return (
@@ -479,7 +530,7 @@ export default function GroceryListPage() {
               </button>
             )}
           </div>
-          {addForm}
+          {addSection}
         </div>
       ) : (
         <div className="space-y-6">
@@ -656,8 +707,7 @@ export default function GroceryListPage() {
 
           {/* Add a product by hand to this week */}
           <div className="border-t border-gray-100 dark:border-[#2a2620] pt-5">
-            <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6] mb-2.5">Add product</p>
-            {addForm}
+            {addSection}
           </div>
         </div>
       )}
