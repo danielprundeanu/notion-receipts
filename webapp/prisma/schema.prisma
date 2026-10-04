@@ -23,6 +23,7 @@ model Recipe {
   nameRo       String?       // RO translation of the title (search-only for now)
   searchText   String?       // normalized name + nameRo (lowercased, diacritics stripped) for matching
   servings     Int?
+  servingsStep Int?          // +/− increment for servings steppers (null = 1)
   time         Int?
   difficulty   String?
   category     String?
