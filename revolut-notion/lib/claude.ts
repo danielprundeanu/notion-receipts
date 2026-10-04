@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { CsvTransaction, ParsedScreenshot, ScreenshotKind } from "./types";
+import { periodBounds, resolveEntryDate } from "./dates";
+import type { ParsedScreenshot, ScreenshotKind } from "./types";
 
 const MODEL = "claude-opus-5";
 
@@ -50,9 +51,11 @@ const SCREENSHOT_SCHEMA = {
           merchant: { type: "string" },
           amount: { type: "number" },
           date: nullableString,
+          date_label: nullableString,
           category: nullableString,
+          note: nullableString,
         },
-        required: ["merchant", "amount", "date", "category"],
+        required: ["merchant", "amount", "date", "date_label", "category", "note"],
         additionalProperties: false,
       },
     },
@@ -80,6 +83,11 @@ Identify which screen you are looking at and set "kind":
 - "transaction_list" — the plain account feed with individual transactions and no category grouping. Fill "entries"; leave "category" null.
 - "unknown" — anything else.
 
+A category drill-down scrolled past its header looks exactly like a plain transaction
+list. If no category header is visible on screen, leave "category" null — never infer it
+from the transactions themselves. The app knows which category the screenshot belongs to
+and will fill it in.
+
 Rules for amounts:
 - Report every amount as a POSITIVE number of currency units, however it is displayed ("-45,20 lei", "45.20 RON" and "−45.20" all become 45.2).
 - Revolut uses "." as thousands separator and "," as decimals in several locales: "1.234,56" is 1234.56, while "1,234.56" is also 1234.56. Use the surrounding amounts to decide which convention the screenshot uses.
@@ -89,36 +97,11 @@ Other fields:
 - "currency" is the ISO code (RON, EUR, GBP, USD). "lei" means RON.
 - "period_label" is the period exactly as displayed ("August", "1 Aug – 31 Aug", "This month").
 - "period_start" / "period_end" are ISO dates (YYYY-MM-DD) when the screenshot states or clearly implies them; otherwise null. A bare month name with no year implies nothing — leave them null and say so in "warnings".
-- "date" on an entry is an ISO date only when the screenshot shows one. Relative labels like "Today" or "Yesterday" are not dates — set null and mention it in "warnings".
+- "date" on an entry is an ISO date ONLY when the screenshot shows a complete one, year included. Revolut almost never does, so this is usually null. Do not invent a year.
+- "date_label" is the day text shown for that transaction, copied VERBATIM and always filled in when anything is visible — from the row itself or from the day heading it sits under ("14 august", "14.08", "Astăzi", "Ieri", "Aug 14"). Keep the original wording and language; do not normalise it. This is how the app recovers the real date, so an entry with a visible day heading must never have "date_label" null.
+- "note" is the note the user wrote on that transaction, shown as its own line of plain text under the row, separate from the merchant name and the amount ("Cadou Bianca", "taxi aeroport"). Copy it verbatim and leave it null when the row has none. It is NOT the merchant's second line: the time, the card, the cashback and the account ("18:16 · -9 lei", "Card ·1234", "Current") are never notes.
 - Category names go in verbatim, in the language shown on screen.
 - Transcribe only what is legible. If a row is cut off or blurred, leave it out and record it in "warnings" rather than guessing.`;
-
-const CLASSIFY_SCHEMA = {
-  type: "object",
-  properties: {
-    assignments: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          id: { type: "string" },
-          category: { type: "string" },
-          confidence: { type: "string", enum: ["high", "medium", "low"] },
-        },
-        required: ["id", "category", "confidence"],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ["assignments"],
-  additionalProperties: false,
-} as const;
-
-const CLASSIFY_PROMPT = `You assign bank transactions to spending categories.
-
-You get a list of transactions (id, date, merchant description, amount) and a closed list of category names taken from the user's own Revolut Analytics screen. Assign every transaction to exactly one category from that list — never invent a category name and never leave one out.
-
-Use the merchant name as the main signal: supermarkets and grocery chains are groceries, restaurants/cafes/delivery are restaurants, fuel stations and ride-hailing are transport, and so on. Where a merchant is genuinely ambiguous, pick the most likely category from the list and mark confidence "low"; use "high" only when the merchant name identifies the category unambiguously.`;
 
 /** data:image/png;base64,AAA… → { mediaType, data } */
 function parseDataUrl(dataUrl: string): { mediaType: string; data: string } {
@@ -155,7 +138,7 @@ function readJsonResponse<T>(message: Anthropic.Message): T {
   }
 }
 
-type RawScreenshot = {
+export type RawScreenshot = {
   kind: ScreenshotKind;
   period_label: string | null;
   period_start: string | null;
@@ -167,15 +150,92 @@ type RawScreenshot = {
     merchant: string;
     amount: number;
     date: string | null;
+    /** The day text exactly as shown ("14 august", "Astăzi"), when there is one. */
+    date_label: string | null;
     category: string | null;
+    /** The note the user wrote on the transaction, when the row shows one. */
+    note: string | null;
   }[];
   warnings: string[];
 };
+
+/**
+ * Shape what Claude read into a `ParsedScreenshot`.
+ *
+ * `categoryHint` is the label of the group the user dropped this screenshot into.
+ * It matters because a category drill-down scrolled past its header is
+ * indistinguishable from the plain account feed — the model is told not to guess,
+ * so the grouping is what supplies the category. A header actually visible on
+ * screen still wins: it is what the screen says, not what the user remembered.
+ *
+ * `period` ("YYYY-MM") is the month the user said they are importing. Revolut's
+ * screens show a day without a year, so this is what turns "14 august" into a
+ * real date — and what fills in the period bounds the screen never states.
+ *
+ * Pure — no network, so `npm run smoke` covers it.
+ */
+export function toParsedScreenshot(
+  raw: RawScreenshot,
+  fileName: string,
+  categoryHint?: string | null,
+  period?: string | null,
+): ParsedScreenshot {
+  const header = raw.category?.trim() || null;
+  const hint = categoryHint?.trim() || null;
+  const category = header ?? hint;
+  const warnings = [...(raw.warnings ?? [])];
+
+  if (header && hint && header.toLowerCase() !== hint.toLowerCase()) {
+    warnings.push(
+      `Grupul spune „${hint}", dar pe ecran scrie „${header}". Am folosit ce scrie pe ecran.`,
+    );
+  }
+
+  const bounds = periodBounds(period);
+  const entries = (raw.entries ?? [])
+    .filter((entry) => entry.merchant?.trim())
+    .map((entry) => ({
+      merchant: entry.merchant.trim(),
+      amount: Math.abs(entry.amount),
+      date: resolveEntryDate(entry.date, entry.date_label, period),
+      category: entry.category?.trim() || category,
+      note: entry.note?.trim() || null,
+    }));
+
+  const undated = entries.filter((entry) => !entry.date).length;
+  if (undated > 0) {
+    warnings.push(
+      period
+        ? `${undated} tranzacții nu au o dată lizibilă pe ecran (etichete de tip „Astăzi" nu spun când a fost făcut screenshot-ul).`
+        : `${undated} tranzacții nu au dată: ecranul arată ziua fără an. Alege luna importului în pasul de încărcare.`,
+    );
+  }
+
+  return {
+    fileName,
+    kind: raw.kind,
+    periodLabel: raw.period_label,
+    periodStart: raw.period_start ?? bounds?.start ?? null,
+    periodEnd: raw.period_end ?? bounds?.end ?? null,
+    currency: raw.currency ? raw.currency.toUpperCase() : null,
+    category,
+    totals: (raw.totals ?? [])
+      .filter((total) => total.category?.trim())
+      .map((total) => ({
+        category: total.category.trim(),
+        amount: Math.abs(total.amount),
+      })),
+    entries,
+    warnings,
+  };
+}
 
 /** Read one Revolut screenshot into structured data. */
 export async function extractScreenshot(
   dataUrl: string,
   fileName: string,
+  categoryHint?: string | null,
+  period?: string | null,
 ): Promise<ParsedScreenshot> {
   const { mediaType, data } = parseDataUrl(dataUrl);
   if (!SUPPORTED_IMAGE_TYPES.has(mediaType)) {
@@ -214,85 +274,5 @@ export async function extractScreenshot(
   });
 
   const raw = readJsonResponse<RawScreenshot>(await stream.finalMessage());
-
-  return {
-    fileName,
-    kind: raw.kind,
-    periodLabel: raw.period_label,
-    periodStart: raw.period_start,
-    periodEnd: raw.period_end,
-    currency: raw.currency ? raw.currency.toUpperCase() : null,
-    category: raw.category,
-    totals: (raw.totals ?? [])
-      .filter((total) => total.category?.trim())
-      .map((total) => ({
-        category: total.category.trim(),
-        amount: Math.abs(total.amount),
-      })),
-    entries: (raw.entries ?? [])
-      .filter((entry) => entry.merchant?.trim())
-      .map((entry) => ({
-        merchant: entry.merchant.trim(),
-        amount: Math.abs(entry.amount),
-        date: entry.date,
-        category: entry.category?.trim() || raw.category?.trim() || null,
-      })),
-    warnings: raw.warnings ?? [],
-  };
-}
-
-export type Assignment = {
-  id: string;
-  category: string;
-  confidence: "high" | "medium" | "low";
-};
-
-/**
- * Assign CSV transactions to categories, constrained to the category list read
- * off the Analytics screenshot. This is what fills the gap left by Revolut's
- * category-less CSV export.
- */
-export async function classifyTransactions(
-  transactions: CsvTransaction[],
-  categories: string[],
-): Promise<Assignment[]> {
-  if (transactions.length === 0 || categories.length === 0) return [];
-
-  const payload = transactions.map((transaction) => ({
-    id: transaction.id,
-    date: transaction.date,
-    merchant: transaction.description,
-    amount: transaction.amount,
-  }));
-
-  const stream = getClient().messages.stream({
-    model: MODEL,
-    max_tokens: 32000,
-    system: CLASSIFY_PROMPT,
-    output_config: {
-      effort: "medium",
-      format: { type: "json_schema", schema: CLASSIFY_SCHEMA },
-    },
-    messages: [
-      {
-        role: "user",
-        content: [
-          `Categorii disponibile (folosește exact aceste denumiri):\n${categories
-            .map((category) => `- ${category}`)
-            .join("\n")}`,
-          "",
-          `Tranzacții:\n${JSON.stringify(payload, null, 2)}`,
-        ].join("\n"),
-      },
-    ],
-  });
-
-  const raw = readJsonResponse<{ assignments: Assignment[] }>(
-    await stream.finalMessage(),
-  );
-
-  const allowed = new Set(categories.map((category) => category.toLowerCase()));
-  return (raw.assignments ?? []).filter((assignment) =>
-    allowed.has(assignment.category?.toLowerCase() ?? ""),
-  );
+  return toParsedScreenshot(raw, fileName, categoryHint, period);
 }

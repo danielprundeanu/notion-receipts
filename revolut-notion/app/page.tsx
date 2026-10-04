@@ -4,7 +4,7 @@ import { useState } from "react";
 import ImportStep from "@/components/ImportStep";
 import ResolveStep from "@/components/ResolveStep";
 import ReviewStep from "@/components/ReviewStep";
-import UploadStep, { type UploadedImage } from "@/components/UploadStep";
+import UploadStep, { createGroup, type ScreenshotGroup } from "@/components/UploadStep";
 import type { DraftTransaction, ImportOutcome, ParseResult } from "@/lib/types";
 
 const STEPS = ["Încarcă", "Verifică", "Rezolvă", "Importă"] as const;
@@ -13,7 +13,9 @@ type Step = 0 | 1 | 2 | 3;
 export default function HomePage() {
   const [step, setStep] = useState<Step>(0);
 
-  const [images, setImages] = useState<UploadedImage[]>([]);
+  const [groups, setGroups] = useState<ScreenshotGroup[]>(() => [createGroup()]);
+  /** "YYYY-MM" — the month the screenshots come from; supplies the missing year. */
+  const [period, setPeriod] = useState("");
   const [csv, setCsv] = useState<{ name: string; text: string } | null>(null);
 
   const [result, setResult] = useState<ParseResult | null>(null);
@@ -27,10 +29,19 @@ export default function HomePage() {
     setBusy(true);
     setError(null);
     try {
+      // Flatten the groups; each screenshot carries its group's label so a shot
+      // with no visible category header still knows which category it belongs to.
+      const images = groups.flatMap((group) =>
+        group.images.map((image) => ({
+          ...image,
+          categoryHint: group.label.trim() || null,
+        })),
+      );
+
       const response = await fetch("/api/parse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images, csv: csv?.text ?? null }),
+        body: JSON.stringify({ images, csv: csv?.text ?? null, period: period || null }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Analiza a eșuat.");
@@ -46,14 +57,15 @@ export default function HomePage() {
     }
   }
 
-  async function importToNotion() {
+  /** `selected` excludes rows the user chose not to duplicate in the Import step. */
+  async function importToNotion(selected: DraftTransaction[]) {
     setBusy(true);
     setError(null);
     try {
       const response = await fetch("/api/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactions }),
+        body: JSON.stringify({ transactions: selected }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Importul a eșuat.");
@@ -67,7 +79,8 @@ export default function HomePage() {
 
   function reset() {
     setStep(0);
-    setImages([]);
+    setGroups([createGroup()]);
+    setPeriod("");
     setCsv(null);
     setResult(null);
     setTransactions([]);
@@ -111,8 +124,10 @@ export default function HomePage() {
             </p>
           )}
           <UploadStep
-            images={images}
-            onImagesChange={setImages}
+            groups={groups}
+            onGroupsChange={setGroups}
+            period={period}
+            onPeriodChange={setPeriod}
             csv={csv}
             onCsvChange={setCsv}
             onAnalyse={analyse}

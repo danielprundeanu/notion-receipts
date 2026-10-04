@@ -1,4 +1,4 @@
-import { classifyTransactions } from "./claude";
+import { AMOUNT_TOLERANCE, daysApart, merchantSimilarity } from "./match";
 import type {
   CsvTransaction,
   DraftTransaction,
@@ -6,42 +6,8 @@ import type {
   ReconciliationRow,
 } from "./types";
 
-/** Amounts equal to the cent. */
-const AMOUNT_TOLERANCE = 0.011;
 /** A screenshot row may be dated a day or two off the CSV's "started" date. */
 const DATE_WINDOW_DAYS = 3;
-
-function normaliseMerchant(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-function daysApart(a: string, b: string): number {
-  const left = Date.parse(a);
-  const right = Date.parse(b);
-  if (Number.isNaN(left) || Number.isNaN(right)) return 0;
-  return Math.abs(left - right) / 86_400_000;
-}
-
-/** 0 = no relation, 1 = identical merchant strings. */
-function merchantSimilarity(a: string, b: string): number {
-  const left = normaliseMerchant(a);
-  const right = normaliseMerchant(b);
-  if (!left || !right) return 0;
-  if (left === right) return 1;
-  if (left.includes(right) || right.includes(left)) return 0.8;
-
-  const leftTokens = new Set(left.split(" ").filter((token) => token.length > 2));
-  const rightTokens = right.split(" ").filter((token) => token.length > 2);
-  if (leftTokens.size === 0 || rightTokens.length === 0) return 0;
-
-  const shared = rightTokens.filter((token) => leftTokens.has(token)).length;
-  return (shared / Math.max(leftTokens.size, rightTokens.length)) * 0.7;
-}
 
 /** Collect the distinct category names seen across every screenshot. */
 export function collectCategories(screenshots: ParsedScreenshot[]): string[] {
@@ -65,7 +31,9 @@ export function collectCategories(screenshots: ParsedScreenshot[]): string[] {
 type CategorisedCsv = {
   transaction: CsvTransaction;
   category: string | null;
-  source: "screenshot" | "inferred" | "none";
+  /** Comes from the screenshot: the CSV export has no note column. */
+  note: string | null;
+  source: "screenshot" | "none";
 };
 
 /**
@@ -76,8 +44,11 @@ type CategorisedCsv = {
 function matchScreenshotEntries(
   screenshots: ParsedScreenshot[],
   csv: CsvTransaction[],
-): { assigned: Map<string, string>; unmatched: string[] } {
-  const assigned = new Map<string, string>();
+): {
+  assigned: Map<string, { category: string; note: string | null }>;
+  unmatched: string[];
+} {
+  const assigned = new Map<string, { category: string; note: string | null }>();
   const unmatched: string[] = [];
   const used = new Set<string>();
 
@@ -104,7 +75,10 @@ function matchScreenshotEntries(
 
     if (best) {
       used.add(best.id);
-      assigned.set(best.id, entry.category as string);
+      assigned.set(best.id, {
+        category: entry.category as string,
+        note: entry.note ?? null,
+      });
     } else {
       unmatched.push(`${entry.merchant} (${entry.amount.toFixed(2)})`);
     }
@@ -116,7 +90,8 @@ function matchScreenshotEntries(
 function toDraft(
   transaction: CsvTransaction,
   category: string | null,
-  source: "screenshot" | "inferred" | "none",
+  note: string | null,
+  source: "screenshot" | "none",
 ): DraftTransaction {
   return {
     id: transaction.id,
@@ -124,13 +99,16 @@ function toDraft(
     description: transaction.description,
     amount: transaction.amount,
     currency: transaction.currency,
+    note,
     revolutCategory: category,
     categorySource: source,
     isAggregate: false,
     notionCategoryId: null,
     notionCategoryName: null,
     matchType: "none",
-    include: true,
+    // Rows the screenshots never showed start excluded: they are reported per
+    // month in the Review step and the user decides whether they go in.
+    include: source === "screenshot",
   };
 }
 
@@ -144,9 +122,11 @@ export type MergeResult = {
 /**
  * Combine screenshots and CSV into the rows that will be written to Notion.
  *
- * The CSV is the authoritative ledger when present (exact amounts, dates and
- * merchant strings); the screenshots supply the categories the CSV lacks.
- * Without a CSV, the screenshots are all we have and are used directly.
+ * **The screenshots decide what gets imported.** The CSV is the authoritative
+ * ledger for the rows they cover (exact amounts, dates and merchant strings),
+ * but a CSV row no screenshot ever showed is not categorised automatically — it
+ * is reported per month and left for the user to rule on. Without a CSV, the
+ * screenshots are all we have and are used directly.
  */
 export async function mergeSources(
   screenshots: ParsedScreenshot[],
@@ -156,7 +136,7 @@ export async function mergeSources(
   const categories = collectCategories(screenshots);
 
   const transactions: DraftTransaction[] = csv.length
-    ? await mergeWithCsv(screenshots, csv, categories, warnings)
+    ? mergeWithCsv(screenshots, csv, warnings)
     : mergeScreenshotsOnly(screenshots, warnings);
 
   return {
@@ -167,12 +147,11 @@ export async function mergeSources(
   };
 }
 
-async function mergeWithCsv(
+function mergeWithCsv(
   screenshots: ParsedScreenshot[],
   csv: CsvTransaction[],
-  categories: string[],
   warnings: string[],
-): Promise<DraftTransaction[]> {
+): DraftTransaction[] {
   const { assigned, unmatched } = matchScreenshotEntries(screenshots, csv);
 
   if (unmatched.length > 0) {
@@ -184,48 +163,23 @@ async function mergeWithCsv(
   }
 
   const rows: CategorisedCsv[] = csv.map((transaction) => {
-    const category = assigned.get(transaction.id) ?? null;
+    const match = assigned.get(transaction.id);
     return {
       transaction,
-      category,
-      source: category ? "screenshot" : "none",
+      category: match?.category ?? null,
+      note: match?.note ?? null,
+      source: match ? "screenshot" : "none",
     };
   });
 
-  const needsInference = rows.filter((row) => !row.category);
-  if (needsInference.length > 0 && categories.length > 0) {
-    try {
-      const assignments = await classifyTransactions(
-        needsInference.map((row) => row.transaction),
-        categories,
-      );
-      const byId = new Map(assignments.map((a) => [a.id, a.category]));
-      for (const row of needsInference) {
-        const category = byId.get(row.transaction.id);
-        if (category) {
-          row.category = category;
-          row.source = "inferred";
-        }
-      }
-    } catch (error) {
-      warnings.push(
-        `Nu am putut deduce categoriile pentru restul tranzacțiilor: ${(error as Error).message}`,
-      );
-    }
-  } else if (needsInference.length > 0) {
+  const uncovered = rows.filter((row) => !row.category).length;
+  if (uncovered > 0) {
     warnings.push(
-      "Niciun screenshot nu a furnizat o listă de categorii, deci tranzacțiile din CSV au rămas necategorisite.",
+      `${uncovered} tranzacții din CSV nu apar în niciun screenshot. Sunt excluse din import și grupate pe luni în pasul de verificare — decide acolo ce faci cu ele.`,
     );
   }
 
-  const stillMissing = rows.filter((row) => !row.category).length;
-  if (stillMissing > 0) {
-    warnings.push(
-      `${stillMissing} tranzacții au rămas fără categorie — alege-le manual în pasul de rezolvare.`,
-    );
-  }
-
-  return rows.map((row) => toDraft(row.transaction, row.category, row.source));
+  return rows.map((row) => toDraft(row.transaction, row.category, row.note, row.source));
 }
 
 function mergeScreenshotsOnly(
@@ -236,49 +190,59 @@ function mergeScreenshotsOnly(
   const detailedCategories = new Set<string>();
   let index = 0;
 
+  let undated = 0;
+
   for (const screenshot of screenshots) {
     for (const entry of screenshot.entries) {
       const category = entry.category?.trim() || null;
       if (category) detailedCategories.add(category.toLowerCase());
+      // No date means no date. Stamping today produced a whole import of rows
+      // dated the day it ran — plausible-looking and entirely wrong.
+      const date = entry.date ?? null;
+      if (!date) undated += 1;
       drafts.push({
         id: `shot-${index++}`,
-        date: entry.date ?? screenshot.periodStart ?? new Date().toISOString().slice(0, 10),
+        date: date ?? "",
         description: entry.merchant,
         amount: entry.amount,
         currency: screenshot.currency ?? "RON",
+        note: entry.note ?? null,
         revolutCategory: category,
         categorySource: category ? "screenshot" : "none",
         isAggregate: false,
         notionCategoryId: null,
         notionCategoryName: null,
         matchType: "none",
-        include: true,
+        include: date !== null,
       });
-      if (!entry.date) {
-        warnings.push(
-          `"${entry.merchant}" nu avea dată în screenshot; am folosit începutul perioadei.`,
-        );
-      }
     }
+  }
+
+  if (undated > 0) {
+    warnings.push(
+      `${undated} tranzacții nu au o dată care să poată fi stabilită și sunt excluse din import. Verifică luna aleasă la încărcare sau adaugă statement-ul CSV, care are datele exacte.`,
+    );
   }
 
   // Categories that only ever appeared as a total get one aggregate row each.
   for (const screenshot of screenshots) {
     for (const total of screenshot.totals) {
       if (detailedCategories.has(total.category.toLowerCase())) continue;
+      const date = screenshot.periodEnd ?? screenshot.periodStart ?? null;
       drafts.push({
         id: `total-${index++}`,
-        date: screenshot.periodEnd ?? screenshot.periodStart ?? new Date().toISOString().slice(0, 10),
+        date: date ?? "",
         description: `${total.category} — total ${screenshot.periodLabel ?? "perioadă"}`,
         amount: total.amount,
         currency: screenshot.currency ?? "RON",
+        note: null,
         revolutCategory: total.category,
         categorySource: "screenshot",
         isAggregate: true,
         notionCategoryId: null,
         notionCategoryName: null,
         matchType: "none",
-        include: true,
+        include: date !== null,
       });
     }
   }

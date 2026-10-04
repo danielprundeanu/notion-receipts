@@ -1,5 +1,14 @@
-import { ruleKey } from "./store";
 import type { CategoryRules, DraftTransaction, NotionCategory } from "./types";
+
+/**
+ * Rule keys are lowercased + whitespace-collapsed so lookups are forgiving.
+ *
+ * It lives here rather than next to the JSON store so this module stays free of
+ * `fs`: the Review step imports `assignCategory` into the browser bundle.
+ */
+export function ruleKey(revolutCategory: string): string {
+  return revolutCategory.trim().toLowerCase().replace(/\s+/g, " ");
+}
 
 /**
  * Resolve each draft's Revolut category to a Notion category page.
@@ -54,4 +63,43 @@ export function applyCategoryMatching(
   });
 
   return { transactions, unresolvedCategories: [...unresolved.values()] };
+}
+
+/**
+ * Point a set of drafts at a Notion category — or clear it, with `category: null`.
+ *
+ * This is the Review step's override: whatever matching produced, the user has
+ * the last word, for a whole Revolut category at once or for a single row.
+ *
+ * `saveRule` only ever sticks to rows that carry a Revolut category name, since
+ * that name is the rule key. A single-row override must pass `false`: a rule
+ * learned from one row would be applied to the whole category next time.
+ */
+export function assignCategory(
+  drafts: DraftTransaction[],
+  ids: ReadonlySet<string>,
+  category: NotionCategory | null,
+  saveRule = false,
+): DraftTransaction[] {
+  return drafts.map((draft) => {
+    if (!ids.has(draft.id)) return draft;
+
+    if (!category) {
+      return {
+        ...draft,
+        notionCategoryId: null,
+        notionCategoryName: null,
+        matchType: "none" as const,
+        saveRule: false,
+      };
+    }
+
+    return {
+      ...draft,
+      notionCategoryId: category.id,
+      notionCategoryName: category.name,
+      matchType: "manual" as const,
+      saveRule: saveRule && Boolean(draft.revolutCategory),
+    };
+  });
 }

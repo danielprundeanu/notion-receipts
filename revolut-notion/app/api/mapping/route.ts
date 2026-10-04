@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getDatabaseSchema, listCategories, normaliseDatabaseId } from "@/lib/notion";
+import {
+  categoriesFromOptions,
+  categoryModeForType,
+  getDatabaseSchema,
+  listCategories,
+  normaliseDatabaseId,
+} from "@/lib/notion";
 import { loadDatabaseIds, loadMapping, saveMapping } from "@/lib/store";
 import type { DatabaseSchema } from "@/lib/notion";
 import type { NotionCategory, NotionMapping } from "@/lib/types";
@@ -44,11 +50,20 @@ export async function GET(request: Request) {
     }
   }
 
-  if (databaseIds.categoriesDbId) {
+  // In select mode the categories are the options of the mapped property, so
+  // there is no second database to read.
+  const categoryProperty = transactionsSchema?.properties.find(
+    (property) => property.name === mapping?.transactions.category,
+  );
+  const selectMode = categoryModeForType(categoryProperty?.type) === "select";
+
+  if (selectMode && categoryProperty) {
+    categories = categoriesFromOptions(categoryProperty);
+  } else if (databaseIds.categoriesDbId) {
     try {
       categoriesSchema = await getDatabaseSchema(databaseIds.categoriesDbId);
       const titleProperty =
-        mapping?.categories.title ??
+        mapping?.categories?.title ??
         categoriesSchema.properties.find((property) => property.type === "title")?.name ??
         "Name";
       categories = await listCategories(databaseIds.categoriesDbId, titleProperty);
@@ -76,14 +91,19 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "Corp de cerere invalid." }, { status: 400 });
   }
 
+  const categoryMode = body.categoryMode === "select" ? "select" : "relation";
+
   const missing = [
     !body.transactionsDbId && "ID-ul bazei de tranzacții",
-    !body.categoriesDbId && "ID-ul bazei de categorii",
     !body.transactions?.title && "proprietatea Titlu",
     !body.transactions?.date && "proprietatea Dată",
     !body.transactions?.amount && "proprietatea Sumă",
-    !body.transactions?.category && "proprietatea Relație categorie",
-    !body.categories?.title && "proprietatea Titlu din baza de categorii",
+    !body.transactions?.category && "proprietatea Categorie",
+    // Only a relation needs a second database behind it.
+    categoryMode === "relation" && !body.categoriesDbId && "ID-ul bazei de categorii",
+    categoryMode === "relation" &&
+      !body.categories?.title &&
+      "proprietatea Titlu din baza de categorii",
   ].filter(Boolean);
 
   if (missing.length > 0) {
@@ -95,7 +115,11 @@ export async function PUT(request: Request) {
 
   const mapping: NotionMapping = {
     transactionsDbId: normaliseDatabaseId(body.transactionsDbId),
-    categoriesDbId: normaliseDatabaseId(body.categoriesDbId),
+    categoryMode,
+    categoriesDbId:
+      categoryMode === "relation" && body.categoriesDbId
+        ? normaliseDatabaseId(body.categoriesDbId)
+        : undefined,
     transactions: {
       title: body.transactions.title,
       date: body.transactions.date,
@@ -103,8 +127,13 @@ export async function PUT(request: Request) {
       category: body.transactions.category,
       currency: body.transactions.currency || undefined,
       source: body.transactions.source || undefined,
+      month: body.transactions.month || undefined,
+      check: body.transactions.check || undefined,
     },
-    categories: { title: body.categories.title },
+    categories:
+      categoryMode === "relation" && body.categories?.title
+        ? { title: body.categories.title }
+        : undefined,
   };
 
   try {

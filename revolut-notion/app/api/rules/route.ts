@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { loadRules, ruleKey, saveRules } from "@/lib/store";
+import { ruleKey } from "@/lib/rules";
+import { loadRules, saveRules } from "@/lib/store";
 import type { CategoryRules } from "@/lib/types";
 
 export const runtime = "nodejs";

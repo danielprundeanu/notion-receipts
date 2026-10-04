@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, RefreshCw, Save, Trash2 } from "lucide-react";
 import type { MappingResponse } from "@/app/api/mapping/route";
-import type { CategoryRules, NotionMapping } from "@/lib/types";
+import type { CategoryMode, CategoryRules, NotionMapping } from "@/lib/types";
 
 type TransactionFields = NotionMapping["transactions"];
 
@@ -12,8 +12,11 @@ const EMPTY_FIELDS: TransactionFields = {
   date: "",
   amount: "",
   category: "",
+  comment: "",
   currency: "",
   source: "",
+  month: "",
+  check: "",
 };
 
 /** Notion property types that can sensibly receive each mapped field. */
@@ -21,18 +24,34 @@ const ALLOWED_TYPES: Record<keyof TransactionFields, string[]> = {
   title: ["title"],
   date: ["date"],
   amount: ["number", "formula"],
-  category: ["relation"],
+  // A relation to a categories database, or a select on this database itself.
+  category: ["relation", "select", "multi_select"],
+  // Free text a user typed on their phone: only a text property can hold it
+  // without inventing select options.
+  comment: ["rich_text"],
   currency: ["select", "rich_text", "multi_select"],
   source: ["select", "rich_text", "multi_select"],
+  month: ["relation"],
+  check: ["checkbox"],
 };
 
 const FIELD_LABELS: Record<keyof TransactionFields, string> = {
   title: "Titlu (descriere / comerciant)",
   date: "Dată",
   amount: "Sumă",
-  category: "Relație către baza de categorii",
+  category: "Categorie (relație sau select)",
+  comment: "Comentariu (opțional)",
   currency: "Monedă (opțional)",
   source: "Sursă import (opțional)",
+  month: "Relație către luna (opțional)",
+  check: "Bifă la import (opțional)",
+};
+
+const FIELD_HINTS: Partial<Record<keyof TransactionFields, string>> = {
+  comment:
+    "Primește nota scrisă pe tranzacție în Revolut („Cadou Bianca”). Se citește din screenshot — CSV-ul nu are note.",
+  month: "Fiecare rând se leagă de pagina lunii sale, ca totalurile lunare să îl includă.",
+  check: "Se bifează automat la import — pentru bazele care își filtrează totalurile pe o bifă.",
 };
 
 export default function SettingsPage() {
@@ -96,7 +115,7 @@ export default function SettingsPage() {
       setCategoriesDbId(overrides?.categoriesDbId ?? mapping.databaseIds.categoriesDbId);
       setFields({ ...EMPTY_FIELDS, ...(mapping.mapping?.transactions ?? {}) });
       setCategoryTitle(
-        mapping.mapping?.categories.title ??
+        mapping.mapping?.categories?.title ??
           mapping.categoriesSchema?.properties.find(
             (property) => property.type === "title",
           )?.name ??
@@ -148,9 +167,10 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           transactionsDbId,
-          categoriesDbId,
+          categoryMode,
+          categoriesDbId: categoryMode === "relation" ? categoriesDbId : undefined,
           transactions: fields,
-          categories: { title: categoryTitle },
+          categories: categoryMode === "relation" ? { title: categoryTitle } : undefined,
         } satisfies NotionMapping),
       });
       const payload = await response.json();
@@ -196,6 +216,17 @@ export default function SettingsPage() {
   const transactionProperties = data?.transactionsSchema?.properties ?? [];
   const categoryProperties = data?.categoriesSchema?.properties ?? [];
 
+  // The chosen property's own type decides the mode: a select/multi_select keeps
+  // the categories on this database, so there is no second database to point at.
+  const categoryProperty = transactionProperties.find(
+    (property) => property.name === fields.category,
+  );
+  const categoryMode: CategoryMode =
+    categoryProperty?.type === "select" || categoryProperty?.type === "multi_select"
+      ? "select"
+      : "relation";
+  const selectOptions = categoryProperty?.options ?? [];
+
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">Setări</h1>
@@ -230,16 +261,23 @@ export default function SettingsPage() {
               className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2"
             />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">Baza de categorii</span>
-            <input
-              type="text"
-              value={categoriesDbId}
-              onChange={(event) => setCategoriesDbId(event.target.value)}
-              placeholder="https://notion.so/… sau ID"
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2"
-            />
-          </label>
+          {categoryMode === "relation" ? (
+            <label className="block text-sm">
+              <span className="mb-1 block text-[var(--muted)]">Baza de categorii</span>
+              <input
+                type="text"
+                value={categoriesDbId}
+                onChange={(event) => setCategoriesDbId(event.target.value)}
+                placeholder="https://notion.so/… sau ID"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2"
+              />
+            </label>
+          ) : (
+            <p className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm text-[var(--muted)]">
+              Categoria e o proprietate <strong>{categoryProperty?.type}</strong> pe baza de
+              tranzacții, deci nu e nevoie de o a doua bază de date.
+            </p>
+          )}
         </div>
 
         <button
@@ -276,14 +314,22 @@ export default function SettingsPage() {
 
         <div className="space-y-3">
           {(Object.keys(FIELD_LABELS) as (keyof TransactionFields)[]).map((field) => {
-            const options = transactionProperties.filter((property) =>
-              ALLOWED_TYPES[field].includes(property.type),
+            const options = transactionProperties.filter(
+              (property) =>
+                ALLOWED_TYPES[field].includes(property.type) &&
+                // The category relation is never also the month relation.
+                !(field === "month" && property.name === fields.category),
             );
             return (
               <label key={field} className="block text-sm">
                 <span className="mb-1 block text-[var(--muted)]">
                   {FIELD_LABELS[field]}
                 </span>
+                {FIELD_HINTS[field] && (
+                  <span className="mb-1 block text-xs text-[var(--muted)]">
+                    {FIELD_HINTS[field]}
+                  </span>
+                )}
                 <select
                   value={fields[field] ?? ""}
                   onChange={(event) =>
@@ -303,26 +349,28 @@ export default function SettingsPage() {
             );
           })}
 
-          <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">
-              Titlul din baza de categorii
-            </span>
-            <select
-              value={categoryTitle}
-              onChange={(event) => setCategoryTitle(event.target.value)}
-              disabled={categoryProperties.length === 0}
-              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 disabled:opacity-50"
-            >
-              <option value="">— alege —</option>
-              {categoryProperties
-                .filter((property) => property.type === "title")
-                .map((property) => (
-                  <option key={property.name} value={property.name}>
-                    {property.name}
-                  </option>
-                ))}
-            </select>
-          </label>
+          {categoryMode === "relation" && (
+            <label className="block text-sm">
+              <span className="mb-1 block text-[var(--muted)]">
+                Titlul din baza de categorii
+              </span>
+              <select
+                value={categoryTitle}
+                onChange={(event) => setCategoryTitle(event.target.value)}
+                disabled={categoryProperties.length === 0}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2 disabled:opacity-50"
+              >
+                <option value="">— alege —</option>
+                {categoryProperties
+                  .filter((property) => property.type === "title")
+                  .map((property) => (
+                    <option key={property.name} value={property.name}>
+                      {property.name}
+                    </option>
+                  ))}
+              </select>
+            </label>
+          )}
         </div>
 
         <button
@@ -339,16 +387,21 @@ export default function SettingsPage() {
           Salvează configurarea
         </button>
 
-        {data && data.categories.length > 0 && (
-          <p className="mt-3 text-sm text-[var(--muted)]">
-            {data.categories.length} categorii găsite:{" "}
-            {data.categories
-              .slice(0, 8)
-              .map((category) => category.name)
-              .join(", ")}
-            {data.categories.length > 8 ? "…" : ""}
-          </p>
-        )}
+        {(() => {
+          // In select mode the options are already in the schema we fetched, so
+          // the preview updates as soon as the property is picked — no save first.
+          const names =
+            categoryMode === "select"
+              ? selectOptions
+              : (data?.categories ?? []).map((category) => category.name);
+          if (names.length === 0) return null;
+          return (
+            <p className="mt-3 text-sm text-[var(--muted)]">
+              {names.length} categorii găsite: {names.slice(0, 8).join(", ")}
+              {names.length > 8 ? "…" : ""}
+            </p>
+          );
+        })()}
       </section>
 
       <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4">

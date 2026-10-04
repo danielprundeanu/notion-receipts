@@ -13,7 +13,17 @@ import type { CsvTransaction } from "./types";
  */
 
 export type CsvParseResult = {
+  /** Spending only — the rows the import may write. */
   transactions: CsvTransaction[];
+  /**
+   * Every completed row in file order, incoming ones included.
+   *
+   * `transactions` is this list filtered to `direction === "out"`, sharing the
+   * same objects. Read this one only to reason about what surrounds a payment
+   * (pocket inference); anything that ends up in Notion goes through
+   * `transactions`, so an incoming row can never be imported as an expense.
+   */
+  rows: CsvTransaction[];
   currency: string | null;
   warnings: string[];
 };
@@ -86,6 +96,15 @@ function toIsoDate(value: string): string | null {
   return parsed.toISOString().slice(0, 10);
 }
 
+/**
+ * `2026-08-14 18:16:23` → `2026-08-14T18:16:23`, null when the cell carries no
+ * time. Ordering payments against transfers needs the clock, not just the day.
+ */
+function toIsoTimestamp(value: string): string | null {
+  const match = value.trim().match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2})?)/);
+  return match ? `${match[1]}T${match[2].length === 5 ? `${match[2]}:00` : match[2]}` : null;
+}
+
 function toNumber(value: string): number {
   const cleaned = value.trim().replace(/\s/g, "").replace(/,/g, ".");
   const parsed = Number(cleaned);
@@ -97,7 +116,7 @@ export function parseRevolutCsv(text: string): CsvParseResult {
   const rows = splitCsv(text);
 
   if (rows.length < 2) {
-    return { transactions: [], currency: null, warnings: ["CSV-ul este gol."] };
+    return { transactions: [], rows: [], currency: null, warnings: ["CSV-ul este gol."] };
   }
 
   const header = rows[0].map(normaliseHeader);
@@ -111,6 +130,7 @@ export function parseRevolutCsv(text: string): CsvParseResult {
 
   const idx = {
     type: columnOf("type"),
+    product: columnOf("product", "account"),
     startedDate: columnOf("started date", "date started", "date"),
     completedDate: columnOf("completed date"),
     description: columnOf("description", "merchant", "reference"),
@@ -123,6 +143,7 @@ export function parseRevolutCsv(text: string): CsvParseResult {
   if (idx.amount === -1 || idx.description === -1) {
     return {
       transactions: [],
+      rows: [],
       currency: null,
       warnings: [
         "CSV-ul nu pare un export Revolut: lipsesc coloanele Amount / Description.",
@@ -130,8 +151,8 @@ export function parseRevolutCsv(text: string): CsvParseResult {
     };
   }
 
-  const transactions: CsvTransaction[] = [];
-  let skippedIncoming = 0;
+  const parsed: CsvTransaction[] = [];
+  let incoming = 0;
   let skippedPending = 0;
   const currencies = new Set<string>();
 
@@ -147,14 +168,15 @@ export function parseRevolutCsv(text: string): CsvParseResult {
 
     const rawAmount = toNumber(get(idx.amount));
     // Revolut writes spending as negative. Anything else is a top-up, refund or
-    // incoming transfer — not something the Analytics "Spent" screen covers.
-    if (rawAmount >= 0) {
-      skippedIncoming += 1;
-      continue;
-    }
+    // incoming transfer — none of which the Analytics "Spent" screen covers, so
+    // none of which is ever imported. They are kept out of `transactions` but
+    // stay in `rows`: a transfer out of a pocket lands on the current account as
+    // one of these, and that is what tells us the pocket a payment came from.
+    const direction = rawAmount < 0 ? "out" : "in";
+    if (direction === "in") incoming += 1;
 
-    const date =
-      toIsoDate(get(idx.startedDate)) ?? toIsoDate(get(idx.completedDate));
+    const started = get(idx.startedDate);
+    const date = toIsoDate(started) ?? toIsoDate(get(idx.completedDate));
     if (!date) {
       warnings.push(`Rândul ${i + 1} nu are o dată validă și a fost ignorat.`);
       continue;
@@ -163,21 +185,26 @@ export function parseRevolutCsv(text: string): CsvParseResult {
     const currency = get(idx.currency).toUpperCase();
     if (currency) currencies.add(currency);
 
-    transactions.push({
+    parsed.push({
       id: `csv-${i}`,
       type: get(idx.type),
       date,
+      startedAt: toIsoTimestamp(started),
+      product: get(idx.product),
       description: get(idx.description) || "(fără descriere)",
       amount: Math.abs(rawAmount),
+      direction,
       fee: Math.abs(toNumber(get(idx.fee))),
       currency: currency || "RON",
       state: state || "COMPLETED",
     });
   }
 
-  if (skippedIncoming > 0) {
+  const transactions = parsed.filter((row) => row.direction === "out");
+
+  if (incoming > 0) {
     warnings.push(
-      `${skippedIncoming} rânduri au fost ignorate (încasări, top-up-uri sau refund-uri).`,
+      `${incoming} rânduri nu se importă (încasări, top-up-uri sau refund-uri).`,
     );
   }
   if (skippedPending > 0) {
@@ -192,5 +219,5 @@ export function parseRevolutCsv(text: string): CsvParseResult {
     );
   }
 
-  return { transactions, currency, warnings };
+  return { transactions, rows: parsed, currency, warnings };
 }

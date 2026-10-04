@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { createTransactionPage, getDatabaseSchema } from "@/lib/notion";
+import { createTransactionPage, getDatabaseSchema, loadMonthIndex } from "@/lib/notion";
+import { monthKeyFromDate } from "@/lib/months";
 import { loadMapping, upsertRules } from "@/lib/store";
 import type { DraftTransaction, ImportOutcome } from "@/lib/types";
 
@@ -31,9 +32,17 @@ export async function POST(request: Request) {
     );
   }
 
-  const selected = (body.transactions ?? []).filter(
+  const candidates = (body.transactions ?? []).filter(
     (transaction) => transaction.include && transaction.notionCategoryId,
   );
+  // Last line of defence: a row without a real date must never be written. An
+  // early version substituted today's date and produced an import that looked
+  // fine and was wrong in every row.
+  const selected = candidates.filter((transaction) =>
+    /^\d{4}-\d{2}-\d{2}$/.test(transaction.date ?? ""),
+  );
+  const undated = candidates.length - selected.length;
+
   if (selected.length === 0) {
     return NextResponse.json(
       { error: "Nicio tranzacție selectată cu o categorie Notion asociată." },
@@ -41,13 +50,19 @@ export async function POST(request: Request) {
     );
   }
 
-  // Read the live schema so optional fields are written in the right shape.
+  // Read the live schema so every field — the category included — is written in
+  // the shape the database actually uses.
   let propertyTypes: Record<string, string>;
+  let monthsDbId: string | undefined;
   try {
     const schema = await getDatabaseSchema(mapping.transactionsDbId);
     propertyTypes = Object.fromEntries(
       schema.properties.map((property) => [property.name, property.type]),
     );
+    monthsDbId = schema.properties.find(
+      (property) =>
+        property.name === mapping.transactions.month && property.type === "relation",
+    )?.relationDatabaseId;
   } catch (error) {
     return NextResponse.json(
       { error: `Nu am putut citi structura bazei de tranzacții: ${(error as Error).message}` },
@@ -55,12 +70,52 @@ export async function POST(request: Request) {
     );
   }
 
-  const outcome: ImportOutcome = { created: 0, failed: [], savedRules: 0 };
+  const outcome: ImportOutcome = {
+    created: 0,
+    failed: [],
+    savedRules: 0,
+    monthsLinked: 0,
+    warnings: [],
+  };
+
+  if (undated > 0) {
+    outcome.warnings.push(
+      `${undated} tranzacții au fost sărite: nu au o dată valabilă. Stabilește luna la încărcare sau folosește statement-ul CSV.`,
+    );
+  }
+
+  // Link each row to its month page so monthly rollups pick the import up. A
+  // missing month must not block the write — the row is still correct without it.
+  let monthIndex = new Map<string, string>();
+  if (mapping.transactions.month) {
+    if (monthsDbId) {
+      try {
+        monthIndex = await loadMonthIndex(monthsDbId);
+      } catch (error) {
+        outcome.warnings.push(
+          `Nu am putut citi baza de luni: ${(error as Error).message}. Rândurile se importă fără lună.`,
+        );
+      }
+    } else {
+      outcome.warnings.push(
+        `Proprietatea „${mapping.transactions.month}” nu mai este o relație — rândurile se importă fără lună.`,
+      );
+    }
+  }
+
+  const missingMonths = new Set<string>();
 
   for (const [index, transaction] of selected.entries()) {
+    const monthKey = monthKeyFromDate(transaction.date);
+    const monthPageId = monthKey ? (monthIndex.get(monthKey) ?? null) : null;
+    if (mapping.transactions.month && monthIndex.size > 0 && !monthPageId && monthKey) {
+      missingMonths.add(monthKey);
+    }
+
     try {
-      await createTransactionPage(mapping, propertyTypes, transaction);
+      await createTransactionPage(mapping, propertyTypes, transaction, monthPageId);
       outcome.created += 1;
+      if (monthPageId) outcome.monthsLinked += 1;
     } catch (error) {
       outcome.failed.push({
         description: transaction.description,
@@ -68,6 +123,12 @@ export async function POST(request: Request) {
       });
     }
     if (index < selected.length - 1) await sleep(WRITE_DELAY_MS);
+  }
+
+  if (missingMonths.size > 0) {
+    outcome.warnings.push(
+      `Nu am găsit pagina de lună pentru ${[...missingMonths].sort().join(", ")} — rândurile din aceste luni s-au importat fără legătura de lună.`,
+    );
   }
 
   // Learn the manual choices the user flagged, so the next import matches them

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractScreenshot } from "@/lib/claude";
 import { mergeSources } from "@/lib/merge";
-import { listCategories } from "@/lib/notion";
+import { listCategoryChoices } from "@/lib/notion";
 import { parseRevolutCsv } from "@/lib/revolut-csv";
 import { applyCategoryMatching } from "@/lib/rules";
 import { loadMapping, loadRules } from "@/lib/store";
@@ -12,8 +12,11 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 type ParseRequest = {
-  images?: { name: string; dataUrl: string }[];
+  /** `categoryHint` is the label of the upload group the screenshot was dropped into. */
+  images?: { name: string; dataUrl: string; categoryHint?: string | null }[];
   csv?: string | null;
+  /** "YYYY-MM" — the month being imported; supplies the year the screens omit. */
+  period?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -40,7 +43,12 @@ export async function POST(request: Request) {
   const screenshots: ParsedScreenshot[] = [];
   for (const image of images) {
     try {
-      const parsed = await extractScreenshot(image.dataUrl, image.name);
+      const parsed = await extractScreenshot(
+        image.dataUrl,
+        image.name,
+        image.categoryHint,
+        body.period,
+      );
       screenshots.push(parsed);
       warnings.push(...parsed.warnings.map((w) => `${image.name}: ${w}`));
     } catch (error) {
@@ -72,15 +80,13 @@ export async function POST(request: Request) {
   }
   warnings.push(...merged.warnings);
 
-  // 4. Match Revolut categories to Notion category pages.
+  // 4. Match Revolut categories to the Notion categories — pages in relation
+  //    mode, select options otherwise.
   const mapping = await loadMapping();
   let notionCategories: NotionCategory[] = [];
   if (mapping) {
     try {
-      notionCategories = await listCategories(
-        mapping.categoriesDbId,
-        mapping.categories.title,
-      );
+      notionCategories = await listCategoryChoices(mapping);
     } catch (error) {
       warnings.push(
         `Nu am putut citi categoriile din Notion: ${(error as Error).message}`,

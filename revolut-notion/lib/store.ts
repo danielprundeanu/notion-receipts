@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { ruleKey } from "./rules";
 import type { CategoryRules, NotionMapping } from "./types";
 
 /**
@@ -31,11 +32,6 @@ async function readJson<T>(file: string, fallback: T): Promise<T> {
 async function writeJson(file: string, value: unknown): Promise<void> {
   await fs.mkdir(DATA_DIR, { recursive: true });
   await fs.writeFile(file, `${JSON.stringify(value, null, 2)}\n`, "utf8");
-}
-
-/** Rule keys are lowercased + whitespace-collapsed so lookups are forgiving. */
-export function ruleKey(revolutCategory: string): string {
-  return revolutCategory.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export async function loadRules(): Promise<CategoryRules> {
@@ -82,15 +78,21 @@ export async function loadMapping(): Promise<NotionMapping | null> {
     stored?.transactionsDbId || process.env.NOTION_TRANSACTIONS_DB_ID || "";
   const categoriesDbId =
     stored?.categoriesDbId || process.env.NOTION_CATEGORIES_DB_ID || "";
+  // Mappings saved before select mode existed have no `categoryMode`.
+  const categoryMode = stored?.categoryMode ?? "relation";
 
-  if (!stored?.transactions || !stored?.categories) return null;
-  if (!transactionsDbId || !categoriesDbId) return null;
+  if (!stored?.transactions || !transactionsDbId) return null;
+  // A separate categories database is only part of a complete mapping when the
+  // category is a relation; in select mode the options live on the transactions
+  // database itself.
+  if (categoryMode === "relation" && (!categoriesDbId || !stored.categories)) return null;
 
   return {
     transactionsDbId,
-    categoriesDbId,
+    categoriesDbId: categoryMode === "relation" ? categoriesDbId : undefined,
+    categoryMode,
     transactions: stored.transactions,
-    categories: stored.categories,
+    categories: categoryMode === "relation" ? stored.categories : undefined,
   };
 }
 

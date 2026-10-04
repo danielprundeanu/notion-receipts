@@ -1,4 +1,9 @@
 {
   "version": 1,
-  "rules": {}
+  "rules": {
+    "gift": {
+      "notionCategoryId": "🎁 Gift",
+      "notionCategoryName": "🎁 Gift"
+    }
+  }
 }
