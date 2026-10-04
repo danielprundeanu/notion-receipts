@@ -1,0 +1,13 @@
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Credentials — never commit these
+.env
+.env.local
+
+# Local-only state written by the app at runtime.
+# category-rules.json IS committed (it is the learned mapping, worth versioning);
+# notion-mapping.json holds database IDs, so it stays local.
+data/notion-mapping.json

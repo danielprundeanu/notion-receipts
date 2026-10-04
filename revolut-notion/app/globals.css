@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --background: #fafafa;
+  --surface: #ffffff;
+  --border: #e5e5e5;
+  --foreground: #1f1f1f;
+  --muted: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #171717;
+    --surface: #1f1f1f;
+    --border: #2f2f2f;
+    --foreground: #e3e3e3;
+    --muted: #9ca3af;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border-subtle: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Mobile-first: every interactive control clears a 44px touch target. */
+button,
+select,
+input[type="file"],
+input[type="text"] {
+  min-height: 44px;
+}

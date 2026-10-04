@@ -7,8 +7,13 @@ notes that say the UI is Romanian.)
 
 ## Repository layout
 
-Two parts:
-- **`webapp/`** — the Next.js app (the deployed product). **All app work happens here.**
+Three parts:
+- **`webapp/`** — the meal-planner Next.js app (the deployed product). **Meal-planner work
+  happens here.**
+- **`revolut-notion/`** — a **separate, unrelated** Next.js app: upload a Revolut Analytics
+  screenshot, Claude reads it, transactions land in two Notion databases. Own `package.json`,
+  own deps, own README. It shares nothing with `webapp/` — don't cross-import, and note its UI
+  copy is in **Romanian**, unlike the meal-planner's English.
 - **Repo root** — a legacy Python pipeline (`scripts/*.py`, `.venv/`, `data/`) that originally
   exported from Notion and parsed recipes. Mostly superseded by the TypeScript app; kept only
   for one-off Notion exports. Do not assume it reflects current app behavior.
