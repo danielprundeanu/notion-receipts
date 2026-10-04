@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.31.0] — 2026-10-05
+
+### ✨ Features
+- **Bulk-add products to the shopping list** — "Paste a list" next to *Add product* adds many hand-added products at once from pasted lines (quantities and units are read from each line). Products already in the week are skipped, and the toast offers Undo. Replaces the earlier bulk add on the Ingredients page.
+- **Copy to another week via a week picker** — copying selected "Other" products now opens a week picker and writes them straight into the chosen week (no more clipboard + Paste). Duplicates are skipped and the toast offers Undo.
+- **Delete selected products** — Select → Delete, behind an inline confirmation, with rollback if it fails.
+- **Quantity steppers** — − / + buttons on the product quantity box (whole units, 0.1 below 1); typing still works.
+
+### 🐛 Fixes
+- Recipe import parses ASCII fractions (`1/2`, `1 1/2`) and trailing units correctly.
+
+### ⚙️ Internals
+- revolut-notion (separate app): duplicate detection, month views, CSV and matching improvements.
+- Added the `dump` / `prime` Claude commands, session context files and a unit-weights backup.
+
 ## [0.30.0] — 2026-10-04
 
 ### ✨ Features
