@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.32.0] — 2026-10-05
+
+### ✨ Features
+- **Type servings directly** — the number between the − / + steppers is now editable (Enter or blur saves, Escape cancels, invalid input reverts). Works on the recipe page (main control + Add to planner modal), on planner slot cards (desktop + mobile) and in the planner's add-recipe modal.
+- **Per-recipe servings step** — a new "Step" field in the recipe form sets how far − / + move (snapped to multiples of the step); typed values stay unrestricted.
+
+### ⚙️ Internals
+- New nullable column `Recipe.servingsStep` (migration `20261002000000_add_recipe_servings_step`) — run `npx prisma migrate deploy` on Neon before deploying.
+
 ## [0.31.0] — 2026-10-05
 
 ### ✨ Features
