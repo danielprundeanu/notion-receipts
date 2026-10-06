@@ -665,7 +665,10 @@ async function fetchRecipeFromUrl(url: string): Promise<RawRecipe> {
 
 // ─── Text parser (=== format) ─────────────────────────────────────────────────
 
-const META_RE = /^(Servings|Time|Difficulty|Favorite|Link|Category|Image):\s*(.+)$/;
+const META_RE = /^(Servings|Time|Difficulty|Favorite|Link|Categories|Category|Image|Batch):\s*(.+)$/i;
+// A plain ingredient line starts with a quantity: "500g flour", "1/2 cup milk", "½ lemon".
+const PLAIN_QTY_RE = /^[\d½⅓⅔¼¾⅛]/;
+const INGR_HEADER_RE = /^(ingredients?|ingrediente)$/i;
 const BRACKET_RE = /^\[([^\]]*)\]\s*(.*)$/;
 const OLD_GROUP_RE = /^\[\d+\]$/;
 const STEP_RE = /^(\d+)[.)]\s*(.+)$/;
@@ -689,6 +692,9 @@ export function parseTextFormat(content: string): RawRecipe[] {
   let groupName: string | null = null;
   let groupOrder = 0;
   let pendingGroup: string | null = null;
+  // Set once a "# Group" header is seen: from then on plain lines are ingredients
+  // (as in the import page's placeholder), not the legacy bare-text group names.
+  let hashGroups = false;
 
   for (const raw of content.split("\n")) {
     const line = raw.trim();
@@ -707,6 +713,7 @@ export function parseTextFormat(content: string): RawRecipe[] {
       groupName = null;
       groupOrder = 0;
       pendingGroup = null;
+      hashGroups = false;
       continue;
     }
 
@@ -715,20 +722,27 @@ export function parseTextFormat(content: string): RawRecipe[] {
     // Metadata
     const metaMatch = line.match(META_RE);
     if (metaMatch && (state === "meta" || state === null)) {
-      const [, key, val] = metaMatch;
-      if (key === "Servings") r.servings = parseInt(val) || null;
-      else if (key === "Time") r.time = parseInt(val) || null;
-      else if (key === "Difficulty") r.difficulty = val;
-      else if (key === "Favorite") r.favorite = val.toLowerCase() === "yes";
-      else if (key === "Link") r.link = val;
-      else if (key === "Category") r.category = val;
-      else if (key === "Image") r.image = val;
+      const [, rawKey, val] = metaMatch;
+      const key = rawKey.toLowerCase();
+      if (key === "servings") {
+        r.servings = parseInt(val) || null;
+        // "Servings: 4 Batch: True" — batch may share the line.
+        const bm = val.match(/batch:\s*(\w+)/i);
+        if (bm) r.batch = /^(true|yes)$/i.test(bm[1]);
+      }
+      else if (key === "batch") r.batch = /^(true|yes)/i.test(val);
+      else if (key === "time") r.time = parseInt(val) || null;
+      else if (key === "difficulty") r.difficulty = val;
+      else if (key === "favorite") r.favorite = val.toLowerCase() === "yes";
+      else if (key === "link") r.link = val;
+      else if (key === "category" || key === "categories") r.category = val;
+      else if (key === "image") r.image = val;
       state = "meta";
       continue;
     }
 
-    // Steps section
-    if (line.startsWith("Steps:")) {
+    // Steps section: legacy "Steps:" or a markdown "## Steps" / "# Steps" header
+    if (/^steps:?$/i.test(line) || /^#+\s*(steps|instructions|method|preparare|mod de preparare)\s*:?$/i.test(line)) {
       state = "steps";
       continue;
     }
@@ -738,7 +752,31 @@ export function parseTextFormat(content: string): RawRecipe[] {
       } else {
         const sm = line.match(STEP_RE);
         if (sm) r.instructions.push({ text: sm[2].trim(), isSection: false });
+        else if (hashGroups) {
+          const text = line.replace(/^[-–•*]\s*/, "").trim();
+          if (text) r.instructions.push({ text, isSection: false });
+        }
       }
+      continue;
+    }
+
+    // "# Group" header (single #): starts an ingredient group; "# Ingredients" = no name
+    if (/^#\s/.test(line)) {
+      const g = line.replace(/^#\s*/, "").replace(/:$/, "").trim();
+      hashGroups = true;
+      if (state === "ingr") groupOrder++;
+      groupName = INGR_HEADER_RE.test(g) ? null : g;
+      pendingGroup = null;
+      state = "ingr";
+      continue;
+    }
+
+    // Plain ingredient line ("500g flour"), or any line inside a "# Group" section
+    if (!line.startsWith("[") && (PLAIN_QTY_RE.test(line) || (hashGroups && state === "ingr"))) {
+      if (pendingGroup !== null) { groupName = pendingGroup; groupOrder++; pendingGroup = null; }
+      state = "ingr";
+      const parsed = parseIngredientString(line);
+      if (parsed.name) r.ingredients.push({ ...parsed, groupName, groupOrder });
       continue;
     }
 
