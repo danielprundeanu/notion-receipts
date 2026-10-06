@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.33.0] — 2026-10-06
+
+### 🐛 Fixes
+- **Text import no longer creates empty recipes** — a pasted recipe starting with `=== Title ===` only read `[qty unit] name` ingredient lines, so plain lines like `500g flour` (the format shown in the import page's own placeholder) were silently dropped. The `===` format now also accepts plain ingredient lines, `# Group` headers (`# Ingredients` = unnamed group), `## Steps` headers with numbered or bulleted steps, and `Categories:` / `Batch:` (also `Servings: 4 Batch: True` on one line). The legacy bracket format parses exactly as before.
+
 ## [0.32.0] — 2026-10-05
 
 ### ✨ Features
