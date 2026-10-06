@@ -547,14 +547,6 @@ export type IngredientUncheckedUpdateManyWithoutGroceryItemNestedInput = {
   deleteMany?: Prisma.IngredientScalarWhereInput | Prisma.IngredientScalarWhereInput[]
 }
 
-export type IntFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type IngredientCreateWithoutRecipeInput = {
   id?: string
   groupName?: string | null

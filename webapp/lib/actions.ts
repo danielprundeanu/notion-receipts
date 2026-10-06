@@ -3,6 +3,7 @@
 import { prisma } from "./db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { ingredientGrams } from "./nutrition";
+import { flattenRecipes, loadRecipeGraph, flattenRecipe, referenceFactor, referencesRecipe, REF_UNITS, type RefUnit, type FlatIngredient } from "./recipe-refs";
 import { buildRecipeSearchText, normalizeSearch } from "./search";
 import { GROCERY_CATEGORIES } from "./constants";
 import Anthropic from "@anthropic-ai/sdk";
@@ -33,6 +34,13 @@ export type RecipeFormInput = {
     groupOrder: number;
     groupName: string | null;
     order: number;
+  }>;
+  // Other recipes used inside this one (shown as expandable ingredient groups).
+  references?: Array<{
+    refRecipeId: string;
+    quantity: number;
+    unit: string;        // "serving" | "g"
+    groupOrder: number;
   }>;
   instructions: Array<{
     text: string;
@@ -107,6 +115,20 @@ async function buildIngredientsAndInstructions(
     });
   }
 
+  for (const ref of data.references ?? []) {
+    if (!ref.refRecipeId || ref.refRecipeId === recipeId) continue;
+    if (!(ref.quantity > 0)) continue;
+    await tx.recipeReference.create({
+      data: {
+        recipeId,
+        refRecipeId: ref.refRecipeId,
+        quantity: ref.quantity,
+        unit: REF_UNITS.includes(ref.unit as RefUnit) ? ref.unit : "serving",
+        groupOrder: ref.groupOrder,
+      },
+    });
+  }
+
   let order = 0;
   for (const inst of data.instructions) {
     if (!inst.text.trim()) continue;
@@ -144,6 +166,25 @@ async function translateTitleAlt(title: string): Promise<string | null> {
     console.error("translateTitleAlt:", e);
     return null;
   }
+}
+
+// Why a recipe's references can't be saved (a referenced recipe that already uses
+// this one would make a loop), or null when they're fine. The form calls this
+// before saving so the message reaches the user (server-action errors are masked
+// in production); create/update re-check it as a backstop.
+export async function checkRecipeReferences(
+  recipeId: string | null,
+  refRecipeIds: string[]
+): Promise<string | null> {
+  if (!recipeId) return null; // a new recipe can't be referenced by anything yet
+  for (const refId of new Set(refRecipeIds)) {
+    if (refId === recipeId) return "A recipe can't reference itself.";
+    if (await referencesRecipe(refId, recipeId)) {
+      const r = await prisma.recipe.findUnique({ where: { id: refId }, select: { name: true } });
+      return `"${r?.name ?? "That recipe"}" already uses this recipe, so it can't be added here (that would make a loop).`;
+    }
+  }
+  return null;
 }
 
 // Step must be a positive integer; 1 (the default) is stored as null.
@@ -191,6 +232,8 @@ export async function updateRecipe(
       nameRo = await translateTitleAlt(data.name);
     }
   }
+  const refProblem = await checkRecipeReferences(id, (data.references ?? []).map((r) => r.refRecipeId));
+  if (refProblem) throw new Error(refProblem);
   // Update + wipe + rebuild must be atomic: without a transaction, a failure
   // after deleteMany leaves the recipe with no ingredients/instructions.
   await prisma.$transaction(async (tx) => {
@@ -212,20 +255,36 @@ export async function updateRecipe(
     });
     await tx.ingredient.deleteMany({ where: { recipeId: id } });
     await tx.instruction.deleteMany({ where: { recipeId: id } });
+    await tx.recipeReference.deleteMany({ where: { recipeId: id } });
     await buildIngredientsAndInstructions(tx, id, data);
   }, RECIPE_TX_OPTS);
   revalidatePath("/recipes");
   revalidatePath(`/recipes/${id}`);
 }
 
-export async function deleteRecipe(id: string): Promise<void> {
-  await prisma.recipe.delete({ where: { id } });
-  revalidatePath("/recipes");
+// Recipes used inside other recipes can't be deleted (the referencing recipes
+// would silently lose that group). Returns an error message instead of throwing
+// so it reaches the user in production.
+export async function deleteRecipe(id: string): Promise<{ error?: string }> {
+  return deleteRecipes([id]);
 }
 
-export async function deleteRecipes(ids: string[]): Promise<void> {
-  await prisma.recipe.deleteMany({ where: { id: { in: ids } } });
+export async function deleteRecipes(ids: string[]): Promise<{ error?: string }> {
+  const usedBy = await prisma.recipeReference.findMany({
+    where: { refRecipeId: { in: ids }, recipeId: { notIn: ids } },
+    select: { refRecipe: { select: { name: true } }, recipe: { select: { name: true } } },
+  });
+  if (usedBy.length > 0) {
+    const pairs = [...new Set(usedBy.map((u) => `"${u.refRecipe.name}" is used in "${u.recipe.name}"`))];
+    return { error: `Can't delete: ${pairs.slice(0, 3).join("; ")}${pairs.length > 3 ? "; …" : ""}. Remove it from there first.` };
+  }
+  await prisma.$transaction([
+    // References between recipes that are all being deleted go first (FK is RESTRICT).
+    prisma.recipeReference.deleteMany({ where: { recipeId: { in: ids } } }),
+    prisma.recipe.deleteMany({ where: { id: { in: ids } } }),
+  ]);
   revalidatePath("/recipes");
+  return {};
 }
 
 // Fields a batch edit can touch. Only keys actually present are written, so an
@@ -347,7 +406,52 @@ export async function getRecipes(search?: string, category?: string, favorites?:
   });
 }
 
+export type RecipeRefGroup = {
+  id: string;
+  refRecipeId: string;
+  name: string;
+  imageUrl: string | null;
+  servings: number | null;
+  quantity: number;
+  unit: string;
+  groupOrder: number;
+  // Multiplier from the referenced recipe's stored quantities to "quantity × unit" of it.
+  factor: number;
+  // Its ingredients for its own servings (nested references already expanded in).
+  ingredients: FlatIngredient[];
+};
+
 export async function getRecipe(id: string) {
+  const recipe = await getRecipeBase(id);
+  if (!recipe) return null;
+  return { ...recipe, refGroups: await getRecipeRefGroups(id) };
+}
+
+async function getRecipeRefGroups(id: string): Promise<RecipeRefGroup[]> {
+  const graph = await loadRecipeGraph([id]);
+  const root = graph.get(id);
+  if (!root) return [];
+  const memo = new Map<string, FlatIngredient[]>();
+  return root.references.flatMap((ref) => {
+    const child = graph.get(ref.refRecipeId);
+    if (!child) return [];
+    const ingredients = flattenRecipe(child.id, graph, memo, [id]);
+    return [{
+      id: ref.id,
+      refRecipeId: child.id,
+      name: child.name,
+      imageUrl: child.imageUrl,
+      servings: child.servings,
+      quantity: ref.quantity,
+      unit: ref.unit,
+      groupOrder: ref.groupOrder,
+      factor: referenceFactor(ref.quantity, ref.unit, child, ingredients),
+      ingredients,
+    }];
+  });
+}
+
+function getRecipeBase(id: string) {
   return prisma.recipe.findUnique({
     where: { id },
     include: {
@@ -456,15 +560,10 @@ export async function getWeekNutrition(
 
   const plans = await prisma.weekPlan.findMany({
     where: { weekStart: { gte: weekStart, lt: weekEnd } },
-    include: {
-      recipe: {
-        select: {
-          servings: true,
-          ingredients: { include: { groceryItem: true } },
-        },
-      },
-    },
+    include: { recipe: { select: { servings: true } } },
   });
+  // Each recipe's ingredients with referenced recipes expanded in.
+  const flat = await flattenRecipes(plans.map((p) => p.recipeId));
 
   const totals: Record<number, { kcal: number; carbs: number; fat: number; protein: number }> = {};
 
@@ -472,7 +571,7 @@ export async function getWeekNutrition(
     const recipeServings = plan.recipe.servings || 1;
     const scale = plan.servings / recipeServings;
 
-    for (const ing of plan.recipe.ingredients) {
+    for (const ing of flat.get(plan.recipeId) ?? []) {
       if (!ing.groceryItem || !ing.quantity) continue;
       const gi = ing.groceryItem;
       if (!gi.kcal && !gi.protein) continue;
@@ -573,16 +672,10 @@ export async function getGroceryList(
 
   const plans = await prisma.weekPlan.findMany({
     where: { weekStart: { gte: weekStart, lt: weekEnd } },
-    include: {
-      recipe: {
-        include: {
-          ingredients: {
-            include: { groceryItem: true },
-          },
-        },
-      },
-    },
+    include: { recipe: { select: { servings: true } } },
   });
+  // Each recipe's ingredients with referenced recipes expanded in.
+  const flat = await flattenRecipes(plans.map((p) => p.recipeId));
 
   const map = new Map<
     string,
@@ -593,7 +686,7 @@ export async function getGroceryList(
     const recipeServings = plan.recipe.servings || 1;
     const scale = plan.servings / recipeServings;
 
-    for (const ing of plan.recipe.ingredients) {
+    for (const ing of flat.get(plan.recipeId) ?? []) {
       if (!ing.groceryItem) continue;
       const unit = ing.unit ?? ing.groceryItem.unit;
       // Key by item AND unit: never sum incompatible units (e.g. 200 g + 1 cup)

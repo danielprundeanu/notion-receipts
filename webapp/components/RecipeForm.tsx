@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil, Sparkles } from "lucide-react";
+import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil, Sparkles, BookOpen, Search } from "lucide-react";
 import {
   createRecipe,
   updateRecipe,
@@ -10,6 +10,8 @@ import {
   searchGroceryItems,
   getGroceryItemDetails,
   updateGroceryItem,
+  searchRecipesForPlanner,
+  checkRecipeReferences,
 } from "@/lib/actions";
 import { stepServings } from "@/lib/servings";
 import { categoryLabel, difficultyLabel } from "@/lib/labels";
@@ -40,6 +42,15 @@ type IngredientGroup = {
   ingredients: IngredientRow[];
 };
 
+// Another recipe used inside this one: how much of it goes in (servings or grams).
+export type RecipeRefRow = {
+  id: string;
+  refRecipeId: string | null;
+  name: string;
+  quantity: string;
+  unit: "serving" | "g";
+};
+
 export type InitialRecipeData = {
   id: string;
   name: string;
@@ -53,6 +64,7 @@ export type InitialRecipeData = {
   link: string;
   imageUrl: string;
   groups: IngredientGroup[];
+  references?: RecipeRefRow[];
   instructionsText: string;
 };
 
@@ -426,6 +438,130 @@ function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: 
 
 // ─── Field label ─────────────────────────────────────────────────────────────
 
+// ─── Recipe reference row ────────────────────────────────────────────────────
+
+function RecipeRefEditor({
+  row,
+  excludeIds,
+  onChange,
+  onRemove,
+}: {
+  row: RecipeRefRow;
+  excludeIds: string[];
+  onChange: (patch: Partial<RecipeRefRow>) => void;
+  onRemove: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const picking = !row.refRecipeId;
+
+  useEffect(() => {
+    if (!picking || !query.trim()) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      setSearchError(false);
+      try {
+        const r = await searchRecipesForPlanner(query.trim());
+        setResults(r.filter((x) => !excludeIds.includes(x.id)));
+      } catch {
+        setSearchError(true);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+    // excludeIds is derived each render; the query drives the search
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, picking]);
+
+  return (
+    <div className="border border-orange-200 dark:border-orange-900/50 rounded-xl bg-orange-50/50 dark:bg-orange-950/10">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-orange-100 dark:border-orange-900/40">
+        <BookOpen size={14} className="text-orange-500 shrink-0" />
+        <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] flex-1">Recipe</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label="Remove recipe reference"
+          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+      <div className="p-3 space-y-2">
+        {picking ? (
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search a recipe to use here…"
+              autoFocus
+              className="w-full pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            />
+            {query.trim() && (
+              <div className="mt-1 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] max-h-56 overflow-y-auto">
+                {searching ? (
+                  <p className="px-3 py-2.5 text-sm text-gray-400 flex items-center gap-2"><Loader2 size={13} className="animate-spin" /> Searching…</p>
+                ) : searchError ? (
+                  <p className="px-3 py-2.5 text-sm text-red-600 dark:text-red-400">Search failed. Try again.</p>
+                ) : results.length === 0 ? (
+                  <p className="px-3 py-2.5 text-sm text-gray-400">No recipes found</p>
+                ) : (
+                  results.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => { onChange({ refRecipeId: r.id, name: r.name }); setQuery(""); }}
+                      className="w-full text-left px-3 py-2.5 text-sm text-gray-800 dark:text-[#d8d0c4] hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                    >
+                      {r.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-gray-900 dark:text-[#eae5de] truncate flex-1">{row.name}</span>
+            <button
+              type="button"
+              onClick={() => onChange({ refRecipeId: null, name: "" })}
+              className="text-xs text-orange-600 hover:text-orange-700 font-medium shrink-0 px-2 py-2"
+            >
+              Change
+            </button>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-gray-500 dark:text-[#7c756a]">Amount</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={row.quantity}
+            onChange={(e) => onChange({ quantity: e.target.value.replace(/[^\d.,]/g, "") })}
+            placeholder={row.unit === "g" ? "300" : "1"}
+            aria-label="Amount of the referenced recipe"
+            className="w-20 text-center px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          />
+          <select
+            value={row.unit}
+            onChange={(e) => onChange({ unit: e.target.value as RecipeRefRow["unit"] })}
+            aria-label="Unit"
+            className="px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            <option value="serving">servings</option>
+            <option value="g">g</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Label({ children }: { children: React.ReactNode }) {
   return (
     <label className="text-xs font-semibold text-gray-600 dark:text-[#a49c90] uppercase tracking-wide block mb-1.5">
@@ -542,6 +678,20 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     initial?.groups?.length ? initial.groups : [defaultGroup()]
   );
   const [instructionsText, setInstructionsText] = useState(initial?.instructionsText ?? "");
+  const [refs, setRefs] = useState<RecipeRefRow[]>(initial?.references ?? []);
+
+  function addRef() {
+    setRefs((rs) => [...rs, { id: uid(), refRecipeId: null, name: "", quantity: "1", unit: "serving" }]);
+    setDirty(true);
+  }
+  function updateRef(id: string, patch: Partial<RecipeRefRow>) {
+    setRefs((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setDirty(true);
+  }
+  function removeRef(id: string) {
+    setRefs((rs) => rs.filter((r) => r.id !== id));
+    setDirty(true);
+  }
 
   // Batch / per-serving control
   const [mode, setMode] = useState<"batch" | "single">(
@@ -785,6 +935,17 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         }))
     );
 
+    // Referenced recipes come after the ingredient groups.
+    const chosenRefs = refs.filter((r) => r.refRecipeId);
+    const badRef = chosenRefs.find((r) => !(parseFloat(r.quantity.replace(",", ".")) > 0));
+    if (badRef) { setError(`Set how much of "${badRef.name}" goes in.`); setSaving(false); return; }
+    const references = chosenRefs.map((r, i) => ({
+      refRecipeId: r.refRecipeId!,
+      quantity: parseFloat(r.quantity.replace(",", ".")),
+      unit: r.unit,
+      groupOrder: groups.length + 1 + i,
+    }));
+
     const instructions: Array<{ text: string; isSection: boolean; step: number; instrType?: string }> = [];
     let order = 0;
     for (const line of instructionsText.split("\n")) {
@@ -814,10 +975,13 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
       link: link.trim() || null,
       imageUrl: imageUrl || null,
       ingredients,
+      references,
       instructions,
     };
 
     try {
+      const refProblem = await checkRecipeReferences(initial?.id ?? null, references.map((r) => r.refRecipeId));
+      if (refProblem) { setError(refProblem); setSaving(false); return; }
       if (initial?.id) {
         await updateRecipe(initial.id, payload);
         router.push(`/recipes/${initial.id}`);
@@ -836,9 +1000,16 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     if (!initial?.id) return;
     if (!confirm(`Delete "${name}"? This action cannot be undone.`)) return;
     setDeleting(true);
-    await deleteRecipe(initial.id);
-    router.push("/recipes");
-    router.refresh();
+    setError(null);
+    try {
+      const res = await deleteRecipe(initial.id);
+      if (res.error) { setError(res.error); setDeleting(false); return; }
+      router.push("/recipes");
+      router.refresh();
+    } catch {
+      setError("Couldn't delete the recipe. Please try again.");
+      setDeleting(false);
+    }
   }
 
   const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
@@ -1133,13 +1304,20 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
 
       {/* ── Ingredients ──────────────────────────────────────────── */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <button
             type="button"
             onClick={addGroup}
             className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] border border-gray-200 dark:border-[#3a352e] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
           >
             <Plus size={13} /> Add group
+          </button>
+          <button
+            type="button"
+            onClick={addRef}
+            className="flex items-center gap-1 text-sm text-orange-700 dark:text-orange-300 hover:text-orange-800 border border-orange-200 dark:border-orange-900/60 rounded-lg px-2.5 py-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors"
+          >
+            <BookOpen size={13} /> Add recipe
           </button>
         </div>
 
@@ -1302,6 +1480,15 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
                 </button>
               </div>
             </div>
+          ))}
+          {refs.map((r) => (
+            <RecipeRefEditor
+              key={r.id}
+              row={r}
+              excludeIds={[...(initial?.id ? [initial.id] : []), ...refs.filter((x) => x.refRecipeId).map((x) => x.refRecipeId!)]}
+              onChange={(patch) => updateRef(r.id, patch)}
+              onRemove={() => removeRef(r.id)}
+            />
           ))}
         </div>
       </div>

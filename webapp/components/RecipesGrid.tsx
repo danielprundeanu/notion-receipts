@@ -63,6 +63,7 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
 
   // Category tags present on the current list — merged with the defaults in the
@@ -110,11 +111,17 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
   }
 
   function handleDelete() {
+    setDeleteError(null);
     startTransition(async () => {
-      await deleteRecipes([...selected]);
-      setSelected(new Set());
-      setConfirmDelete(false);
-      router.refresh();
+      try {
+        const res = await deleteRecipes([...selected]);
+        if (res.error) { setDeleteError(res.error); return; }
+        setSelected(new Set());
+        setConfirmDelete(false);
+        router.refresh();
+      } catch {
+        setDeleteError("Couldn't delete. Please try again.");
+      }
     });
   }
 
@@ -170,8 +177,11 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
                 >
                   {isPending ? "Deleting…" : "Delete permanently"}
                 </button>
+                {deleteError && (
+                  <span className="text-xs text-red-600 dark:text-red-400 max-w-xs">{deleteError}</span>
+                )}
                 <button
-                  onClick={() => setConfirmDelete(false)}
+                  onClick={() => { setConfirmDelete(false); setDeleteError(null); }}
                   className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#bab2a6] transition-colors"
                 >
                   Cancel

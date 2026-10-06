@@ -68,6 +68,13 @@ export default async function EditRecipePage({
     link: recipe.link ?? "",
     imageUrl: recipe.imageUrl ?? "",
     groups,
+    references: recipe.refGroups.map((r) => ({
+      id: r.id,
+      refRecipeId: r.refRecipeId,
+      name: r.name,
+      quantity: String(r.quantity),
+      unit: r.unit === "g" ? "g" : "serving",
+    })),
     instructionsText,
   };
 

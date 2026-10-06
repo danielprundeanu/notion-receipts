@@ -315,6 +315,8 @@ export type RecipeWhereInput = {
   ingredients?: Prisma.IngredientListRelationFilter
   instructions?: Prisma.InstructionListRelationFilter
   weekPlans?: Prisma.WeekPlanListRelationFilter
+  references?: Prisma.RecipeReferenceListRelationFilter
+  usedIn?: Prisma.RecipeReferenceListRelationFilter
 }
 
 export type RecipeOrderByWithRelationInput = {
@@ -337,6 +339,8 @@ export type RecipeOrderByWithRelationInput = {
   ingredients?: Prisma.IngredientOrderByRelationAggregateInput
   instructions?: Prisma.InstructionOrderByRelationAggregateInput
   weekPlans?: Prisma.WeekPlanOrderByRelationAggregateInput
+  references?: Prisma.RecipeReferenceOrderByRelationAggregateInput
+  usedIn?: Prisma.RecipeReferenceOrderByRelationAggregateInput
 }
 
 export type RecipeWhereUniqueInput = Prisma.AtLeast<{
@@ -362,6 +366,8 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
   ingredients?: Prisma.IngredientListRelationFilter
   instructions?: Prisma.InstructionListRelationFilter
   weekPlans?: Prisma.WeekPlanListRelationFilter
+  references?: Prisma.RecipeReferenceListRelationFilter
+  usedIn?: Prisma.RecipeReferenceListRelationFilter
 }, "id" | "notionId">
 
 export type RecipeOrderByWithAggregationInput = {
@@ -430,6 +436,8 @@ export type RecipeCreateInput = {
   ingredients?: Prisma.IngredientCreateNestedManyWithoutRecipeInput
   instructions?: Prisma.InstructionCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeUncheckedCreateInput = {
@@ -452,6 +460,8 @@ export type RecipeUncheckedCreateInput = {
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutRecipeInput
   instructions?: Prisma.InstructionUncheckedCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanUncheckedCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeUpdateInput = {
@@ -474,6 +484,8 @@ export type RecipeUpdateInput = {
   ingredients?: Prisma.IngredientUpdateManyWithoutRecipeNestedInput
   instructions?: Prisma.InstructionUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeUncheckedUpdateInput = {
@@ -496,6 +508,8 @@ export type RecipeUncheckedUpdateInput = {
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutRecipeNestedInput
   instructions?: Prisma.InstructionUncheckedUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeCreateManyInput = {
@@ -641,6 +655,34 @@ export type BoolFieldUpdateOperationsInput = {
   set?: boolean
 }
 
+export type RecipeCreateNestedOneWithoutReferencesInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutReferencesInput, Prisma.RecipeUncheckedCreateWithoutReferencesInput>
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutReferencesInput
+  connect?: Prisma.RecipeWhereUniqueInput
+}
+
+export type RecipeCreateNestedOneWithoutUsedInInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutUsedInInput, Prisma.RecipeUncheckedCreateWithoutUsedInInput>
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutUsedInInput
+  connect?: Prisma.RecipeWhereUniqueInput
+}
+
+export type RecipeUpdateOneRequiredWithoutReferencesNestedInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutReferencesInput, Prisma.RecipeUncheckedCreateWithoutReferencesInput>
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutReferencesInput
+  upsert?: Prisma.RecipeUpsertWithoutReferencesInput
+  connect?: Prisma.RecipeWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RecipeUpdateToOneWithWhereWithoutReferencesInput, Prisma.RecipeUpdateWithoutReferencesInput>, Prisma.RecipeUncheckedUpdateWithoutReferencesInput>
+}
+
+export type RecipeUpdateOneRequiredWithoutUsedInNestedInput = {
+  create?: Prisma.XOR<Prisma.RecipeCreateWithoutUsedInInput, Prisma.RecipeUncheckedCreateWithoutUsedInInput>
+  connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutUsedInInput
+  upsert?: Prisma.RecipeUpsertWithoutUsedInInput
+  connect?: Prisma.RecipeWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.RecipeUpdateToOneWithWhereWithoutUsedInInput, Prisma.RecipeUpdateWithoutUsedInInput>, Prisma.RecipeUncheckedUpdateWithoutUsedInInput>
+}
+
 export type RecipeCreateNestedOneWithoutIngredientsInput = {
   create?: Prisma.XOR<Prisma.RecipeCreateWithoutIngredientsInput, Prisma.RecipeUncheckedCreateWithoutIngredientsInput>
   connectOrCreate?: Prisma.RecipeCreateOrConnectWithoutIngredientsInput
@@ -683,6 +725,222 @@ export type RecipeUpdateOneRequiredWithoutWeekPlansNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.RecipeUpdateToOneWithWhereWithoutWeekPlansInput, Prisma.RecipeUpdateWithoutWeekPlansInput>, Prisma.RecipeUncheckedUpdateWithoutWeekPlansInput>
 }
 
+export type RecipeCreateWithoutReferencesInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  searchText?: string | null
+  servings?: number | null
+  servingsStep?: number | null
+  time?: number | null
+  difficulty?: string | null
+  category?: string | null
+  favorite?: boolean
+  link?: string | null
+  imageUrl?: string | null
+  notionId?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ingredients?: Prisma.IngredientCreateNestedManyWithoutRecipeInput
+  instructions?: Prisma.InstructionCreateNestedManyWithoutRecipeInput
+  weekPlans?: Prisma.WeekPlanCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceCreateNestedManyWithoutRefRecipeInput
+}
+
+export type RecipeUncheckedCreateWithoutReferencesInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  searchText?: string | null
+  servings?: number | null
+  servingsStep?: number | null
+  time?: number | null
+  difficulty?: string | null
+  category?: string | null
+  favorite?: boolean
+  link?: string | null
+  imageUrl?: string | null
+  notionId?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutRecipeInput
+  instructions?: Prisma.InstructionUncheckedCreateNestedManyWithoutRecipeInput
+  weekPlans?: Prisma.WeekPlanUncheckedCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRefRecipeInput
+}
+
+export type RecipeCreateOrConnectWithoutReferencesInput = {
+  where: Prisma.RecipeWhereUniqueInput
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutReferencesInput, Prisma.RecipeUncheckedCreateWithoutReferencesInput>
+}
+
+export type RecipeCreateWithoutUsedInInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  searchText?: string | null
+  servings?: number | null
+  servingsStep?: number | null
+  time?: number | null
+  difficulty?: string | null
+  category?: string | null
+  favorite?: boolean
+  link?: string | null
+  imageUrl?: string | null
+  notionId?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ingredients?: Prisma.IngredientCreateNestedManyWithoutRecipeInput
+  instructions?: Prisma.InstructionCreateNestedManyWithoutRecipeInput
+  weekPlans?: Prisma.WeekPlanCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceCreateNestedManyWithoutRecipeInput
+}
+
+export type RecipeUncheckedCreateWithoutUsedInInput = {
+  id?: string
+  name: string
+  nameRo?: string | null
+  searchText?: string | null
+  servings?: number | null
+  servingsStep?: number | null
+  time?: number | null
+  difficulty?: string | null
+  category?: string | null
+  favorite?: boolean
+  link?: string | null
+  imageUrl?: string | null
+  notionId?: string | null
+  notes?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutRecipeInput
+  instructions?: Prisma.InstructionUncheckedCreateNestedManyWithoutRecipeInput
+  weekPlans?: Prisma.WeekPlanUncheckedCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRecipeInput
+}
+
+export type RecipeCreateOrConnectWithoutUsedInInput = {
+  where: Prisma.RecipeWhereUniqueInput
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutUsedInInput, Prisma.RecipeUncheckedCreateWithoutUsedInInput>
+}
+
+export type RecipeUpsertWithoutReferencesInput = {
+  update: Prisma.XOR<Prisma.RecipeUpdateWithoutReferencesInput, Prisma.RecipeUncheckedUpdateWithoutReferencesInput>
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutReferencesInput, Prisma.RecipeUncheckedCreateWithoutReferencesInput>
+  where?: Prisma.RecipeWhereInput
+}
+
+export type RecipeUpdateToOneWithWhereWithoutReferencesInput = {
+  where?: Prisma.RecipeWhereInput
+  data: Prisma.XOR<Prisma.RecipeUpdateWithoutReferencesInput, Prisma.RecipeUncheckedUpdateWithoutReferencesInput>
+}
+
+export type RecipeUpdateWithoutReferencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  favorite?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  link?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUpdateManyWithoutRecipeNestedInput
+  instructions?: Prisma.InstructionUpdateManyWithoutRecipeNestedInput
+  weekPlans?: Prisma.WeekPlanUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUpdateManyWithoutRefRecipeNestedInput
+}
+
+export type RecipeUncheckedUpdateWithoutReferencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  favorite?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  link?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutRecipeNestedInput
+  instructions?: Prisma.InstructionUncheckedUpdateManyWithoutRecipeNestedInput
+  weekPlans?: Prisma.WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRefRecipeNestedInput
+}
+
+export type RecipeUpsertWithoutUsedInInput = {
+  update: Prisma.XOR<Prisma.RecipeUpdateWithoutUsedInInput, Prisma.RecipeUncheckedUpdateWithoutUsedInInput>
+  create: Prisma.XOR<Prisma.RecipeCreateWithoutUsedInInput, Prisma.RecipeUncheckedCreateWithoutUsedInInput>
+  where?: Prisma.RecipeWhereInput
+}
+
+export type RecipeUpdateToOneWithWhereWithoutUsedInInput = {
+  where?: Prisma.RecipeWhereInput
+  data: Prisma.XOR<Prisma.RecipeUpdateWithoutUsedInInput, Prisma.RecipeUncheckedUpdateWithoutUsedInInput>
+}
+
+export type RecipeUpdateWithoutUsedInInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  favorite?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  link?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUpdateManyWithoutRecipeNestedInput
+  instructions?: Prisma.InstructionUpdateManyWithoutRecipeNestedInput
+  weekPlans?: Prisma.WeekPlanUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUpdateManyWithoutRecipeNestedInput
+}
+
+export type RecipeUncheckedUpdateWithoutUsedInInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  favorite?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  link?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  imageUrl?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  notes?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutRecipeNestedInput
+  instructions?: Prisma.InstructionUncheckedUpdateManyWithoutRecipeNestedInput
+  weekPlans?: Prisma.WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRecipeNestedInput
+}
+
 export type RecipeCreateWithoutIngredientsInput = {
   id?: string
   name: string
@@ -702,6 +960,8 @@ export type RecipeCreateWithoutIngredientsInput = {
   updatedAt?: Date | string
   instructions?: Prisma.InstructionCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeUncheckedCreateWithoutIngredientsInput = {
@@ -723,6 +983,8 @@ export type RecipeUncheckedCreateWithoutIngredientsInput = {
   updatedAt?: Date | string
   instructions?: Prisma.InstructionUncheckedCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanUncheckedCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeCreateOrConnectWithoutIngredientsInput = {
@@ -760,6 +1022,8 @@ export type RecipeUpdateWithoutIngredientsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   instructions?: Prisma.InstructionUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutIngredientsInput = {
@@ -781,6 +1045,8 @@ export type RecipeUncheckedUpdateWithoutIngredientsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   instructions?: Prisma.InstructionUncheckedUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeCreateWithoutInstructionsInput = {
@@ -802,6 +1068,8 @@ export type RecipeCreateWithoutInstructionsInput = {
   updatedAt?: Date | string
   ingredients?: Prisma.IngredientCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeUncheckedCreateWithoutInstructionsInput = {
@@ -823,6 +1091,8 @@ export type RecipeUncheckedCreateWithoutInstructionsInput = {
   updatedAt?: Date | string
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutRecipeInput
   weekPlans?: Prisma.WeekPlanUncheckedCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeCreateOrConnectWithoutInstructionsInput = {
@@ -860,6 +1130,8 @@ export type RecipeUpdateWithoutInstructionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutInstructionsInput = {
@@ -881,6 +1153,8 @@ export type RecipeUncheckedUpdateWithoutInstructionsInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutRecipeNestedInput
   weekPlans?: Prisma.WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeCreateWithoutWeekPlansInput = {
@@ -902,6 +1176,8 @@ export type RecipeCreateWithoutWeekPlansInput = {
   updatedAt?: Date | string
   ingredients?: Prisma.IngredientCreateNestedManyWithoutRecipeInput
   instructions?: Prisma.InstructionCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeUncheckedCreateWithoutWeekPlansInput = {
@@ -923,6 +1199,8 @@ export type RecipeUncheckedCreateWithoutWeekPlansInput = {
   updatedAt?: Date | string
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutRecipeInput
   instructions?: Prisma.InstructionUncheckedCreateNestedManyWithoutRecipeInput
+  references?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRecipeInput
+  usedIn?: Prisma.RecipeReferenceUncheckedCreateNestedManyWithoutRefRecipeInput
 }
 
 export type RecipeCreateOrConnectWithoutWeekPlansInput = {
@@ -960,6 +1238,8 @@ export type RecipeUpdateWithoutWeekPlansInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUpdateManyWithoutRecipeNestedInput
   instructions?: Prisma.InstructionUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUpdateManyWithoutRefRecipeNestedInput
 }
 
 export type RecipeUncheckedUpdateWithoutWeekPlansInput = {
@@ -981,6 +1261,8 @@ export type RecipeUncheckedUpdateWithoutWeekPlansInput = {
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutRecipeNestedInput
   instructions?: Prisma.InstructionUncheckedUpdateManyWithoutRecipeNestedInput
+  references?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRecipeNestedInput
+  usedIn?: Prisma.RecipeReferenceUncheckedUpdateManyWithoutRefRecipeNestedInput
 }
 
 
@@ -992,12 +1274,16 @@ export type RecipeCountOutputType = {
   ingredients: number
   instructions: number
   weekPlans: number
+  references: number
+  usedIn: number
 }
 
 export type RecipeCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | RecipeCountOutputTypeCountIngredientsArgs
   instructions?: boolean | RecipeCountOutputTypeCountInstructionsArgs
   weekPlans?: boolean | RecipeCountOutputTypeCountWeekPlansArgs
+  references?: boolean | RecipeCountOutputTypeCountReferencesArgs
+  usedIn?: boolean | RecipeCountOutputTypeCountUsedInArgs
 }
 
 /**
@@ -1031,6 +1317,20 @@ export type RecipeCountOutputTypeCountWeekPlansArgs<ExtArgs extends runtime.Type
   where?: Prisma.WeekPlanWhereInput
 }
 
+/**
+ * RecipeCountOutputType without action
+ */
+export type RecipeCountOutputTypeCountReferencesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecipeReferenceWhereInput
+}
+
+/**
+ * RecipeCountOutputType without action
+ */
+export type RecipeCountOutputTypeCountUsedInArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.RecipeReferenceWhereInput
+}
+
 
 export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -1052,6 +1352,8 @@ export type RecipeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs =
   ingredients?: boolean | Prisma.Recipe$ingredientsArgs<ExtArgs>
   instructions?: boolean | Prisma.Recipe$instructionsArgs<ExtArgs>
   weekPlans?: boolean | Prisma.Recipe$weekPlansArgs<ExtArgs>
+  references?: boolean | Prisma.Recipe$referencesArgs<ExtArgs>
+  usedIn?: boolean | Prisma.Recipe$usedInArgs<ExtArgs>
   _count?: boolean | Prisma.RecipeCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["recipe"]>
 
@@ -1117,6 +1419,8 @@ export type RecipeInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs 
   ingredients?: boolean | Prisma.Recipe$ingredientsArgs<ExtArgs>
   instructions?: boolean | Prisma.Recipe$instructionsArgs<ExtArgs>
   weekPlans?: boolean | Prisma.Recipe$weekPlansArgs<ExtArgs>
+  references?: boolean | Prisma.Recipe$referencesArgs<ExtArgs>
+  usedIn?: boolean | Prisma.Recipe$usedInArgs<ExtArgs>
   _count?: boolean | Prisma.RecipeCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type RecipeIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -1128,6 +1432,8 @@ export type $RecipePayload<ExtArgs extends runtime.Types.Extensions.InternalArgs
     ingredients: Prisma.$IngredientPayload<ExtArgs>[]
     instructions: Prisma.$InstructionPayload<ExtArgs>[]
     weekPlans: Prisma.$WeekPlanPayload<ExtArgs>[]
+    references: Prisma.$RecipeReferencePayload<ExtArgs>[]
+    usedIn: Prisma.$RecipeReferencePayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1543,6 +1849,8 @@ export interface Prisma__RecipeClient<T, Null = never, ExtArgs extends runtime.T
   ingredients<T extends Prisma.Recipe$ingredientsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$ingredientsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$IngredientPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   instructions<T extends Prisma.Recipe$instructionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$instructionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$InstructionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   weekPlans<T extends Prisma.Recipe$weekPlansArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$weekPlansArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$WeekPlanPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  references<T extends Prisma.Recipe$referencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$referencesArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecipeReferencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  usedIn<T extends Prisma.Recipe$usedInArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Recipe$usedInArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$RecipeReferencePayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -2045,6 +2353,54 @@ export type Recipe$weekPlansArgs<ExtArgs extends runtime.Types.Extensions.Intern
   take?: number
   skip?: number
   distinct?: Prisma.WeekPlanScalarFieldEnum | Prisma.WeekPlanScalarFieldEnum[]
+}
+
+/**
+ * Recipe.references
+ */
+export type Recipe$referencesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RecipeReference
+   */
+  select?: Prisma.RecipeReferenceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RecipeReference
+   */
+  omit?: Prisma.RecipeReferenceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecipeReferenceInclude<ExtArgs> | null
+  where?: Prisma.RecipeReferenceWhereInput
+  orderBy?: Prisma.RecipeReferenceOrderByWithRelationInput | Prisma.RecipeReferenceOrderByWithRelationInput[]
+  cursor?: Prisma.RecipeReferenceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecipeReferenceScalarFieldEnum | Prisma.RecipeReferenceScalarFieldEnum[]
+}
+
+/**
+ * Recipe.usedIn
+ */
+export type Recipe$usedInArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the RecipeReference
+   */
+  select?: Prisma.RecipeReferenceSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the RecipeReference
+   */
+  omit?: Prisma.RecipeReferenceOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.RecipeReferenceInclude<ExtArgs> | null
+  where?: Prisma.RecipeReferenceWhereInput
+  orderBy?: Prisma.RecipeReferenceOrderByWithRelationInput | Prisma.RecipeReferenceOrderByWithRelationInput[]
+  cursor?: Prisma.RecipeReferenceWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.RecipeReferenceScalarFieldEnum | Prisma.RecipeReferenceScalarFieldEnum[]
 }
 
 /**
