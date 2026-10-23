@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.34.0] — 2026-10-23
+
+### ✨ Features
+- **Decimal servings** — the editable servings number accepts one decimal (`1.5` or `1,5`) on the recipe page, planner slot cards, the planner's add-recipe modal and the Add to planner modal. Values round to a tenth (min 0.1). − / + still snap to whole numbers (or the recipe's step); − never drops below 1 from a value ≥ 1 and leaves a typed 0.5 as it is. The recipe form's batch size stays an integer.
+
+### ⚙️ Internals
+- `WeekPlan.servings` is now `Float` (integer → double precision; existing values are kept). Run `npx prisma db push` on Neon — until then, saving a decimal servings value in the planner fails (whole numbers still work).
+
 ## [0.33.0] — 2026-10-06
 
 ### 🐛 Fixes
