@@ -3,6 +3,7 @@
 import { prisma } from "./db";
 import type { Prisma } from "@/app/generated/prisma/client";
 import { ingredientGrams } from "./nutrition";
+import { MIN_SERVINGS, roundServings } from "./servings";
 import { buildRecipeSearchText, normalizeSearch } from "./search";
 import { GROCERY_CATEGORIES } from "./constants";
 import Anthropic from "@anthropic-ai/sdk";
@@ -501,7 +502,7 @@ export async function addToWeekPlan(data: {
   // Guard against 0 / negative / NaN servings and out-of-range days: these feed
   // scale = servings / recipeServings in the grocery list + nutrition, where a bad
   // value silently hides ingredients or produces negative quantities.
-  const servings = Math.max(1, Math.round(data.servings || 1));
+  const servings = Math.max(MIN_SERVINGS, roundServings(data.servings || 1));
   const dayOfWeek = Number.isFinite(data.dayOfWeek)
     ? Math.min(6, Math.max(0, Math.round(data.dayOfWeek)))
     : 0;
@@ -526,7 +527,7 @@ export async function removeFromWeekPlan(id: string) {
 }
 
 export async function updateWeekPlanServings(id: string, servings: number): Promise<void> {
-  const safe = Math.max(1, Math.round(servings || 1));
+  const safe = Math.max(MIN_SERVINGS, roundServings(servings || 1));
   await prisma.weekPlan.update({ where: { id }, data: { servings: safe } });
   revalidatePath("/planner");
   revalidatePath("/grocery-list");
@@ -1065,5 +1066,5 @@ export async function getRecipeWeekPlanServings(
     where: { recipeId, weekStart: { gte: weekStart, lt: weekEnd } },
     select: { servings: true },
   });
-  return plans.reduce((sum, p) => sum + p.servings, 0);
+  return roundServings(plans.reduce((sum, p) => sum + p.servings, 0));
 }

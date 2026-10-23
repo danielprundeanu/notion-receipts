@@ -234,7 +234,7 @@ export type WeekPlanWhereInput = {
   weekStart?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
   dayOfWeek?: Prisma.IntFilter<"WeekPlan"> | number
   mealType?: Prisma.StringFilter<"WeekPlan"> | string
-  servings?: Prisma.IntFilter<"WeekPlan"> | number
+  servings?: Prisma.FloatFilter<"WeekPlan"> | number
   createdAt?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
   recipe?: Prisma.XOR<Prisma.RecipeScalarRelationFilter, Prisma.RecipeWhereInput>
 }
@@ -259,7 +259,7 @@ export type WeekPlanWhereUniqueInput = Prisma.AtLeast<{
   weekStart?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
   dayOfWeek?: Prisma.IntFilter<"WeekPlan"> | number
   mealType?: Prisma.StringFilter<"WeekPlan"> | string
-  servings?: Prisma.IntFilter<"WeekPlan"> | number
+  servings?: Prisma.FloatFilter<"WeekPlan"> | number
   createdAt?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
   recipe?: Prisma.XOR<Prisma.RecipeScalarRelationFilter, Prisma.RecipeWhereInput>
 }, "id">
@@ -288,7 +288,7 @@ export type WeekPlanScalarWhereWithAggregatesInput = {
   weekStart?: Prisma.DateTimeWithAggregatesFilter<"WeekPlan"> | Date | string
   dayOfWeek?: Prisma.IntWithAggregatesFilter<"WeekPlan"> | number
   mealType?: Prisma.StringWithAggregatesFilter<"WeekPlan"> | string
-  servings?: Prisma.IntWithAggregatesFilter<"WeekPlan"> | number
+  servings?: Prisma.FloatWithAggregatesFilter<"WeekPlan"> | number
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"WeekPlan"> | Date | string
 }
 
@@ -317,7 +317,7 @@ export type WeekPlanUpdateInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   recipe?: Prisma.RecipeUpdateOneRequiredWithoutWeekPlansNestedInput
 }
@@ -328,7 +328,7 @@ export type WeekPlanUncheckedUpdateInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -347,7 +347,7 @@ export type WeekPlanUpdateManyMutationInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -357,7 +357,7 @@ export type WeekPlanUncheckedUpdateManyInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -453,6 +453,14 @@ export type WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput = {
   deleteMany?: Prisma.WeekPlanScalarWhereInput | Prisma.WeekPlanScalarWhereInput[]
 }
 
+export type FloatFieldUpdateOperationsInput = {
+  set?: number
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
 export type WeekPlanCreateWithoutRecipeInput = {
   id?: string
   weekStart: Date | string
@@ -506,7 +514,7 @@ export type WeekPlanScalarWhereInput = {
   weekStart?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
   dayOfWeek?: Prisma.IntFilter<"WeekPlan"> | number
   mealType?: Prisma.StringFilter<"WeekPlan"> | string
-  servings?: Prisma.IntFilter<"WeekPlan"> | number
+  servings?: Prisma.FloatFilter<"WeekPlan"> | number
   createdAt?: Prisma.DateTimeFilter<"WeekPlan"> | Date | string
 }
 
@@ -524,7 +532,7 @@ export type WeekPlanUpdateWithoutRecipeInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -533,7 +541,7 @@ export type WeekPlanUncheckedUpdateWithoutRecipeInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -542,7 +550,7 @@ export type WeekPlanUncheckedUpdateManyWithoutRecipeInput = {
   weekStart?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   dayOfWeek?: Prisma.IntFieldUpdateOperationsInput | number
   mealType?: Prisma.StringFieldUpdateOperationsInput | string
-  servings?: Prisma.IntFieldUpdateOperationsInput | number
+  servings?: Prisma.FloatFieldUpdateOperationsInput | number
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -1044,7 +1052,7 @@ export interface WeekPlanFieldRefs {
   readonly weekStart: Prisma.FieldRef<"WeekPlan", 'DateTime'>
   readonly dayOfWeek: Prisma.FieldRef<"WeekPlan", 'Int'>
   readonly mealType: Prisma.FieldRef<"WeekPlan", 'String'>
-  readonly servings: Prisma.FieldRef<"WeekPlan", 'Int'>
+  readonly servings: Prisma.FieldRef<"WeekPlan", 'Float'>
   readonly createdAt: Prisma.FieldRef<"WeekPlan", 'DateTime'>
 }
     

@@ -1,16 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { MIN_SERVINGS, roundServings } from "@/lib/servings";
 
 /**
  * Editable servings number shown between −/+ steppers. Typing is kept as a local
  * draft and only committed on blur / Enter, so a half-typed value ("1" on the way
  * to "12") never triggers a save or a rescale. Invalid input reverts to `value`.
+ * Accepts one decimal ("1.5" or "1,5").
  */
 export default function ServingsInput({
   value,
   onCommit,
-  min = 1,
+  min = MIN_SERVINGS,
   className = "",
   ariaLabel = "Servings",
 }: {
@@ -26,7 +28,7 @@ export default function ServingsInput({
   function commit() {
     if (draft === null) return;
     if (cancelled.current) { cancelled.current = false; setDraft(null); return; }
-    const n = Math.round(parseFloat(draft.replace(",", ".")));
+    const n = roundServings(parseFloat(draft.replace(",", ".")));
     setDraft(null);
     if (!isFinite(n) || n < min || n === value) return;
     onCommit(n);
@@ -35,7 +37,7 @@ export default function ServingsInput({
   return (
     <input
       type="text"
-      inputMode="numeric"
+      inputMode="decimal"
       aria-label={ariaLabel}
       value={draft ?? String(value)}
       onFocus={(e) => { setDraft(String(value)); e.target.select(); }}

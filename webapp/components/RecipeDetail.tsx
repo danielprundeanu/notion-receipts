@@ -20,7 +20,7 @@ import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings } from "@/lib/
 import ShareButton from "@/components/ShareButton";
 import { mealLabel, categoryLabel, difficultyLabel } from "@/lib/labels";
 import { ingredientGrams } from "@/lib/nutrition";
-import { servingsStepOf, stepServings } from "@/lib/servings";
+import { servingsStepOf, stepServings, stepServingsDown } from "@/lib/servings";
 import ServingsInput from "@/components/ServingsInput";
 
 export type RecipeData = {
@@ -525,7 +525,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Servings</span>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setServings((s) => Math.max(1, stepServings(s, -1, servingsStep)))}
+            onClick={() => setServings((s) => stepServingsDown(s, servingsStep))}
             aria-label="Fewer servings"
             className="w-10 h-10 rounded-full border border-gray-300 dark:border-[#46403a] flex items-center justify-center hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-700 dark:text-[#bab2a6] transition-colors"
           >

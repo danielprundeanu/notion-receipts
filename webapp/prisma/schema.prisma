@@ -89,7 +89,7 @@ model WeekPlan {
   weekStart DateTime
   dayOfWeek Int
   mealType  String
-  servings  Int      @default(1)
+  servings  Float    @default(1) // one decimal allowed (1.5 servings)
   createdAt DateTime @default(now())
 }
 

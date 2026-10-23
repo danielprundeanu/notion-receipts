@@ -26,7 +26,7 @@ import {
   getRecipesPanel,
   getRecipeCategories,
 } from "@/lib/actions";
-import { servingsStepOf, stepServings } from "@/lib/servings";
+import { servingsStepOf, stepServings, stepServingsDown } from "@/lib/servings";
 import ServingsInput from "@/components/ServingsInput";
 import { mealLabel, categoryLabel } from "@/lib/labels";
 import {
@@ -160,7 +160,7 @@ function RecipeCard({
   const [swipeX, setSwipeX] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const step = servingsStepOf(entry.recipe);
-  const servingsDown = () => onServingsChange(Math.max(1, stepServings(entry.servings, -1, step)));
+  const servingsDown = () => onServingsChange(stepServingsDown(entry.servings, step));
   const servingsUp = () => onServingsChange(stepServings(entry.servings, 1, step));
   const contentRef = useRef<HTMLDivElement>(null);
   const swipeXRef = useRef(0);
@@ -867,7 +867,7 @@ function RecipeSelectorModal({
           )}
           <div className="flex items-center gap-1.5 shrink-0">
             <button
-              onClick={() => setServings((s) => Math.max(1, stepServings(s, -1, selected ? servingsStepOf(selected) : 1)))}
+              onClick={() => setServings((s) => stepServingsDown(s, selected ? servingsStepOf(selected) : 1))}
               aria-label="Fewer servings"
               className="w-10 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
             >−</button>

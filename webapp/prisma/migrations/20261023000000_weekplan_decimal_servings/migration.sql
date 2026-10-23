@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "WeekPlan" ALTER COLUMN "servings" SET DATA TYPE DOUBLE PRECISION;
