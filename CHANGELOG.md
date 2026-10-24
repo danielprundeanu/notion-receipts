@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.35.0] — 2026-10-24
+
+### ✨ Features
+- **Use a recipe inside another recipe** — e.g. puff pastry in a pie. In the recipe form, "Add recipe" next to "Add group" searches a recipe and sets the amount (servings or grams); self-references and loops are refused with a message. On the recipe page each reference renders as a collapsible ingredient group with an amount badge that scales with the servings control and a link to the referenced recipe; nested references are expanded in. Referenced ingredients count toward the nutrition box, the grocery list and planner nutrition.
+- A recipe used inside another can't be deleted (single or bulk) — the delete names the recipe that uses it instead of failing silently.
+
+### ⚙️ Internals
+- New `RecipeReference` table (`recipeId`, `refRecipeId`, `quantity`, unit `serving` | `g`, `groupOrder`); `lib/recipe-refs.ts` flattens the reference graph (depth-limited, cycle-safe). Already applied on Neon with `npx prisma db push`, together with v0.34.0's `WeekPlan.servings` → double precision.
+
 ## [0.34.0] — 2026-10-23
 
 ### ✨ Features
