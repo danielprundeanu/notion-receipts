@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.36.0] — 2026-10-24
+
+### ✨ Features
+- **`/import-recipe` Claude Code skill** — give Claude recipe links (or pasted text) and it imports them straight into the app: it scrapes each page (or reads it itself when the site blocks the scraper), matches ingredients to your grocery items, converts units to the item's units, asks only about the genuinely ambiguous choices in one go, shows a summary and imports after you confirm. It can also import a sub-recipe (e.g. a guacamole) and use it inside another recipe.
+
+### 🐛 Fixes
+- Imported recipes now get their search text (and the Romanian title, when given) — before, the import wizard left them empty, so search could only find them by their exact English name.
+
+### ⚙️ Internals
+- The import wizard's matching and saving moved from `app/api/import/parse` and `app/api/import/confirm` into `lib/import.ts`, shared with the new CLI importer `scripts/import-recipe.mts` (`parse-urls`, `match`, `items`, `meta`, `check`, `import`). The wizard behaves as before. The CLI writes to the database in `webapp/.env.local` (production Neon).
+
 ## [0.35.0] — 2026-10-24
 
 ### ✨ Features
