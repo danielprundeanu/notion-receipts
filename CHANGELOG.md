@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.37.0] — 2026-10-25
+
+### ✨ Features
+- **`/import-recipe` fixes recipes that already exist** — when a link was imported before, Claude compares the recipe in the app with the source page and, if it's wrong (wrong products, "1 g" roots, missing steps), rewrites it in place. The recipe keeps its id, so planner entries and recipes that use it stay linked.
+
+### ⚙️ Internals
+- `ConfirmedRecipe.replaceRecipeId` in `lib/import.ts` (CLI importer only; the wizard doesn't send it): replaces the recipe's fields, ingredients, instructions and references in one transaction. `scripts/import-recipe.mts check` validates the target recipe and no longer flags it as its own duplicate.
+
 ## [0.36.0] — 2026-10-24
 
 ### ✨ Features
