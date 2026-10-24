@@ -49,7 +49,7 @@
 
 ## Images (Vercel)
 - Upload routes use **Vercel Blob** when `BLOB_READ_WRITE_TOKEN` is set (store must be **public** — private stores can't be served via `<img>`); dev falls back to the filesystem.
-- Never store base64 in the DB (`imageUrl`). `next.config` `remotePatterns` only allows the blob host — so in `RecipesGrid`, `next/image` is used only for local (`/…`) and blob URLs; any other remote URL renders via a plain `<img>` (`RecipeCover`) so one bad host can't crash the whole grid.
+- Never store base64 in the DB (`imageUrl`). `next.config` `remotePatterns` only allows the blob host, and recipes imported from a link keep the source site's image URL — so never pass `recipe.imageUrl` to `next/image` directly. Use `components/RecipeCover` (it uses `next/image` only for local `/…` and blob URLs, a plain `<img>` otherwise) or a plain `<img>`; one bad host would otherwise crash the whole page.
 
 ## Styling
 - Match the surrounding component's Tailwind + dark-mode tokens: `dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text, **orange-500** brand accent, teal secondary.
