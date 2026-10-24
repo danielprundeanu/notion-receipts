@@ -650,6 +650,76 @@ export async function moveWeekPlanEntry(
   revalidatePath("/grocery-list");
 }
 
+// ─── Plan History ─────────────────────────────────────────────────────────────
+
+export type PlanHistoryEntry = {
+  weekStart: string;
+  dayOfWeek: number;
+  mealType: string;
+  servings: number;
+  recipe: { id: string; name: string; category: string | null; imageUrl: string | null };
+};
+
+// Every planned meal before `beforeIso` (the client passes next week's Monday, so weeks
+// planned ahead aren't "history"). Raw rows: the client groups them into weeks/months/
+// seasons in its own timezone (see lib/weeks.ts).
+export async function getPlanHistory(beforeIso: string): Promise<PlanHistoryEntry[]> {
+  const before = new Date(beforeIso);
+  if (isNaN(before.getTime())) throw new Error("Invalid date");
+  const rows = await prisma.weekPlan.findMany({
+    where: { weekStart: { lt: before } },
+    orderBy: [{ weekStart: "desc" }, { dayOfWeek: "asc" }, { createdAt: "asc" }],
+    select: {
+      weekStart: true,
+      dayOfWeek: true,
+      mealType: true,
+      servings: true,
+      recipe: { select: { id: true, name: true, category: true, imageUrl: true } },
+    },
+  });
+  return rows.map((r) => ({ ...r, weekStart: r.weekStart.toISOString() }));
+}
+
+// Copy every meal of one week into another (same day, meal and servings).
+// "add" keeps what the target week already has; "replace" clears it first.
+export async function copyWeekPlan(
+  sourceWeekIso: string,
+  targetWeekIso: string,
+  mode: "add" | "replace"
+): Promise<{ copied: number }> {
+  const source = new Date(sourceWeekIso);
+  const target = new Date(targetWeekIso);
+  if (isNaN(source.getTime()) || isNaN(target.getTime())) throw new Error("Invalid date");
+  if (mode !== "add" && mode !== "replace") throw new Error("Invalid mode");
+  // Same Monday, give or take a DST hour — copying a week onto itself would duplicate it.
+  if (Math.abs(source.getTime() - target.getTime()) < 24 * 3600_000) {
+    throw new Error("Can't import a week into itself");
+  }
+
+  const sourceEnd = new Date(source);
+  sourceEnd.setDate(sourceEnd.getDate() + 7);
+  const targetEnd = new Date(target);
+  targetEnd.setDate(targetEnd.getDate() + 7);
+
+  const rows = await prisma.weekPlan.findMany({
+    where: { weekStart: { gte: source, lt: sourceEnd } },
+    select: { recipeId: true, dayOfWeek: true, mealType: true, servings: true },
+  });
+  if (rows.length === 0) return { copied: 0 };
+
+  await prisma.$transaction([
+    ...(mode === "replace"
+      ? [prisma.weekPlan.deleteMany({ where: { weekStart: { gte: target, lt: targetEnd } } })]
+      : []),
+    prisma.weekPlan.createMany({
+      data: rows.map((r) => ({ ...r, weekStart: target })),
+    }),
+  ]);
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
+  return { copied: rows.length };
+}
+
 // ─── Grocery List ─────────────────────────────────────────────────────────────
 
 type GroceryEntry = {

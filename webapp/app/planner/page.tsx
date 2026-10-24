@@ -28,7 +28,9 @@ import {
 import { servingsStepOf, stepServings, stepServingsDown } from "@/lib/servings";
 import ServingsInput from "@/components/ServingsInput";
 import RecipeCover from "@/components/RecipeCover";
+import PlanHistorySheet from "@/components/PlanHistorySheet";
 import { mealLabel, categoryLabel } from "@/lib/labels";
+import { getMondayOf, formatWeekRange } from "@/lib/weeks";
 import {
   ChevronLeft,
   ChevronRight,
@@ -40,6 +42,7 @@ import {
   Star,
   Trash2,
   GripVertical,
+  History,
 } from "lucide-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -75,21 +78,6 @@ type PlanEntry = {
   servings: number;
   recipe: RecipeRef;
 };
-
-function getMondayOf(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function formatWeekRange(monday: Date): string {
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("en-US", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`;
-}
 
 function isThisWeek(monday: Date): boolean {
   return (
@@ -902,12 +890,17 @@ export default function PlannerPage() {
   );
   const [mobileDay, setMobileDay] = useState(todayDayIndex);
   const [dragActive, setDragActive] = useState<RecipeRef | null>(null);
-  // Transient error toast for failed mutations (add/remove/servings) — planner data is
-  // shared, so a silent failure must never look like it saved.
-  const [toast, setToast] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  // Transient toast: errors for failed mutations (add/remove/servings) — planner data is
+  // shared, so a silent failure must never look like it saved — plus import confirmations.
+  const [toast, setToast] = useState<{ msg: string; ok?: boolean } | null>(null);
   function showError(msg: string) {
-    setToast(msg);
+    setToast({ msg });
     setTimeout(() => setToast(null), 4000);
+  }
+  function showSuccess(msg: string) {
+    setToast({ msg, ok: true });
+    setTimeout(() => setToast(null), 3000);
   }
 
   const sensors = useSensors(
@@ -1091,19 +1084,31 @@ export default function PlannerPage() {
     >
       {toast && (
         <div
-          role="alert"
-          className="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-lg bg-red-600 text-white text-sm font-medium shadow-lg max-w-[90vw] text-center"
+          role={toast.ok ? "status" : "alert"}
+          className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-lg text-white text-sm font-medium shadow-lg max-w-[90vw] text-center ${
+            toast.ok ? "bg-teal-600" : "bg-red-600"
+          }`}
         >
-          {toast}
+          {toast.msg}
         </div>
       )}
       <div className="p-4 md:p-6 h-full flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between gap-2 mb-4">
           <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">
             Planner
           </h1>
-          {weekNav}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setHistoryOpen(true)}
+              aria-label="History"
+              className="flex items-center gap-1.5 p-3 sm:px-3 sm:py-2.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
+            >
+              <History size={16} />
+              <span className="hidden sm:inline">History</span>
+            </button>
+            {weekNav}
+          </div>
         </div>
 
         {/* Week label on mobile */}
@@ -1263,6 +1268,19 @@ export default function PlannerPage() {
               setPlans((prev) => [...prev, entry]);
               setModal(null);
               getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
+            }}
+          />
+        )}
+
+        {historyOpen && (
+          <PlanHistorySheet
+            targetWeek={weekStart}
+            targetCount={plans.length}
+            onClose={() => setHistoryOpen(false)}
+            onImported={(copied) => {
+              setHistoryOpen(false);
+              loadPlans();
+              showSuccess(copied ? `Imported ${copied} meal${copied === 1 ? "" : "s"}.` : "That week had nothing to import.");
             }}
           />
         )}
