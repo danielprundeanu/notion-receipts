@@ -15,8 +15,10 @@ import {
   CalendarPlus,
   X,
   Loader2,
+  ChevronRight,
+  ArrowUpRight,
 } from "lucide-react";
-import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings } from "@/lib/actions";
+import { toggleFavorite, addToWeekPlan, getRecipeWeekPlanServings, type RecipeRefGroup } from "@/lib/actions";
 import ShareButton from "@/components/ShareButton";
 import { mealLabel, categoryLabel, difficultyLabel } from "@/lib/labels";
 import { ingredientGrams } from "@/lib/nutrition";
@@ -54,6 +56,8 @@ export type RecipeData = {
       unitWeight: number | null;
     } | null;
   }>;
+  // Other recipes used in this one, shown as expandable groups.
+  refGroups?: RecipeRefGroup[];
   instructions: Array<{
     id: string;
     step: number;
@@ -86,6 +90,13 @@ function formatQty(qty: number, scale: number): string {
   const scaled = qty * scale;
   const s = (Math.round(scaled * 10) / 10).toString();
   return s.endsWith(".0") ? s.slice(0, -2) : s;
+}
+
+// "300 g" / "0.5 servings" — how much of a referenced recipe goes in.
+function formatRefQty(qty: number, unit: string, scale: number): string {
+  const n = formatQty(qty, scale);
+  if (unit === "g") return `${n} g`;
+  return `${n} ${n === "1" ? "serving" : "servings"}`;
 }
 
 // ─── Adaugă în planner Modal ─────────────────────────────────────────────────────
@@ -364,6 +375,17 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const [showPlanner, setShowPlanner] = useState(false);
   const [plannerServings, setPlannerServings] = useState(0);
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
+  const [expandedRefs, setExpandedRefs] = useState<Set<string>>(new Set());
+  const refGroups = recipe.refGroups ?? [];
+
+  function toggleRef(id: string) {
+    setExpandedRefs((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   function toggleIngredient(id: string) {
     setCheckedIngredients((prev) => {
@@ -427,6 +449,71 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
     totalCarbs += (gi.carbs ?? 0) * factor;
     totalFat += (gi.fat ?? 0) * factor;
     totalProtein += (gi.protein ?? 0) * factor;
+  }
+  // Referenced recipes count too, scaled by how much of each goes in.
+  for (const ref of refGroups) {
+    for (const ing of ref.ingredients) {
+      if (!ing.groceryItem || !ing.quantity || ref.factor <= 0) continue;
+      const gi = ing.groceryItem;
+      if (!gi.kcal && !gi.carbs && !gi.fat && !gi.protein) continue;
+      const grams = ingredientGrams(ing.quantity * ref.factor, ing.unit, gi);
+      if (grams == null) continue;
+      hasNutrition = true;
+      const factor = (grams * scale) / 100;
+      totalKcal += (gi.kcal ?? 0) * factor;
+      totalCarbs += (gi.carbs ?? 0) * factor;
+      totalFat += (gi.fat ?? 0) * factor;
+      totalProtein += (gi.protein ?? 0) * factor;
+    }
+  }
+
+  // Ingredient groups and referenced recipes, interleaved by groupOrder.
+  type Section =
+    | { kind: "group"; order: number; group: GroupEntry }
+    | { kind: "ref"; order: number; ref: RecipeRefGroup };
+  const sections: Section[] = [
+    ...sortedGroups.map(([order, group]) => ({ kind: "group" as const, order, group })),
+    ...refGroups.map((ref) => ({ kind: "ref" as const, order: ref.groupOrder, ref })),
+  ].sort((a, b) => a.order - b.order);
+  const showGroupHeaders = sections.length > 1;
+
+  function renderIngredient(
+    key: string,
+    quantity: number | null,
+    unit: string | null,
+    name: string | null | undefined,
+    notes: string | null,
+  ) {
+    const checked = checkedIngredients.has(key);
+    return (
+      <li
+        key={key}
+        className="flex items-start gap-3 text-base leading-7 cursor-pointer select-none py-2.5 px-2 -mx-2 rounded-lg active:bg-orange-50 dark:active:bg-orange-950/20 transition-colors"
+        onClick={() => toggleIngredient(key)}
+      >
+        <span className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
+          {checked && (
+            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
+              <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </span>
+        <span className={checked ? "line-through text-gray-400 dark:text-[#ffffff]" : ""}>
+          {quantity != null && (
+            <span className={`font-semibold ${checked ? "" : "text-gray-900 dark:text-[#eae5de]"}`}>
+              {formatQty(quantity, scale)}
+              {unit ? ` ${unit}` : ""}
+            </span>
+          )}{" "}
+          <span className={checked ? "" : "text-gray-800 dark:text-[#d8d0c4]"}>
+            {name ?? "—"}
+          </span>
+          {notes && (
+            <span className="text-gray-400 dark:text-[#5c554b]">, {notes}</span>
+          )}
+        </span>
+      </li>
+    );
   }
 
   return (
@@ -581,53 +668,85 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
         {/* Ingredients */}
         <div className="lg:col-span-2">
-          {sortedGroups.length === 0 ? (
+          {sections.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-[#7c756a]">No ingredients</p>
           ) : (
             <div className="space-y-5">
-              {sortedGroups.map(([groupOrder, group]) => (
-                <div key={groupOrder}>
-                  {(sortedGroups.length > 1 || group.name) && (
-                    <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de] mb-2">
-                      {group.name ?? `Part ${groupOrder}`}
-                    </h2>
-                  )}
-                  <ul className="space-y-1">
-                    {group.items.map((ing) => {
-                      const checked = checkedIngredients.has(ing.id);
-                      return (
-                        <li
-                          key={ing.id}
-                          className="flex items-start gap-3 text-base leading-7 cursor-pointer select-none py-2.5 px-2 -mx-2 rounded-lg active:bg-orange-50 dark:active:bg-orange-950/20 transition-colors"
-                          onClick={() => toggleIngredient(ing.id)}
-                        >
-                          <span className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${checked ? "bg-orange-400 border-orange-400" : "border-gray-300 dark:border-[#5c554b]"}`}>
-                            {checked && (
-                              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
-                                <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            )}
+              {sections.map((sec) => {
+                if (sec.kind === "group") {
+                  const group = sec.group;
+                  return (
+                    <div key={`g-${sec.order}`}>
+                      {(showGroupHeaders || group.name) && (
+                        <h2 className="text-base font-semibold text-gray-900 dark:text-[#eae5de] mb-2">
+                          {group.name ?? `Part ${sec.order}`}
+                        </h2>
+                      )}
+                      <ul className="space-y-1">
+                        {group.items.map((ing) =>
+                          renderIngredient(ing.id, ing.quantity, ing.unit, ing.groceryItem?.name, ing.notes)
+                        )}
+                      </ul>
+                    </div>
+                  );
+                }
+                const ref = sec.ref;
+                const open = expandedRefs.has(ref.id);
+                return (
+                  <div key={`r-${ref.id}`} className="rounded-xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/10">
+                    <div className="flex items-center gap-1 pr-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleRef(ref.id)}
+                        aria-expanded={open}
+                        className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-left"
+                      >
+                        <ChevronRight size={16} className={`shrink-0 text-orange-500 transition-transform ${open ? "rotate-90" : ""}`} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-base font-semibold text-gray-900 dark:text-[#eae5de] truncate">{ref.name}</span>
+                          <span className="block text-xs text-gray-500 dark:text-[#7c756a]">
+                            Recipe · {ref.ingredients.length} ingredient{ref.ingredients.length === 1 ? "" : "s"}
                           </span>
-                          <span className={checked ? "line-through text-gray-400 dark:text-[#ffffff]" : ""}>
-                            {ing.quantity != null && (
-                              <span className={`font-semibold ${checked ? "" : "text-gray-900 dark:text-[#eae5de]"}`}>
-                                {formatQty(ing.quantity, scale)}
-                                {ing.unit ? ` ${ing.unit}` : ""}
-                              </span>
-                            )}{" "}
-                            <span className={checked ? "" : "text-gray-800 dark:text-[#d8d0c4]"}>
-                              {ing.groceryItem?.name ?? "—"}
-                            </span>
-                            {ing.notes && (
-                              <span className="text-gray-400 dark:text-[#5c554b]">, {ing.notes}</span>
+                        </span>
+                        <span className="shrink-0 text-sm font-semibold text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-950/50 px-2 py-0.5 rounded-full">
+                          {formatRefQty(ref.quantity, ref.unit, scale)}
+                        </span>
+                      </button>
+                      <Link
+                        href={`/recipes/${ref.refRecipeId}`}
+                        title={`Open ${ref.name}`}
+                        aria-label={`Open ${ref.name}`}
+                        className="shrink-0 w-10 h-10 flex items-center justify-center rounded-lg text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-950/40 transition-colors"
+                      >
+                        <ArrowUpRight size={18} />
+                      </Link>
+                    </div>
+                    {open && (
+                      <div className="px-3 pb-2 border-t border-orange-100 dark:border-orange-900/40">
+                        {ref.factor <= 0 ? (
+                          <p className="py-2.5 text-sm text-amber-700 dark:text-amber-400">
+                            Can&apos;t work out {formatRefQty(ref.quantity, ref.unit, 1)} of this recipe — none of its ingredients have a weight in grams. Use servings instead.
+                          </p>
+                        ) : ref.ingredients.length === 0 ? (
+                          <p className="py-2.5 text-sm text-gray-500 dark:text-[#7c756a]">No ingredients</p>
+                        ) : (
+                          <ul className="space-y-1 pt-1">
+                            {ref.ingredients.map((ing) =>
+                              renderIngredient(
+                                `${ref.id}:${ing.id}`,
+                                ing.quantity != null ? ing.quantity * ref.factor : null,
+                                ing.unit,
+                                ing.groceryItem?.name,
+                                ing.notes,
+                              )
                             )}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

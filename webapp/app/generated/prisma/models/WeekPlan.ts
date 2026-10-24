@@ -453,14 +453,6 @@ export type WeekPlanUncheckedUpdateManyWithoutRecipeNestedInput = {
   deleteMany?: Prisma.WeekPlanScalarWhereInput | Prisma.WeekPlanScalarWhereInput[]
 }
 
-export type FloatFieldUpdateOperationsInput = {
-  set?: number
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type WeekPlanCreateWithoutRecipeInput = {
   id?: string
   weekStart: Date | string

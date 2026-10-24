@@ -35,8 +35,28 @@ model Recipe {
   ingredients  Ingredient[]
   instructions Instruction[]
   weekPlans    WeekPlan[]
+  references   RecipeReference[] @relation("RecipeReferences")
+  usedIn       RecipeReference[] @relation("RecipeReferencedBy")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+}
+
+// A recipe used inside another recipe (e.g. puff pastry in a pie), shown as an
+// expandable ingredient group. quantity + unit say how much of the referenced
+// recipe goes in: unit "serving" (servings of it) or "g" (grams of its total
+// ingredient weight). Its ingredients count toward grocery lists and nutrition.
+model RecipeReference {
+  id          String @id @default(cuid())
+  recipeId    String
+  recipe      Recipe @relation("RecipeReferences", fields: [recipeId], references: [id], onDelete: Cascade)
+  refRecipeId String
+  refRecipe   Recipe @relation("RecipeReferencedBy", fields: [refRecipeId], references: [id], onDelete: Restrict)
+  quantity    Float
+  unit        String @default("serving")
+  groupOrder  Int    @default(0)
+
+  @@index([recipeId])
+  @@index([refRecipeId])
 }
 
 model GroceryItem {
