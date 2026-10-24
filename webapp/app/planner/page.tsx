@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   DndContext,
   DragOverlay,
@@ -28,6 +27,7 @@ import {
 } from "@/lib/actions";
 import { servingsStepOf, stepServings, stepServingsDown } from "@/lib/servings";
 import ServingsInput from "@/components/ServingsInput";
+import RecipeCover from "@/components/RecipeCover";
 import { mealLabel, categoryLabel } from "@/lib/labels";
 import {
   ChevronLeft,
@@ -391,14 +391,7 @@ function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
     >
       <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
         {recipe.imageUrl ? (
-          <Image
-            src={recipe.imageUrl}
-            alt={recipe.name}
-            fill
-            sizes="200px"
-            className="object-cover"
-            loading="lazy"
-          />
+          <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="200px" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="text-3xl opacity-20">🍽️</span>
@@ -436,7 +429,7 @@ function DragOverlayCard({ recipe }: { recipe: RecipeRef }) {
     <div className="bg-white dark:bg-[#24211c] rounded-xl border border-orange-300 shadow-2xl w-44 overflow-hidden rotate-1 opacity-95">
       <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
         {recipe.imageUrl ? (
-          <Image src={recipe.imageUrl} alt={recipe.name} fill sizes="176px" className="object-cover" />
+          <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="176px" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
             <span className="text-2xl opacity-20">🍽️</span>
