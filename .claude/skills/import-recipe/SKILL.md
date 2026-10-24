@@ -114,6 +114,13 @@ Dă mereu varianta recomandată prima. Nu întreba ce poți decide singur din re
    cantitatea finală, produsele noi și conversiile decise de tine. Cere confirmarea (`AskUserQuestion`).
 4. Rulează `import` și dă-i link-urile din output.
 
+## Rețete care există deja
+`check` avertizează la link sau nume deja existent. Atunci compară rețeta din aplicație cu pagina
+(ingrediente, cantități, unități, pași, porții, link, poză). Dacă e bună, n-o importa din nou. Dacă are
+greșeli (produse greșite, cantități absurde ca „1 g” de rădăcină, pași lipsă) și Daniel e de acord,
+refă-o pe loc: pune `"replaceRecipeId": "<id>"` pe rețeta din payload — se rescriu câmpurile, ingredientele,
+pașii și referințele, iar id-ul (planner, rețetele care o folosesc) rămâne. Payload-ul trebuie să fie
+rețeta completă, nu doar diferențele. Spune-i lui Daniel exact ce se schimbă.
+
 ## Ce nu face
 - Nu scrie direct în tabele (fără SQL/Prisma ad-hoc) — doar prin `import`.
-- Nu editează rețete deja importate — pentru corecturi, Daniel le editează în aplicație.

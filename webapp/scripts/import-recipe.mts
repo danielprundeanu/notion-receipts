@@ -59,11 +59,17 @@ async function check(payload: { recipes: ConfirmedRecipe[]; newUnitRules?: NewUn
     if (!r.name?.trim()) errors.push("A recipe has no name.");
     if (r.ingredients.length === 0) warnings.push(`${at}: no ingredients.`);
     if (r.instructions.length === 0) warnings.push(`${at}: no instructions.`);
+    const others = r.replaceRecipeId ? { id: { not: r.replaceRecipeId } } : {};
+    if (r.replaceRecipeId) {
+      const target = await prisma.recipe.findUnique({ where: { id: r.replaceRecipeId }, select: { name: true } });
+      if (!target) errors.push(`${at}: recipe to replace ${r.replaceRecipeId} doesn't exist.`);
+      else warnings.push(`${at}: replaces the existing recipe "${target.name}" (${APP_URL}/recipes/${r.replaceRecipeId}).`);
+    }
     if (r.link) {
-      const dup = await prisma.recipe.findFirst({ where: { link: r.link }, select: { id: true, name: true } });
+      const dup = await prisma.recipe.findFirst({ where: { link: r.link, ...others }, select: { id: true, name: true } });
       if (dup) warnings.push(`${at}: link already imported as "${dup.name}" (${APP_URL}/recipes/${dup.id}).`);
     }
-    const sameName = await prisma.recipe.findFirst({ where: { name: { equals: r.name, mode: "insensitive" } }, select: { id: true } });
+    const sameName = await prisma.recipe.findFirst({ where: { name: { equals: r.name, mode: "insensitive" }, ...others }, select: { id: true } });
     if (sameName) warnings.push(`${at}: a recipe with this name already exists (${APP_URL}/recipes/${sameName.id}).`);
 
     for (const ing of r.ingredients) {

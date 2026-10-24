@@ -97,6 +97,10 @@ export type ConfirmedRecipe = {
   createdAt?: string | null;
   ingredients: ConfirmedIngredient[];
   instructions: Array<{ text: string; isSection: boolean }>;
+  // Rewrite this existing recipe in place instead of creating a new one: its fields,
+  // ingredients, instructions and references are replaced; the id (planner entries,
+  // recipes that use it) and createdAt stay. CLI importer only.
+  replaceRecipeId?: string;
   // Other recipes used inside this one: an existing recipe (refRecipeId) or one
   // imported earlier in the same payload (refIndex < this recipe's index — so a
   // new recipe can never close a loop). Not set by the wizard (CLI importer only).
@@ -477,21 +481,30 @@ export async function importRecipes(
       // leaves a half-imported, ingredient-less recipe behind.
       const { recipeId, newItemsCreated } = await prisma.$transaction(async (tx) => {
         const nameRo = recipeData.nameRo?.trim() || null;
-        const recipe = await tx.recipe.create({
-          data: {
-            name: recipeData.name,
-            nameRo,
-            searchText: buildRecipeSearchText(recipeData.name, nameRo),
-            servings: savedServings,
-            time: recipeData.time,
-            difficulty: recipeData.difficulty,
-            category: recipeData.category,
-            favorite: recipeData.favorite,
-            link: recipeData.link,
-            imageUrl,
-            ...(recipeData.createdAt ? { createdAt: new Date(recipeData.createdAt) } : {}),
-          },
-        });
+        const fields = {
+          name: recipeData.name,
+          nameRo,
+          searchText: buildRecipeSearchText(recipeData.name, nameRo),
+          servings: savedServings,
+          time: recipeData.time,
+          difficulty: recipeData.difficulty,
+          category: recipeData.category,
+          favorite: recipeData.favorite,
+          link: recipeData.link,
+          imageUrl,
+        };
+        let recipe;
+        if (recipeData.replaceRecipeId) {
+          const where = { recipeId: recipeData.replaceRecipeId };
+          await tx.ingredient.deleteMany({ where });
+          await tx.instruction.deleteMany({ where });
+          await tx.recipeReference.deleteMany({ where });
+          recipe = await tx.recipe.update({ where: { id: recipeData.replaceRecipeId }, data: fields });
+        } else {
+          recipe = await tx.recipe.create({
+            data: { ...fields, ...(recipeData.createdAt ? { createdAt: new Date(recipeData.createdAt) } : {}) },
+          });
+        }
 
         let newItemsCreated = 0;
 
