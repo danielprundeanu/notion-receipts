@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useTransition, useSyncExternalStore } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Star, Trash2, Clock, ChevronRight, Pencil } from "lucide-react";
+import RecipeCover from "./RecipeCover";
 import { deleteRecipes, updateRecipesBatch, type RecipeBatchPatch } from "@/lib/actions";
 import RecipeBatchEditModal from "./RecipeBatchEditModal";
 import { useRouter } from "next/navigation";
@@ -37,22 +37,6 @@ function subscribeView(cb: () => void) {
 }
 function getViewSnapshot(): ViewMode {
   return (localStorage.getItem("recipesView") as ViewMode) || "grid";
-}
-
-// next/image throws at render for any remote host not in next.config remotePatterns —
-// and since the grid maps every recipe, one bad host would crash the WHOLE list. Local
-// paths and Vercel Blob URLs are configured/safe; anything else remote falls back to a
-// plain <img> so it renders (unoptimized) instead of taking the page down.
-function isOptimizableSrc(url: string): boolean {
-  return url.startsWith("/") || url.includes(".public.blob.vercel-storage.com");
-}
-
-function RecipeCover({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
-  if (isOptimizableSrc(src)) {
-    return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading="lazy" />;
-  }
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />;
 }
 
 export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {

@@ -1,0 +1,19 @@
+import Image from "next/image";
+
+// next/image throws at render for any remote host not in next.config remotePatterns —
+// and since lists map every recipe, one bad host would crash the WHOLE page. Local
+// paths and Vercel Blob URLs are configured/safe; anything else remote (e.g. a cover
+// hotlinked from the site a recipe was imported from) falls back to a plain <img> so
+// it renders (unoptimized) instead of taking the page down.
+function isOptimizableSrc(url: string): boolean {
+  return url.startsWith("/") || url.includes(".public.blob.vercel-storage.com");
+}
+
+// Fills its nearest positioned ancestor (the parent needs `relative` + a size).
+export default function RecipeCover({ src, alt, sizes }: { src: string; alt: string; sizes: string }) {
+  if (isOptimizableSrc(src)) {
+    return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading="lazy" />;
+  }
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />;
+}
