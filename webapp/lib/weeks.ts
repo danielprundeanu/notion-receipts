@@ -55,3 +55,13 @@ export type SeasonKey = (typeof SEASONS)[number]["key"];
 export function seasonOfMonth(month: number): SeasonKey {
   return SEASONS.find((s) => (s.months as readonly number[]).includes(month))!.key;
 }
+
+// The season `date` falls in, as [start, end): the 1st of its first month to the 1st of the
+// month after its last. Winter spans the new year, so in Jan/Feb it started last December.
+export function seasonRange(date: Date): { key: SeasonKey; label: string; start: Date; end: Date } {
+  const month = date.getMonth();
+  const season = SEASONS.find((s) => (s.months as readonly number[]).includes(month))!;
+  const first = season.months[0];
+  const year = first > month ? date.getFullYear() - 1 : date.getFullYear();
+  return { key: season.key, label: season.label, start: new Date(year, first, 1), end: new Date(year, first + 3, 1) };
+}
