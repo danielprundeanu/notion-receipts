@@ -1,97 +1,95 @@
 "use client";
 
-import { useState, useEffect, useMemo, useTransition, useSyncExternalStore } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
-import { Star, Trash2, Clock, ChevronRight, Pencil } from "lucide-react";
-import RecipeCover from "./RecipeCover";
-import { deleteRecipes, updateRecipesBatch, type RecipeBatchPatch } from "@/lib/actions";
-import RecipeBatchEditModal from "./RecipeBatchEditModal";
 import { useRouter } from "next/navigation";
+import { Star, Trash2, Clock, Pencil, Check, X } from "lucide-react";
+import RecipeCover from "./RecipeCover";
+import { deleteRecipes, updateRecipesBatch, type RecipeBatchPatch, type RecipeListItem } from "@/lib/actions";
+import { categoryLabel } from "@/lib/labels";
+import RecipeBatchEditModal from "./RecipeBatchEditModal";
 
-type Recipe = {
-  id: string;
-  name: string;
-  category: string | null;
-  imageUrl: string | null;
-  favorite: boolean;
-  servings: number | null;
-  time: number | null;
-  difficulty: string | null;
-};
+export type RecipesLayout = "list" | "grid";
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Breakfast:       "bg-yellow-100 text-yellow-700 dark:bg-[#3f3217] dark:text-yellow-300",
-  Lunch:           "bg-green-100  text-green-700  dark:bg-[#1b3725] dark:text-green-300",
-  Dinner:          "bg-blue-100   text-blue-700   dark:bg-[#1e2a45] dark:text-blue-300",
-  Snack:           "bg-purple-100 text-purple-700 dark:bg-[#342045] dark:text-purple-300",
-  Smoothie:        "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  "Smoothie Bowl": "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  Soup:            "bg-orange-100 text-orange-700 dark:bg-[#452819] dark:text-orange-300",
-  "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
-};
+type Recipe = Pick<RecipeListItem, "id" | "name" | "category" | "imageUrl" | "favorite" | "time">;
 
-type ViewMode = "grid" | "grid2" | "list";
-function subscribeView(cb: () => void) {
-  window.addEventListener("viewchange", cb);
-  return () => window.removeEventListener("viewchange", cb);
-}
-function getViewSnapshot(): ViewMode {
-  return (localStorage.getItem("recipesView") as ViewMode) || "grid";
+export function recipeCategories(category: string | null): string[] {
+  return (category ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 }
 
-export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
-  // View is an external store (localStorage + SortSelect's "viewchange" event), so it's
-  // correct on mount without an event-timing race or a hydration mismatch.
-  const view = useSyncExternalStore(subscribeView, getViewSnapshot, () => "grid" as ViewMode);
+// "Lunch · 25 min" — the first category and the time, whichever exist.
+export function recipeMeta(r: Recipe): string {
+  const cat = recipeCategories(r.category)[0];
+  return [cat ? categoryLabel(cat) : null, r.time ? `${r.time} min` : null].filter(Boolean).join(" · ");
+}
+
+// Cover photo, or the recipe's initial on a tinted tile when it has none. Sized by `className`.
+export function RecipeThumb({
+  recipe, sizes, className, initialClass,
+}: { recipe: Recipe; sizes: string; className: string; initialClass: string }) {
+  const src = recipe.imageUrl;
+  const [broken, setBroken] = useState(false);
+  return (
+    <div className={`relative overflow-hidden bg-gray-100 dark:bg-[#2e2a24] ${className}`}>
+      {src && !broken && (src.startsWith("/") || src.startsWith("http")) ? (
+        <RecipeCover src={src} alt="" sizes={sizes} onError={() => setBroken(true)} />
+      ) : (
+        <span
+          aria-hidden
+          className={`absolute inset-0 flex items-center justify-center font-[family-name:var(--font-serif)] text-orange-600 dark:text-orange-400 ${initialClass}`}
+        >
+          {recipe.name.charAt(0)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function SelectBadge({ on }: { on: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`absolute top-1.5 left-1.5 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${
+        on ? "bg-orange-500 border-orange-500 text-white" : "bg-black/30 border-white"
+      }`}
+    >
+      {on && <Check size={14} strokeWidth={3} />}
+    </span>
+  );
+}
+
+export default function RecipesGrid({
+  recipes, layout, selectMode, onExitSelect,
+}: { recipes: RecipeListItem[]; layout: RecipesLayout; selectMode: boolean; onExitSelect: () => void }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const [selectMode, setSelectMode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
-
-  // Category tags present on the current list — merged with the defaults in the
-  // batch modal so the chip picker offers what's actually in use.
-  const knownCategories = useMemo(() => {
-    const set = new Set<string>();
-    for (const r of recipes) {
-      for (const c of (r.category ?? "").split(",")) {
-        const t = c.trim();
-        if (t) set.add(t);
-      }
-    }
-    return [...set];
-  }, [recipes]);
-
-  // Select mode is toggled from the filter bar (SortSelect) via a window event.
-  // When it turns off, drop the current selection.
-  useEffect(() => {
-    function onSel(e: Event) {
-      const v = (e as CustomEvent<boolean>).detail;
-      setSelectMode(v);
-      if (!v) { setSelected(new Set()); setConfirmDelete(false); setShowEdit(false); }
-    }
-    window.addEventListener("selectmodechange", onSel);
-    return () => window.removeEventListener("selectmodechange", onSel);
-  }, []);
-
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+
+  // Leaving select mode drops the selection (adjusting state during render, not in an effect).
+  if (!selectMode && (selected.size > 0 || confirmDelete || showEdit)) {
+    setSelected(new Set());
+    setConfirmDelete(false);
+    setShowEdit(false);
+  }
+
+  // Category tags on the current list — merged with the defaults in the batch modal so its
+  // chip picker offers what's actually in use.
+  const knownCategories = [...new Set(recipes.flatMap((r) => recipeCategories(r.category)))];
 
   function toggleSelect(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
 
   function toggleAll() {
-    if (selected.size === recipes.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(recipes.map((r) => r.id)));
-    }
+    setSelected(selected.size === recipes.length ? new Set() : new Set(recipes.map((r) => r.id)));
   }
 
   function handleDelete() {
@@ -113,198 +111,169 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
   // itself open and shows an error (shared data → no false "saved").
   async function handleBatchApply(patch: RecipeBatchPatch) {
     await updateRecipesBatch([...selected], patch);
-    setSelected(new Set());
-    window.dispatchEvent(new CustomEvent("selectmodechange", { detail: false }));
+    onExitSelect();
     router.refresh();
   }
 
-  const isSelecting = selected.size > 0;
+  // In select mode a tap toggles the recipe instead of opening it.
+  function tile(r: RecipeListItem, className: string, children: ReactNode) {
+    if (!selectMode) {
+      return <Link href={`/recipes/${r.id}`} className={className}>{children}</Link>;
+    }
+    return (
+      <button type="button" aria-pressed={selected.has(r.id)} onClick={() => toggleSelect(r.id)} className={`${className} text-left`}>
+        {children}
+      </button>
+    );
+  }
+
+  const toolBtn = "h-10 px-3 inline-flex items-center gap-1.5 text-sm font-medium rounded-xl border transition-colors";
 
   return (
     <div>
-      {/* Toolbar — visible in select mode or when items are selected */}
-      {(selectMode || isSelecting) && (
-        <div className="flex items-center justify-between mb-4">
+      {selectMode && (
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-3">
             <button
+              type="button"
               onClick={toggleAll}
-              className="text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
+              className="h-10 text-sm font-medium text-orange-700 dark:text-orange-400"
             >
               {selected.size === recipes.length && recipes.length > 0 ? "Deselect all" : `Select all (${recipes.length})`}
             </button>
-            <span className="text-xs text-gray-400 dark:text-[#5c554b]">{selected.size} selected</span>
+            <span className="text-sm text-gray-500 dark:text-[#a49c90]">{selected.size} selected</span>
           </div>
           <div className="flex items-center gap-2">
             {selected.size > 0 && !confirmDelete && (
-              <button
-                onClick={() => setShowEdit(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/30 hover:bg-orange-100 dark:hover:bg-orange-950/50 border border-orange-200 dark:border-orange-900 rounded-lg transition-colors"
-              >
-                <Pencil size={13} /> Edit {selected.size}
-              </button>
-            )}
-            {selected.size > 0 && !confirmDelete && (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 hover:bg-red-100 dark:hover:bg-red-950/50 border border-red-200 dark:border-red-900 rounded-lg transition-colors"
-              >
-                <Trash2 size={13} /> Delete {selected.size}
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowEdit(true)}
+                  className={`${toolBtn} text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-900`}
+                >
+                  <Pencil size={14} /> Edit {selected.size}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className={`${toolBtn} text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900`}
+                >
+                  <Trash2 size={14} /> Delete {selected.size}
+                </button>
+              </>
             )}
             {selected.size > 0 && confirmDelete && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 dark:text-[#7c756a]">Are you sure?</span>
+              <>
                 <button
+                  type="button"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                  className={`${toolBtn} text-white bg-red-600 hover:bg-red-700 border-red-600 disabled:opacity-50`}
                 >
-                  {isPending ? "Deleting…" : "Delete permanently"}
+                  {isPending ? "Deleting…" : `Delete ${selected.size} for good`}
                 </button>
-                {deleteError && (
-                  <span className="text-xs text-red-600 dark:text-red-400 max-w-xs">{deleteError}</span>
-                )}
                 <button
+                  type="button"
                   onClick={() => { setConfirmDelete(false); setDeleteError(null); }}
-                  className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 dark:text-[#7c756a] dark:hover:text-[#bab2a6] transition-colors"
+                  className="h-10 px-2 text-sm text-gray-600 dark:text-[#a49c90]"
                 >
                   Cancel
                 </button>
-              </div>
+              </>
             )}
             <button
-              onClick={() => { setSelected(new Set()); setConfirmDelete(false); window.dispatchEvent(new CustomEvent("selectmodechange", { detail: false })); }}
-              className="text-xs text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#7c756a] transition-colors"
-              title="Exit selection"
+              type="button"
+              onClick={onExitSelect}
+              aria-label="Exit selection"
+              className="w-10 h-10 flex items-center justify-center rounded-xl text-gray-500 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2a2620]"
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
+          {deleteError && <p className="w-full text-sm text-red-600 dark:text-red-400">{deleteError}</p>}
         </div>
       )}
 
-      {/* Grid view — 1 col mobile */}
-      {view === "grid" && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {recipes.map((recipe) => {
-            const cats = (recipe.category ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 3);
-            const isSelected = selected.has(recipe.id);
+      {layout === "list" ? (
+        <ul className="md:grid md:grid-cols-2 xl:grid-cols-3 md:gap-x-6">
+          {recipes.map((r) => {
+            const on = selected.has(r.id);
+            const cat = recipeCategories(r.category)[0];
             return (
-              <div
-                key={recipe.id}
-                className={`relative bg-white dark:bg-[#24211c] rounded-xl border transition-all overflow-hidden group ${
-                  isSelected
-                    ? "border-orange-400 dark:border-orange-500 ring-2 ring-orange-300 dark:ring-orange-700"
-                    : "border-gray-100 dark:border-[#2e2a24] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a352e]"
-                }`}
-              >
-                {(selectMode || isSelected) && (
-                  <button
-                    onClick={() => toggleSelect(recipe.id)}
-                    className={`absolute top-2 left-2 z-10 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                      isSelected
-                        ? "bg-orange-500 border-orange-500"
-                        : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b]"
-                    }`}
-                  >
-                    {isSelected && <span className="text-white text-[10px] font-bold">✓</span>}
-                  </button>
-                )}
-                <Link
-                  href={`/recipes/${recipe.id}`}
-                  className="block"
-                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
-                >
-                  <div className="relative h-36 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
-                    {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                      <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 100vw, 25vw" />
-                    ) : (
-                      <span className="text-4xl opacity-20">🍽️</span>
-                    )}
-                    {cats.length > 0 && (
-                      <div className="absolute top-2 right-2 flex flex-row items-center gap-1">
-                        {cats.map((c) => {
-                          const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-                          return <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold text-gray-900 dark:text-[#eae5de] text-sm leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
-                        {recipe.name}
-                      </h3>
-                      {recipe.favorite && <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
+              <li key={r.id}>
+                {tile(
+                  r,
+                  `w-[calc(100%+1rem)] flex items-center gap-3.5 -mx-2 px-2 py-2.5 rounded-2xl transition-colors ${
+                    on ? "bg-orange-50 dark:bg-orange-500/10" : "hover:bg-gray-50 active:bg-gray-100 dark:hover:bg-[#24211c] dark:active:bg-[#24211c]"
+                  }`,
+                  <>
+                    <div className="relative shrink-0">
+                      <RecipeThumb recipe={r} sizes="68px" className="w-[68px] h-[68px] rounded-[14px]" initialClass="text-[28px]" />
+                      {selectMode && <SelectBadge on={on} />}
                     </div>
-                  </div>
-                </Link>
-              </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-base font-semibold leading-snug line-clamp-2 text-gray-900 dark:text-[#eae5de]">{r.name}</p>
+                      {(cat || r.time) && (
+                        <p className="mt-1 flex items-center gap-3 text-[13px] text-gray-600 dark:text-[#a49c90]">
+                          {cat && <span className="truncate">{categoryLabel(cat)}</span>}
+                          {r.time ? (
+                            <span className="flex items-center gap-1 shrink-0">
+                              <Clock size={14} aria-hidden /> {r.time} min
+                            </span>
+                          ) : null}
+                        </p>
+                      )}
+                    </div>
+                    {r.favorite && (
+                      <>
+                        <Star size={18} aria-hidden className="shrink-0 text-orange-600 dark:text-orange-400 fill-current" />
+                        <span className="sr-only">Favorite</span>
+                      </>
+                    )}
+                  </>
+                )}
+              </li>
             );
           })}
-        </div>
-      )}
-
-      {/* Grid view — 2 col mobile */}
-      {view === "grid2" && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {recipes.map((recipe) => {
-            const cats = (recipe.category ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 1);
-            const isSelected = selected.has(recipe.id);
+        </ul>
+      ) : (
+        <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-x-3 gap-y-[18px]">
+          {recipes.map((r) => {
+            const on = selected.has(r.id);
+            const meta = recipeMeta(r);
             return (
-              <div
-                key={recipe.id}
-                className={`relative bg-white dark:bg-[#24211c] rounded-xl border transition-all overflow-hidden group ${
-                  isSelected
-                    ? "border-orange-400 dark:border-orange-500 ring-2 ring-orange-300 dark:ring-orange-700"
-                    : "border-gray-100 dark:border-[#2e2a24] hover:shadow-md hover:border-gray-200 dark:hover:border-[#3a352e]"
-                }`}
-              >
-                {(selectMode || isSelected) && (
-                  <button
-                    onClick={() => toggleSelect(recipe.id)}
-                    className={`absolute top-2 left-2 z-10 w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                      isSelected
-                        ? "bg-orange-500 border-orange-500"
-                        : "bg-white/80 dark:bg-black/40 border-gray-300 dark:border-[#5c554b]"
-                    }`}
-                  >
-                    {isSelected && <span className="text-white text-[9px] font-bold">✓</span>}
-                  </button>
-                )}
-                <Link
-                  href={`/recipes/${recipe.id}`}
-                  className="block"
-                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
-                >
-                  <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] flex items-center justify-center overflow-hidden">
-                    {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                      <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="(max-width: 640px) 50vw, 25vw" />
-                    ) : (
-                      <span className="text-4xl opacity-20">🍽️</span>
-                    )}
-                    {cats.length > 0 && (
-                      <div className="absolute top-1.5 right-1.5">
-                        {cats.map((c) => {
-                          const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-                          return <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
-                        })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-2.5">
-                    <div className="flex items-start justify-between gap-1.5">
-                      <h3 className="font-semibold text-gray-900 dark:text-[#eae5de] text-sm leading-snug line-clamp-2 group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
-                        {recipe.name}
-                      </h3>
-                      {recipe.favorite && <Star size={13} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />}
+              <li key={r.id} className="min-w-0">
+                {tile(
+                  r,
+                  "w-full flex flex-col gap-2 group",
+                  <>
+                    <div className={`relative rounded-[18px] ${on ? "ring-2 ring-orange-500 ring-offset-2 ring-offset-[var(--color-bg-base)]" : ""}`}>
+                      <RecipeThumb
+                        recipe={r}
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                        className="w-full h-[168px] rounded-[18px]"
+                        initialClass="text-5xl"
+                      />
+                      {r.favorite && (
+                        <span className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-orange-300 flex items-center justify-center">
+                          <Star size={16} aria-hidden className="fill-current" />
+                          <span className="sr-only">Favorite</span>
+                        </span>
+                      )}
+                      {selectMode && <SelectBadge on={on} />}
                     </div>
-                  </div>
-                </Link>
-              </div>
+                    <div className="min-w-0">
+                      <p className="text-[15px] font-semibold leading-snug line-clamp-2 text-gray-900 dark:text-[#eae5de] group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors">
+                        {r.name}
+                      </p>
+                      {meta && <p className="mt-1 text-xs text-gray-600 dark:text-[#a49c90]">{meta}</p>}
+                    </div>
+                  </>
+                )}
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
 
       {showEdit && selected.size > 0 && (
@@ -314,107 +283,6 @@ export default function RecipesGrid({ recipes }: { recipes: Recipe[] }) {
           onClose={() => setShowEdit(false)}
           onApply={handleBatchApply}
         />
-      )}
-
-      {/* List view */}
-      {view === "list" && (
-        <div className="border border-gray-100 dark:border-[#2e2a24] rounded-xl overflow-hidden">
-          {/* Header */}
-          <div className="hidden sm:grid grid-cols-[24px_40px_1fr_120px_70px_60px_24px] gap-3 px-4 py-2 bg-gray-50 dark:bg-[#24211c] border-b border-gray-100 dark:border-[#2e2a24]">
-            <button onClick={toggleAll} className="flex items-center">
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                selected.size === recipes.length && recipes.length > 0
-                  ? "bg-orange-500 border-orange-500"
-                  : "border-gray-300 dark:border-[#5c554b]"
-              }`}>
-                {selected.size === recipes.length && recipes.length > 0 && <span className="text-white text-[9px] font-bold">✓</span>}
-              </div>
-            </button>
-            <div />
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Recipe</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Category</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Time</span>
-            <span className="text-xs font-semibold text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">Servings</span>
-            <div />
-          </div>
-
-          {recipes.map((recipe, idx) => {
-            const cats = (recipe.category ?? "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 2);
-            const isSelected = selected.has(recipe.id);
-            return (
-              <div
-                key={recipe.id}
-                className={`flex sm:grid sm:grid-cols-[24px_40px_1fr_120px_70px_60px_24px] gap-3 items-center px-4 py-2.5 transition-colors ${
-                  idx > 0 ? "border-t border-gray-100 dark:border-[#2e2a24]" : ""
-                } ${isSelected ? "bg-orange-50 dark:bg-orange-950/10" : "bg-white dark:bg-[#201c18] hover:bg-gray-50 dark:hover:bg-[#24211c]"}`}
-              >
-                {/* Checkbox */}
-                <button onClick={() => toggleSelect(recipe.id)} className="shrink-0">
-                  <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-all ${
-                    isSelected ? "bg-orange-500 border-orange-500" : "border-gray-300 dark:border-[#5c554b]"
-                  }`}>
-                    {isSelected && <span className="text-white text-[9px] font-bold">✓</span>}
-                  </div>
-                </button>
-
-                {/* Thumbnail — shown inline between the checkbox and the name on all screens */}
-                <div className="block w-9 h-9 sm:w-10 sm:h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-[#2a2620] shrink-0 relative">
-                  {recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) ? (
-                    <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="40px" />
-                  ) : (
-                    <span className="flex items-center justify-center w-full h-full text-lg opacity-30">🍽️</span>
-                  )}
-                </div>
-
-                {/* Name (+ favorite; + category tag on mobile) */}
-                <Link
-                  href={`/recipes/${recipe.id}`}
-                  className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2"
-                  onClick={(e) => { if (selectMode) { e.preventDefault(); toggleSelect(recipe.id); } }}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-medium text-gray-900 dark:text-[#eae5de] truncate hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
-                      {recipe.name}
-                    </span>
-                    {recipe.favorite && <Star size={12} className="text-amber-400 fill-amber-400 shrink-0" />}
-                  </div>
-                  {/* Category tags — mobile only (desktop shows them in the Category column) */}
-                  {cats.length > 0 && (
-                    <div className="flex sm:hidden items-center gap-1 flex-wrap">
-                      {cats.map((c) => {
-                        const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-                        return <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
-                      })}
-                    </div>
-                  )}
-                </Link>
-
-                {/* Category */}
-                <div className="hidden sm:flex items-center gap-1 flex-wrap">
-                  {cats.length > 0 ? cats.map((c) => {
-                    const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-                    return <span key={c} className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>{c}</span>;
-                  }) : <span className="text-xs text-gray-300 dark:text-[#4a443c]">—</span>}
-                </div>
-
-                {/* Time */}
-                <div className="hidden sm:flex items-center gap-1 text-xs text-gray-500 dark:text-[#7c756a]">
-                  {recipe.time ? <><Clock size={11} />{recipe.time} min</> : <span className="text-gray-300 dark:text-[#4a443c]">—</span>}
-                </div>
-
-                {/* Servings */}
-                <div className="hidden sm:block text-xs text-gray-500 dark:text-[#7c756a]">
-                  {recipe.servings ? `${recipe.servings} servings` : <span className="text-gray-300 dark:text-[#4a443c]">—</span>}
-                </div>
-
-                {/* Arrow */}
-                <Link href={`/recipes/${recipe.id}`} className="hidden sm:flex text-gray-300 dark:text-[#4a443c] hover:text-orange-400 transition-colors">
-                  <ChevronRight size={16} />
-                </Link>
-              </div>
-            );
-          })}
-        </div>
       )}
     </div>
   );

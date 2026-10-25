@@ -6,6 +6,7 @@ import { ingredientGrams } from "./nutrition";
 import { MIN_SERVINGS, roundServings } from "./servings";
 import { flattenRecipes, loadRecipeGraph, flattenRecipe, referenceFactor, referencesRecipe, REF_UNITS, type RefUnit, type FlatIngredient } from "./recipe-refs";
 import { buildRecipeSearchText, normalizeSearch } from "./search";
+import { getMondayOf, mondayFromStored, seasonRange } from "./weeks";
 import { GROCERY_CATEGORIES } from "./constants";
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
@@ -364,36 +365,24 @@ export async function toggleFavorite(id: string, favorite: boolean): Promise<voi
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
-export async function getRecipes(search?: string, category?: string, favorites?: boolean, sort?: string) {
-  const orderBy =
-    sort === "date_asc"  ? { createdAt: "asc"  as const } :
-    sort === "date_desc" ? { createdAt: "desc" as const } :
-                           { name: "asc" as const };
+export type RecipeListItem = {
+  id: string;
+  name: string;
+  category: string | null;
+  time: number | null;
+  servings: number | null;
+  difficulty: string | null;
+  favorite: boolean;
+  imageUrl: string | null;
+  // Normalized title + RO title + ingredient names, one per line — what search matches.
+  search: string;
+};
 
-  return prisma.recipe.findMany({
-    where: {
-      AND: [
-        search
-          ? {
-              OR: [
-                { searchText: { contains: normalizeSearch(search) } },
-                { name: { contains: search, mode: "insensitive" } },
-                { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
-                { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },
-              ],
-            }
-          : {},
-        // `category` may be a comma-separated multi-select ("Breakfast,High Protein").
-        // A recipe matches if its (comma-joined) category string contains ANY of them (OR).
-        (() => {
-          const cats = (category ?? "").split(",").map((c) => c.trim()).filter(Boolean);
-          if (cats.length === 0) return {};
-          return { OR: cats.map((c) => ({ category: { contains: c, mode: "insensitive" as const } })) };
-        })(),
-        favorites ? { favorite: true } : {},
-      ],
-    },
-    orderBy,
+// Every recipe, newest first. /recipes loads this once and searches/filters/sorts it in
+// the browser, so typing or tapping a chip never waits on a server round-trip.
+export async function getRecipeIndex(): Promise<RecipeListItem[]> {
+  const rows = await prisma.recipe.findMany({
+    orderBy: { createdAt: "desc" },
     select: {
       id: true,
       name: true,
@@ -403,8 +392,52 @@ export async function getRecipes(search?: string, category?: string, favorites?:
       difficulty: true,
       favorite: true,
       imageUrl: true,
+      searchText: true,
+      ingredients: { select: { groceryItem: { select: { name: true, nameRo: true } } } },
     },
   });
+  return rows.map(({ searchText, ingredients, ...r }) => {
+    const parts = new Set([normalizeSearch(r.name), searchText ?? ""]);
+    for (const { groceryItem } of ingredients) {
+      if (!groceryItem) continue;
+      parts.add(normalizeSearch(groceryItem.name));
+      if (groceryItem.nameRo) parts.add(normalizeSearch(groceryItem.nameRo));
+    }
+    parts.delete("");
+    return { ...r, search: [...parts].join("\n") };
+  });
+}
+
+// The recipes planned this season (up to the current week), most-planned first — the
+// "Cooked this autumn" row on /recipes. Runs on the (UTC) server: mondayFromStored's +12 h
+// puts a stored local-midnight Monday on the right day here too.
+export async function getCookedThisSeason(): Promise<{ season: string; recipeIds: string[] }> {
+  const now = new Date();
+  const { label, start, end } = seasonRange(now);
+  const thisMonday = getMondayOf(now);
+  const rows = await prisma.weekPlan.findMany({
+    where: { weekStart: { gte: new Date(start.getTime() - 7 * 24 * 3600_000) } },
+    select: { weekStart: true, recipeId: true },
+  });
+
+  const tally = new Map<string, { count: number; last: number }>();
+  for (const row of rows) {
+    const monday = mondayFromStored(row.weekStart);
+    if (monday > thisMonday) continue; // planned ahead, not cooked yet
+    const thursday = new Date(monday);
+    thursday.setDate(thursday.getDate() + 3); // a week belongs where its Thursday falls
+    if (thursday < start || thursday >= end) continue;
+    const t = tally.get(row.recipeId) ?? { count: 0, last: 0 };
+    t.count += 1;
+    t.last = Math.max(t.last, monday.getTime());
+    tally.set(row.recipeId, t);
+  }
+
+  const recipeIds = [...tally]
+    .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
+    .slice(0, 12)
+    .map(([id]) => id);
+  return { season: label.toLowerCase(), recipeIds };
 }
 
 export type RecipeRefGroup = {
