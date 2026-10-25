@@ -4,11 +4,13 @@ import {
   browserHeaders, isUnsupportedHost, normalizeUnit, parseIngredientString, parseText, parseUrls,
   type RawRecipe,
 } from "./recipe-scraper";
+import { prisma } from "./db";
 
 // The "Ask AI" side of adding recipes: turns a recipe link (+ notes), a description, pasted
 // text or a photo/PDF into the RawRecipe shape the matcher (lib/import.ts) already takes.
-// Links and text go through the plain scraper first; Claude only steps in for what it can't
-// do — notes to apply, a page it can't read, a description, or a photo.
+// When AI is set up Claude reads every source, naming ingredients after the person's own
+// grocery items so the matcher finds them exactly; without it, links and text fall back to
+// the plain scraper and parser.
 
 const MODEL = "claude-opus-5-5";
 const CATEGORIES = ["Breakfast", "Lunch", "Dinner", "Snack", "Smoothie", "Smoothie Bowl", "Soup", "High Protein"] as const;
@@ -33,7 +35,10 @@ const RECIPE_SCHEMA = {
           group: { type: "string", description: "Ingredient group heading such as \"For the sauce\"; empty if none" },
           quantity: { type: "string", description: "Number as written: \"2\", \"1.5\", \"1/2\"; empty for to taste" },
           unit: { type: "string", description: "g, kg, ml, l, tsp, tbsp, cup, piece, slice, clove, can, pinch, handful, bunch, scoop; empty for a plain count or to taste" },
-          name: { type: "string", description: "The ingredient alone, singular, lower case: \"red onion\", not \"2 red onions, chopped\"" },
+          name: {
+            type: "string",
+            description: "The ingredient alone: one of the person's grocery item names when it's the same product, otherwise singular and lower case — \"red onion\", not \"2 red onions, chopped\"",
+          },
           note: { type: "string", description: "Preparation or remark: \"finely chopped\", \"optional\"; empty if none" },
         },
         required: ["group", "quantity", "unit", "name", "note"],
@@ -62,6 +67,7 @@ const SYSTEM = `You turn recipes into structured data for a two-person household
 Rules:
 - Keep the recipe's own amounts and servings; never invent ingredients or steps the source doesn't have (unless asked to write a recipe from a description).
 - One ingredient per line. Split "salt and pepper" into two. Put preparation ("chopped", "at room temperature") in note, not in name.
+- Name each ingredient after the product you'd buy. When it is the same product as one of the person's grocery items (listed after these rules), use that item's name exactly: "fresh ground black pepper" becomes "Black Pepper" when that's on the list. Pick an item only when it's the same thing in the same form — dried and canned chickpeas, or fresh and dried herbs, are different products. Otherwise write a short plain name, and put words like "raw" or "freshly ground" in note.
 - Units: use the metric or kitchen unit the source uses, from the listed set. A plain count ("2 eggs") has an empty unit.
 - Steps: one action per step, in order, without numbering. Keep section headings as is_section steps only when the source groups steps.
 - Write the recipe in English unless the notes say otherwise; keep proper names.
@@ -76,14 +82,26 @@ function anthropic(): Anthropic {
   return client;
 }
 
+/** The person's grocery item names, sorted so the prompt is the same from one request to
+ *  the next and the cached copy is reused while several sources are read in a row. */
+async function groceryNames(): Promise<string[]> {
+  const items = await prisma.groceryItem.findMany({ select: { name: true }, orderBy: { name: "asc" } });
+  return items.map((i) => i.name.trim()).filter(Boolean);
+}
+
 async function extract(content: Anthropic.ContentBlockParam[], link: string | null): Promise<RawRecipe> {
+  const client = anthropic();
+  const names = await groceryNames();
   let res;
   try {
-    res = await anthropic().messages.parse({
+    res = await client.messages.parse({
       model: MODEL,
       max_tokens: 16000,
       output_config: { effort: "medium", format: jsonSchemaOutputFormat(RECIPE_SCHEMA) },
-      system: SYSTEM,
+      system: [
+        { type: "text", text: SYSTEM },
+        { type: "text", text: `The person's grocery items, one per line:\n${names.join("\n")}`, cache_control: { type: "ephemeral" } },
+      ],
       messages: [{ role: "user", content }],
     });
   } catch (err) {
