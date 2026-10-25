@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.1.0] — 2026-10-26
+
+### ✨ Features
+- **Add recipes** — the "+" in Recipes, Add recipes in the desktop planner's panel and "Import recipes" under More open one sheet: paste recipe links with notes in plain words ("2 servings, no cilantro"), describe a recipe and let AI write it, paste a recipe's text, or upload a photo or PDF of one. Each source is read on its own with its own progress. Ingredients are matched to your grocery items and only the uncertain ones become questions (pick one of up to 3 matches, add it as new, or search; conversions ask for the total, e.g. "8 piece = ? g"). Fixed conversions (tbsp → tsp, cup → ml) apply without asking, and "Remember" keeps a choice for future imports. Nothing is saved until "Add"; closing after adding from More goes to Recipes.
+- **Ingredients named after your grocery items** — with AI on, Claude gets your item list and uses an item's exact name when it's the same product, so "fresh ground black pepper" lands on Black Pepper and "canned chickpeas" on Chickpeas Tinned instead of becoming new items.
+- **Recipes list** — Sort opens a "Sort by" sheet; Select mode has an Edit / Delete bar that acts only on the selected recipes still visible; batch edit is a sheet where every field can stay "As is". The header has a single "+".
+- **Desktop planner** — from `lg` up, a recipes panel sits beside the week: drag a recipe into a slot, click a recipe and then a slot ("Add here"), or click a slot to pick a recipe. The header links to the shopping list.
+
+### ⚙️ Internals
+- New `app/api/import/ai` route (one source per request, `maxDuration` 60) over `lib/ai-import.ts`: Claude Opus 5.5 with structured output, the grocery item names sent as a cached system block. Without `ANTHROPIC_API_KEY`, links and text fall back to the scraper and parser. The AI paths need `ANTHROPIC_API_KEY` in Vercel (Production).
+- `lib/units.ts` holds the standard conversion table (shared with the import wizard); `lib/recipe-scraper.ts` exports `browserHeaders`, `normalizeUnit` and `isUnsupportedHost`. Sheet / Switch / Segmented moved into `components/Sheet.tsx`; the old batch edit modal is gone. The `/recipes/import` wizard stays, without a link in the app.
+
 ## [1.0.0] — 2026-10-25
 
 Mobile-first redesign of the whole app, following the clickable prototype.
