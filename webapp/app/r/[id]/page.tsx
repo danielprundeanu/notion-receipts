@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { getRecipe } from "@/lib/actions";
 
-// Public route (excluded from the auth middleware) — serves only a preview card
+// Public route (excluded from the auth proxy) — serves only a preview card
 // (name, description, image) so shared links get a rich Open Graph preview. The
 // full recipe stays behind login via the "View full recipe" link.
 

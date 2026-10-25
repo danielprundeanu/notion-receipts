@@ -1,6 +1,6 @@
 import type { NextAuthConfig } from "next-auth";
 
-// Edge-safe config (no Prisma / bcrypt) — imported by middleware.ts.
+// Edge-safe config (no Prisma / bcrypt) — imported by proxy.ts.
 // The real Credentials provider lives in auth.ts (Node runtime).
 export const authConfig = {
   pages: {
