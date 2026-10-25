@@ -23,8 +23,12 @@ const nav: { href: string; label: string; Icon: LucideIcon; match: (p: string) =
   },
 ];
 
+// The recipe editor is a full screen with its own Cancel / Save: no tabs to lose unsaved work with.
+const isEditor = (p: string) => p === "/recipes/new" || /^\/recipes\/[^/]+\/edit$/.test(p);
+
 export default function BottomNav() {
   const pathname = usePathname();
+  if (isEditor(pathname)) return null;
 
   return (
     <nav

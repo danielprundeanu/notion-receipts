@@ -32,6 +32,36 @@ export function formatAmount(q: number, unit: string | null): string {
   return kitchenFraction(q);
 }
 
+// ── Typing an amount (recipe form) ──
+
+const TYPED_FRACTIONS: Record<string, number> = { "⅛": 1 / 8, "¼": 1 / 4, "⅓": 1 / 3, "½": 1 / 2, "⅔": 2 / 3, "¾": 3 / 4 };
+
+/** "2", "1,5", "1/2", "1 1/2", "1½", "⅓" → a number. "" → null (no amount, to taste); unreadable → NaN. */
+export function parseAmount(text: string): number | null {
+  const t = text.trim().replace(",", ".");
+  if (!t) return null;
+  const m = t.match(/^(\d+(?:\.\d+)?)?\s*(?:([⅛¼⅓½⅔¾])|(\d+)\s*\/\s*(\d+))?$/);
+  if (!m || (!m[1] && !m[2] && !m[3])) return NaN;
+  let n = m[1] ? parseFloat(m[1]) : 0;
+  if (m[2]) n += TYPED_FRACTIONS[m[2]];
+  if (m[3]) {
+    const den = parseInt(m[4]);
+    if (!den) return NaN;
+    n += parseInt(m[3]) / den;
+  }
+  return n;
+}
+
+/** An amount as the amount field shows it: decimals, except thirds, which no decimal writes exactly. */
+export function editableAmount(q: number): string {
+  const whole = Math.floor(q + 1e-9);
+  const rest = q - whole;
+  for (const [v, s] of [[1 / 3, "⅓"], [2 / 3, "⅔"]] as const) {
+    if (Math.abs(rest - v) < 0.002) return `${whole || ""}${s}`;
+  }
+  return trimDecimal(q, 3);
+}
+
 // ── Shopping list ──
 // What you buy whole (onions, cans, garlic cloves) is rounded UP to what the shop
 // sells: ⅓ of an onion is still one onion. Spoons and cups stay kitchen fractions.
