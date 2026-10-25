@@ -50,13 +50,13 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Settings — pinned to the bottom */}
+      {/* More (settings, import, new recipe) — pinned to the bottom */}
       <div className="p-3 border-t border-gray-100 dark:border-[#2e2a24]">
         <Link
-          href="/settings"
-          aria-current={pathname === "/settings" || pathname.startsWith("/settings/") ? "page" : undefined}
+          href="/more"
+          aria-current={pathname === "/more" ? "page" : undefined}
           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-            pathname === "/settings" || pathname.startsWith("/settings/")
+            pathname === "/more"
               ? "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400"
               : "text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] hover:text-gray-900 dark:hover:text-[#eae5de]"
           }`}
@@ -66,9 +66,9 @@ export default function Sidebar() {
             alt=""
             width={20}
             height={20}
-            className={`transition-opacity ${pathname === "/settings" || pathname.startsWith("/settings/") ? "opacity-100" : "opacity-60"}`}
+            className={`transition-opacity ${pathname === "/more" ? "opacity-100" : "opacity-60"}`}
           />
-          Settings
+          More &amp; settings
         </Link>
       </div>
     </aside>
