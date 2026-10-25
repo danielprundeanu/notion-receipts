@@ -1,60 +1,34 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Loader2, Star, ChevronDown, ChevronUp, X, ImageIcon, Pencil, Sparkles, BookOpen, Search } from "lucide-react";
-import {
-  createRecipe,
-  updateRecipe,
-  deleteRecipe,
-  searchGroceryItems,
-  getGroceryItemDetails,
-  updateGroceryItem,
-  searchRecipesForPlanner,
-  checkRecipeReferences,
-} from "@/lib/actions";
-import { stepServings } from "@/lib/servings";
+import { BookOpen, Camera, ChevronDown, ChevronRight, ChevronUp, ImagePlus, Link2, Loader2, Minus, Plus, Trash2 } from "lucide-react";
+import { createRecipe, updateRecipe, deleteRecipe, checkRecipeReferences, type RecipeFormInput } from "@/lib/actions";
+import { stepServings, stepServingsDown } from "@/lib/servings";
 import { categoryLabel, difficultyLabel } from "@/lib/labels";
-import GroceryItemModal from "@/components/GroceryItemModal";
+import { emptySection, parseStepText, sectionsToInstructions, type StepSection } from "@/lib/steps";
+import { kitchenFraction } from "@/lib/quantities";
+import ServingsInput from "@/components/ServingsInput";
+import IngredientRows from "@/components/recipe-form/IngredientRows";
+import IngredientSheet from "@/components/recipe-form/IngredientSheet";
+import RecipeRefSheet from "@/components/recipe-form/RecipeRefSheet";
+import StepsEditor, { type StepsMode } from "@/components/recipe-form/StepsEditor";
+import {
+  Segmented, Sheet, Switch, cardCls, fieldCls, hintCls, labelCls, sectionCls, uid,
+  type IngredientGroup, type IngredientRow, type RecipeRefRow,
+} from "@/components/recipe-form/ui";
+
+export type { IngredientGroup, IngredientRow, RecipeRefRow };
 
 const CATEGORIES = [
   "Breakfast", "Lunch", "Dinner", "Snack",
   "Smoothie", "Smoothie Bowl", "Soup", "High Protein", "Receipt", "Extra",
 ];
-const ALL_UNITS = ["g", "ml", "piece", "tsp", "tbsp", "cup", "slice", "handful", "pinch", "scoop", "bottle", "pint"];
 const DIFFICULTIES = ["Easy", "Moderate", "Hard"];
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type IngredientRow = {
-  id: string;
-  quantity: string;
-  unit: string;
-  groceryItemName: string;
-  groceryItemId: string | null;
-  availableUnits: string[] | null; // null = show all ALL_UNITS
-  notes: string;
-};
-
-type IngredientGroup = {
-  id: string;
-  name: string;
-  ingredients: IngredientRow[];
-};
-
-// Another recipe used inside this one: how much of it goes in (servings or grams).
-export type RecipeRefRow = {
-  id: string;
-  refRecipeId: string | null;
-  name: string;
-  quantity: string;
-  unit: "serving" | "g";
-};
 
 export type InitialRecipeData = {
   id: string;
   name: string;
-  nameRo: string;
   categories: string[];
   servings: string;
   servingsStep?: string;
@@ -65,593 +39,137 @@ export type InitialRecipeData = {
   imageUrl: string;
   groups: IngredientGroup[];
   references?: RecipeRefRow[];
-  instructionsText: string;
+  sections: StepSection[];
 };
 
-function uid() {
-  return Math.random().toString(36).slice(2);
+type FormState = {
+  name: string;
+  categories: string[];
+  servings: string;
+  servingsStep: string;
+  time: string;
+  difficulty: string;
+  favorite: boolean;
+  link: string;
+  imageUrl: string;
+  groups: IngredientGroup[];
+  refs: RecipeRefRow[];
+  sections: StepSection[];
+};
+
+function initForm(initial?: InitialRecipeData): FormState {
+  return {
+    name: initial?.name ?? "",
+    categories: initial?.categories ?? [],
+    servings: initial?.servings ?? "",
+    servingsStep: initial?.servingsStep ?? "",
+    time: initial?.time ?? "",
+    difficulty: initial?.difficulty ?? "",
+    favorite: initial?.favorite ?? false,
+    link: initial?.link ?? "",
+    imageUrl: initial?.imageUrl ?? "",
+    groups: initial?.groups?.length ? initial.groups : [{ id: uid(), name: "", ingredients: [] }],
+    refs: initial?.references ?? [],
+    sections: initial?.sections?.length ? initial.sections : [emptySection()],
+  };
 }
 
-function emptyIngredient(): IngredientRow {
-  return { id: uid(), quantity: "", unit: "g", groceryItemName: "", groceryItemId: null, availableUnits: null, notes: "" };
-}
-
-function defaultGroup(name = "Ingredients"): IngredientGroup {
-  return { id: uid(), name, ingredients: [emptyIngredient()] };
-}
-
-// ─── Grocery Item Autocomplete ──────────────────────────────────────────────
-
-type GroceryItemOption = { id: string; name: string; nameRo?: string | null; unit: string | null; unit2: string | null };
-
-function GroceryItemInput({
-  value,
-  onChange,
-  onItemSelect,
-  onCreateRequest,
-}: {
-  value: string;
-  onChange: (name: string) => void;
-  onItemSelect?: (item: GroceryItemOption) => void;
-  onCreateRequest?: (name: string) => void;
-}) {
-  const [results, setResults] = useState<GroceryItemOption[]>([]);
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const hasTouched = useRef(false);
-
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      if (value.length < 2) { setResults([]); setOpen(false); return; }
-      const r = await searchGroceryItems(value);
-      setResults(r as GroceryItemOption[]);
-      if (hasTouched.current) setOpen(true);
-    }, 250);
-    return () => clearTimeout(t);
-  }, [value]);
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
-
-  const showDropdown = open && value.length >= 2 && (results.length > 0 || onCreateRequest);
-
-  return (
-    <div ref={ref} className="relative flex-1 min-w-0">
-      <input
-        value={value}
-        onChange={(e) => { hasTouched.current = true; onChange(e.target.value); setOpen(true); }}
-        placeholder="Ingredient name"
-        className="w-full px-2.5 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
-      />
-      {showDropdown && (
-        <div className="absolute z-30 top-full mt-0.5 left-0 right-0 bg-white dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg shadow-lg overflow-hidden">
-          {results.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                onChange(r.name);
-                onItemSelect?.(r);
-                setOpen(false);
-              }}
-              className="w-full text-left px-3 py-2 text-sm hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center justify-between"
-            >
-              <span className="text-gray-800 dark:text-[#d8d0c4]">
-                {r.name}
-                {r.nameRo && (
-                  <span className="text-xs text-gray-400 dark:text-[#5c554b] ml-1.5">({r.nameRo})</span>
-                )}
-              </span>
-              {r.unit && (
-                <span className="text-xs text-gray-500 dark:text-[#7c756a] ml-2 shrink-0">
-                  {r.unit}{r.unit2 ? ` / ${r.unit2}` : ""}
-                </span>
-              )}
-            </button>
-          ))}
-          {onCreateRequest && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                setOpen(false);
-                onCreateRequest(value);
-              }}
-              className="w-full text-left px-3 py-2 text-sm text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 flex items-center gap-1.5 border-t border-gray-100 dark:border-[#3a352e]"
-            >
-              <Plus size={13} /> Add &ldquo;{value}&rdquo; as a new ingredient
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+// What createRecipe / updateRecipe receive. Also compared against the starting point to
+// know whether there's anything unsaved. The search alias (nameRo) isn't edited here: the
+// server keeps the stored one and translates again when the title changes.
+function buildPayload(f: FormState, sections: { title: string; steps: { text: string }[] }[]): RecipeFormInput {
+  const ingredients = f.groups.flatMap((group, groupIdx) =>
+    group.ingredients
+      .filter((i) => i.groceryItemName.trim())
+      .map((ing, order) => ({
+        groceryItemName: ing.groceryItemName.trim(),
+        quantity: ing.quantity.trim() ? parseFloat(ing.quantity) : null,
+        unit: ing.unit || null,
+        notes: ing.notes.trim() || null,
+        groupOrder: groupIdx + 1,
+        groupName: group.name.trim() || null,
+        order,
+      }))
   );
+  // Referenced recipes come after the ingredient groups.
+  const references = f.refs
+    .filter((r) => r.refRecipeId)
+    .map((r, i) => ({
+      refRecipeId: r.refRecipeId!,
+      quantity: parseFloat(r.quantity.replace(",", ".")),
+      unit: r.unit,
+      groupOrder: f.groups.length + 1 + i,
+    }));
+  return {
+    name: f.name.trim(),
+    nameRo: null,
+    categories: f.categories,
+    servings: f.servings ? parseInt(f.servings) : null,
+    servingsStep: parseInt(f.servingsStep) > 1 ? parseInt(f.servingsStep) : null,
+    time: f.time ? parseInt(f.time) : null,
+    difficulty: f.difficulty || null,
+    favorite: f.favorite,
+    link: f.link.trim() || null,
+    imageUrl: f.imageUrl || null,
+    ingredients,
+    references,
+    instructions: sectionsToInstructions(sections),
+  };
 }
 
-// ─── Grocery Item Edit Modal ──────────────────────────────────────────────────
-
-function GroceryItemEditModal({
-  itemId,
-  onClose,
-  onSaved,
-}: {
-  itemId: string;
-  onClose: () => void;
-  onSaved: (unit: string | null, unit2: string | null) => void;
-}) {
-  const [item, setItem] = useState<{
-    name: string; unit: string | null; unit2: string | null;
-    conversion: number | null; kcal: number | null; carbs: number | null;
-    fat: number | null; protein: number | null;
-  } | null>(null);
-  const [unit2, setUnit2] = useState("");
-  const [conversion, setConversion] = useState("");
-  const [kcal, setKcal] = useState("");
-  const [carbs, setCarbs] = useState("");
-  const [fat, setFat] = useState("");
-  const [protein, setProtein] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [fetchingNutrition, setFetchingNutrition] = useState(false);
-  const [nutritionError, setNutritionError] = useState<string | null>(null);
-  const [aiConvLoading, setAiConvLoading] = useState(false);
-  const [aiConvNote, setAiConvNote] = useState<string | null>(null);
-  const [aiConvError, setAiConvError] = useState<string | null>(null);
-
-  async function handleSuggestConversion() {
-    if (!item || !item.unit || !unit2.trim()) return;
-    setAiConvLoading(true);
-    setAiConvNote(null);
-    setAiConvError(null);
-    try {
-      const res = await fetch("/api/import/suggest-conversion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // factor = câte `toUnit` (primary) reprezintă 1 `fromUnit` (unit2) = valoarea `conversion`.
-        body: JSON.stringify({ ingredientName: item.name, fromUnit: unit2.trim(), toUnit: item.unit }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setAiConvError(data.error ?? "Nu s-a putut genera sugestia"); return; }
-      if (data.factor != null) { setConversion(String(data.factor)); setAiConvNote(data.note || ""); }
-    } catch {
-      setAiConvError("Eroare la conexiune");
-    } finally {
-      setAiConvLoading(false);
-    }
-  }
-
-  async function handleFetchNutrition() {
-    if (!item) return;
-    setFetchingNutrition(true);
-    setNutritionError(null);
-    try {
-      const res = await fetch(`/api/nutrition?q=${encodeURIComponent(item.name)}`);
-      const data = await res.json();
-      if (!res.ok) { setNutritionError(data.error ?? "No data found"); return; }
-      if (data.kcal != null) setKcal(String(data.kcal));
-      if (data.carbs != null) setCarbs(String(data.carbs));
-      if (data.fat != null) setFat(String(data.fat));
-      if (data.protein != null) setProtein(String(data.protein));
-    } catch {
-      setNutritionError("Eroare la conexiune");
-    } finally {
-      setFetchingNutrition(false);
-    }
-  }
-
-  useEffect(() => {
-    getGroceryItemDetails(itemId).then((data) => {
-      if (!data) return;
-      setItem(data);
-      setUnit2(data.unit2 ?? "");
-      setConversion(data.conversion?.toString() ?? "");
-      setKcal(data.kcal?.toString() ?? "");
-      setCarbs(data.carbs?.toString() ?? "");
-      setFat(data.fat?.toString() ?? "");
-      setProtein(data.protein?.toString() ?? "");
-    });
-  }, [itemId]);
-
-  async function handleSave() {
-    setSaving(true);
-    const u2 = unit2.trim() || null;
-    await updateGroceryItem(itemId, {
-      unit2: u2,
-      conversion: conversion ? parseFloat(conversion) : null,
-      kcal: kcal ? parseFloat(kcal) : null,
-      carbs: carbs ? parseFloat(carbs) : null,
-      fat: fat ? parseFloat(fat) : null,
-      protein: protein ? parseFloat(protein) : null,
-    });
-    onSaved(item?.unit ?? null, u2);
-    setSaving(false);
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-md p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {item ? item.name : "Loading…"}
-          </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-1">
-            <X size={18} />
-          </button>
-        </div>
-
-        {!item ? (
-          <div className="flex justify-center py-8"><Loader2 size={20} className="animate-spin text-gray-400" /></div>
-        ) : (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Primary unit</span>
-                <div className="px-3 py-2 text-sm bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] rounded-lg text-gray-500 dark:text-[#7c756a]">
-                  {item.unit ?? "—"}
-                </div>
-              </div>
-              <div>
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide block mb-1.5">Second unit</span>
-                <input
-                  value={unit2}
-                  onChange={(e) => { setUnit2(e.target.value); setAiConvNote(null); setAiConvError(null); }}
-                  placeholder="cup, tbsp…"
-                  className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Conversion (1 {unit2 || "2nd unit"} = ? {item.unit ?? "primary"})
-                </span>
-                <button
-                  type="button"
-                  onClick={handleSuggestConversion}
-                  disabled={aiConvLoading || !item.unit || !unit2.trim()}
-                  className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-40 transition-colors"
-                  title="Estimate with AI (common cooking values)"
-                >
-                  {aiConvLoading ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
-                  {aiConvLoading ? "Searching..." : "AI suggestion"}
-                </button>
-              </div>
-              <input
-                inputMode="decimal" type="number" step="0.001" min="0"
-                value={conversion}
-                onChange={(e) => { setConversion(e.target.value); if (aiConvNote != null) setAiConvNote(null); }}
-                placeholder={`e.g. 240 if 1 cup = 240 ${item.unit ?? "g"}`}
-                className="w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
-              {aiConvNote != null && (
-                <p className="text-xs text-orange-600/90 dark:text-orange-400/90 mt-1">
-                  Suggested by AI{aiConvNote ? ` · ${aiConvNote}` : ""}. Review and adjust.
-                </p>
-              )}
-              {aiConvError && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-1">{aiConvError}</p>
-              )}
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-gray-500 dark:text-[#7c756a] uppercase tracking-wide">
-                  Nutrition (per 100{item.unit === "ml" ? "ml" : "g"})
-                </span>
-                <button
-                  type="button"
-                  onClick={handleFetchNutrition}
-                  disabled={fetchingNutrition}
-                  className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-600 disabled:opacity-50 transition-colors"
-                  title="Auto-search from Open Food Facts"
-                >
-                  {fetchingNutrition
-                    ? <Loader2 size={11} className="animate-spin" />
-                    : <span>↓</span>}
-                  {fetchingNutrition ? "Searching..." : "Auto-fill"}
-                </button>
-              </div>
-              {nutritionError && (
-                <p className="text-xs text-red-500 dark:text-red-400 mb-1.5">{nutritionError}</p>
-              )}
-              <div className="grid grid-cols-4 gap-2">
-                {[
-                  { label: "kcal", value: kcal, set: setKcal },
-                  { label: "carbs g", value: carbs, set: setCarbs },
-                  { label: "fat g", value: fat, set: setFat },
-                  { label: "protein g", value: protein, set: setProtein },
-                ].map(({ label, value, set }) => (
-                  <div key={label}>
-                    <span className="text-xs text-gray-400 dark:text-[#5c554b] block mb-1">{label}</span>
-                    <input
-                      inputMode="decimal" type="number" step="0.1" min="0"
-                      value={value}
-                      onChange={(e) => set(e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div className="flex gap-3 mt-6">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !item}
-            className="flex-1 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
-          >
-            {saving && <Loader2 size={14} className="animate-spin" />}
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] rounded-lg transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function hostOf(url: string): string {
+  const m = url.trim().match(/^https?:\/\/([^/?#]+)/i);
+  return m ? m[1].replace(/^www\./, "") : "";
 }
 
-// ─── Instructions Editor ─────────────────────────────────────────────────────
-
-function InstructionsEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-
-  function autoResize() {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }
-
-  // Fit height to content on mount and whenever the text changes externally
-  // (e.g. editing an existing recipe) — otherwise a long body stays clipped at
-  // `rows={8}` until the user focuses or types.
-  useEffect(() => { autoResize(); }, [value]);
-
-  return (
-    <textarea
-      ref={ref}
-      value={value}
-      onChange={(e) => { onChange(e.target.value); autoResize(); }}
-      onFocus={autoResize}
-      placeholder={"## Steps\n1. First step\n2. Second step\n\n## Tips\n- Use cold butter\n- Or plain text"}
-      rows={8}
-      className="w-full px-4 py-3 text-sm bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#3a352e] rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-300 dark:focus:ring-orange-800 resize-none text-gray-700 dark:text-[#c4bcb0] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] leading-relaxed font-mono"
-    />
-  );
+// 6-decimal precision so fine fractional quantities (e.g. 0.0625) survive rescaling.
+function fmtQty(n: number): string {
+  return Number(n.toFixed(6)).toString();
 }
 
-// ─── Field label ─────────────────────────────────────────────────────────────
+type SheetState =
+  | { kind: "ingredient"; groupId: string; row: IngredientRow | null }
+  | { kind: "ref"; row: RecipeRefRow | null }
+  | { kind: "discard" }
+  | null;
 
-// ─── Recipe reference row ────────────────────────────────────────────────────
-
-function RecipeRefEditor({
-  row,
-  excludeIds,
-  onChange,
-  onRemove,
-}: {
-  row: RecipeRefRow;
-  excludeIds: string[];
-  onChange: (patch: Partial<RecipeRefRow>) => void;
-  onRemove: () => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<Array<{ id: string; name: string }>>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchError, setSearchError] = useState(false);
-  const picking = !row.refRecipeId;
-
-  useEffect(() => {
-    if (!picking || !query.trim()) { setResults([]); return; }
-    const t = setTimeout(async () => {
-      setSearching(true);
-      setSearchError(false);
-      try {
-        const r = await searchRecipesForPlanner(query.trim());
-        setResults(r.filter((x) => !excludeIds.includes(x.id)));
-      } catch {
-        setSearchError(true);
-      } finally {
-        setSearching(false);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-    // excludeIds is derived each render; the query drives the search
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, picking]);
-
-  return (
-    <div className="border border-orange-200 dark:border-orange-900/50 rounded-xl bg-orange-50/50 dark:bg-orange-950/10">
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-orange-100 dark:border-orange-900/40">
-        <BookOpen size={14} className="text-orange-500 shrink-0" />
-        <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] flex-1">Recipe</span>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Remove recipe reference"
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 transition-colors"
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
-      <div className="p-3 space-y-2">
-        {picking ? (
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search a recipe to use here…"
-              autoFocus
-              className="w-full pl-8 pr-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-            {query.trim() && (
-              <div className="mt-1 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] max-h-56 overflow-y-auto">
-                {searching ? (
-                  <p className="px-3 py-2.5 text-sm text-gray-400 flex items-center gap-2"><Loader2 size={13} className="animate-spin" /> Searching…</p>
-                ) : searchError ? (
-                  <p className="px-3 py-2.5 text-sm text-red-600 dark:text-red-400">Search failed. Try again.</p>
-                ) : results.length === 0 ? (
-                  <p className="px-3 py-2.5 text-sm text-gray-400">No recipes found</p>
-                ) : (
-                  results.map((r) => (
-                    <button
-                      key={r.id}
-                      type="button"
-                      onClick={() => { onChange({ refRecipeId: r.id, name: r.name }); setQuery(""); }}
-                      className="w-full text-left px-3 py-2.5 text-sm text-gray-800 dark:text-[#d8d0c4] hover:bg-orange-50 dark:hover:bg-orange-950/30"
-                    >
-                      {r.name}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-semibold text-gray-900 dark:text-[#eae5de] truncate flex-1">{row.name}</span>
-            <button
-              type="button"
-              onClick={() => onChange({ refRecipeId: null, name: "" })}
-              className="text-xs text-orange-600 hover:text-orange-700 font-medium shrink-0 px-2 py-2"
-            >
-              Change
-            </button>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 dark:text-[#7c756a]">Amount</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={row.quantity}
-            onChange={(e) => onChange({ quantity: e.target.value.replace(/[^\d.,]/g, "") })}
-            placeholder={row.unit === "g" ? "300" : "1"}
-            aria-label="Amount of the referenced recipe"
-            className="w-20 text-center px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
-          <select
-            value={row.unit}
-            onChange={(e) => onChange({ unit: e.target.value as RecipeRefRow["unit"] })}
-            aria-label="Unit"
-            className="px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            <option value="serving">servings</option>
-            <option value="g">g</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <label className="text-xs font-semibold text-gray-600 dark:text-[#a49c90] uppercase tracking-wide block mb-1.5">
-      {children}
-    </label>
-  );
-}
-
-// ─── Unit Select ──────────────────────────────────────────────────────────────
-
-function UnitSelect({
-  value,
-  availableUnits,
-  groceryItemId,
-  onChange,
-  onAddUnit,
-  className,
-}: {
-  value: string;
-  availableUnits: string[] | null;
-  groceryItemId: string | null;
-  onChange: (v: string) => void;
-  onAddUnit: () => void;
-  className?: string;
-}) {
-  const units = availableUnits ?? ALL_UNITS;
-  const showAddUnit = groceryItemId !== null && availableUnits !== null && availableUnits.length < 2;
-
-  return (
-    <select
-      value={value}
-      onChange={(e) => {
-        if (e.target.value === "__add_unit__") { onAddUnit(); return; }
-        onChange(e.target.value);
-      }}
-      className={className}
-    >
-      <option value="">—</option>
-      {units.map((u) => <option key={u} value={u}>{u}</option>)}
-      {showAddUnit && <option value="__add_unit__">+ Add unit…</option>}
-    </select>
-  );
-}
-
-// ─── Ingredient reorder controls ───────────────────────────────────────────────
-
-function IngredientReorder({
-  onUp,
-  onDown,
-  upDisabled,
-  downDisabled,
-}: {
-  onUp: () => void;
-  onDown: () => void;
-  upDisabled: boolean;
-  downDisabled: boolean;
-}) {
-  return (
-    <div className="flex flex-col shrink-0">
-      <button
-        type="button"
-        onClick={onUp}
-        disabled={upDisabled}
-        aria-label="move up"
-        className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
-      >
-        <ChevronUp size={12} />
-      </button>
-      <button
-        type="button"
-        onClick={onDown}
-        disabled={downDisabled}
-        aria-label="move down"
-        className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors"
-      >
-        <ChevronDown size={12} />
-      </button>
-    </div>
-  );
-}
-
-// ─── Main Form ────────────────────────────────────────────────────────────────
-
-export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRecipeData; noWrapper?: boolean }) {
+export default function RecipeForm({ initial }: { initial?: InitialRecipeData }) {
   const router = useRouter();
+  const [form, setForm] = useState<FormState>(() => initForm(initial));
+  const [baseline] = useState(() => {
+    const f = initForm(initial);
+    return JSON.stringify(buildPayload(f, f.sections));
+  });
+  const [stepsMode, setStepsMode] = useState<StepsMode>("steps");
+  const [stepsText, setStepsText] = useState("");
+  const [sheet, setSheet] = useState<SheetState>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Tracks unsaved edits so we can warn before a full-page unload or an explicit Cancel.
-  const [dirty, setDirty] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [newTag, setNewTag] = useState("");
+  const [addingTag, setAddingTag] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  // Batch / per-serving
+  const [mode, setMode] = useState<"batch" | "single">(() => (parseInt(initial?.servings ?? "") > 1 ? "batch" : "single"));
+  const [scaleQty, setScaleQty] = useState(true);
+  const [lastBatch, setLastBatch] = useState<number>(() => {
+    const n = parseInt(initial?.servings ?? "");
+    return n > 1 ? n : 2;
+  });
+
+  const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  const setGroups = (fn: (gs: IngredientGroup[]) => IngredientGroup[]) => setForm((f) => ({ ...f, groups: fn(f.groups) }));
+
+  const currentSections = stepsMode === "text" ? parseStepText(stepsText).map((s) => ({ title: s.title, steps: s.steps.map((text) => ({ text })) })) : form.sections;
+  const payload = buildPayload(form, currentSections);
+  const dirty = JSON.stringify(payload) !== baseline;
+
   useEffect(() => {
     if (!dirty) return;
     const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
@@ -659,127 +177,51 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const [name, setName] = useState(initial?.name ?? "");
-  const [nameRo, setNameRo] = useState(initial?.nameRo ?? "");
-  const [categories, setCategorii] = useState<string[]>(initial?.categories ?? []);
-  const [newTag, setNewTag] = useState("");
-  const [addingTag, setAddingTag] = useState(false);
-  const [servings, setServings] = useState(initial?.servings ?? "");
-  const [servingsStep, setServingsStep] = useState(initial?.servingsStep ?? "");
-  const [time, setTime] = useState(initial?.time ?? "");
-  const [difficulty, setDifficulty] = useState(initial?.difficulty ?? "");
-  const [favorite, setFavorite] = useState(initial?.favorite ?? false);
-  const [link, setLink] = useState(initial?.link ?? "");
-  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
-  const [imageUploading, setImageUploading] = useState(false);
-  const [dragActive, setDragActive] = useState(false);
-
-  const [groups, setGroups] = useState<IngredientGroup[]>(
-    initial?.groups?.length ? initial.groups : [defaultGroup()]
-  );
-  const [instructionsText, setInstructionsText] = useState(initial?.instructionsText ?? "");
-  const [refs, setRefs] = useState<RecipeRefRow[]>(initial?.references ?? []);
-
-  function addRef() {
-    setRefs((rs) => [...rs, { id: uid(), refRecipeId: null, name: "", quantity: "1", unit: "serving" }]);
-    setDirty(true);
-  }
-  function updateRef(id: string, patch: Partial<RecipeRefRow>) {
-    setRefs((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    setDirty(true);
-  }
-  function removeRef(id: string) {
-    setRefs((rs) => rs.filter((r) => r.id !== id));
-    setDirty(true);
-  }
-
-  // Batch / per-serving control
-  const [mode, setMode] = useState<"batch" | "single">(
-    () => (parseInt(initial?.servings ?? "") > 1 ? "batch" : "single")
-  );
-  const [scaleQty, setScaleQty] = useState(true);
-  const [lastBatch, setLastBatch] = useState<number>(() => {
-    const n = parseInt(initial?.servings ?? "");
-    return n > 1 ? n : 2;
-  });
-  const servingsAtFocus = useRef<number>(0);
-
-  // For the "Add unit" modal
-  const [editingUnit, setEditingUnit] = useState<{
-    groupId: string; ingId: string; groceryItemId: string;
-  } | null>(null);
-
-  // For the "Create new ingredient" modal
-  const [createIngModal, setCreateIngModal] = useState<{
-    groupId: string; ingId: string; initialName: string;
-  } | null>(null);
-
-  const imageInputRef = useRef<HTMLInputElement>(null);
-
+  // ── Categories ──
   function toggleCategory(cat: string) {
-    setCategorii((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
+    set({ categories: form.categories.includes(cat) ? form.categories.filter((c) => c !== cat) : [...form.categories, cat] });
   }
-
-  // Add a free-form tag. Commas are stripped — they're the delimiter categories
-  // are stored with (join(", ") / split(",")), so a tag can't contain one.
+  // Commas are stripped — they're the delimiter categories are stored with, so a tag can't contain one.
   function addNewTag() {
     const t = newTag.replace(/,/g, "").trim();
     setNewTag("");
     if (!t) return;
-    const exists = [...CATEGORIES, ...categories].some((c) => c.toLowerCase() === t.toLowerCase());
-    if (!exists) setCategorii((prev) => [...prev, t]);
+    const exists = [...CATEGORIES, ...form.categories].some((c) => c.toLowerCase() === t.toLowerCase());
+    if (!exists) set({ categories: [...form.categories, t] });
   }
 
-  // ── Servings scaler (batch ↔ per-serving) ──────────────────────────
-  function fmtQty(n: number): string {
-    // 6-decimal precision so fine fractional quantities (e.g. 0.0625) survive
-    // rescaling; trailing float noise is trimmed by Number()/toString().
-    return Number((n).toFixed(6)).toString();
-  }
+  // ── Servings (batch ↔ per serving) ──
+  const curServings = parseInt(form.servings) || 1;
+  const stepN = parseInt(form.servingsStep) > 1 ? parseInt(form.servingsStep) : 1;
 
-  // Multiply every numeric ingredient quantity by `factor` (proportional rescale).
-  function scaleQuantities(factor: number) {
-    if (!isFinite(factor) || factor <= 0 || factor === 1) return;
-    setGroups((prev) =>
-      prev.map((g) => ({
-        ...g,
-        ingredients: g.ingredients.map((ing) => {
-          const q = parseFloat(ing.quantity);
-          if (ing.quantity.trim() === "" || isNaN(q)) return ing;
-          return { ...ing, quantity: fmtQty(q * factor) };
-        }),
-      }))
-    );
-  }
-
-  // Set servings to newN, rescaling quantities from oldN when scaling is enabled.
+  // Set servings to newN, rescaling every amount from oldN when scaling is on.
   function applyServings(newN: number, oldN: number) {
     newN = Math.max(1, Math.round(newN || 1));
-    if (newN !== oldN && scaleQty) scaleQuantities(newN / oldN);
+    const factor = newN / oldN;
+    setForm((f) => ({
+      ...f,
+      servings: String(newN),
+      groups:
+        scaleQty && newN !== oldN && isFinite(factor) && factor > 0
+          ? f.groups.map((g) => ({
+              ...g,
+              ingredients: g.ingredients.map((ing) => {
+                const q = parseFloat(ing.quantity);
+                return ing.quantity.trim() === "" || isNaN(q) ? ing : { ...ing, quantity: fmtQty(q * factor) };
+              }),
+            }))
+          : f.groups,
+    }));
     if (newN > 1) setLastBatch(newN);
-    setServings(String(newN));
   }
 
-  const curServings = parseInt(servings) || 1;
-  const stepN = parseInt(servingsStep) > 1 ? parseInt(servingsStep) : 1;
-
-  function goBatch() {
-    setMode("batch");
-    applyServings(curServings > 1 ? curServings : lastBatch, curServings);
-  }
-  function goPerServing() {
-    setMode("single");
-    applyServings(1, curServings);
-  }
-  function commitServingsInput(raw: string) {
-    const oldN = servingsAtFocus.current || curServings;
-    applyServings(parseInt(raw) || 1, oldN);
+  function pickMode(m: "batch" | "single") {
+    if (m === mode) return;
+    setMode(m);
+    applyServings(m === "batch" ? (curServings > 1 ? curServings : lastBatch) : 1, curServings);
   }
 
-  // ── Image upload ──────────────────────────────────────────────────────────
-
+  // ── Cover photo ──
   async function handleImageFile(file: File) {
     setError(null);
     if (!["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(file.type)) {
@@ -796,15 +238,15 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     try {
       const res = await fetch("/api/upload-recipe-image", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (res.ok && data.path) setImageUrl(data.path);
+      if (res.ok && data.path) set({ imageUrl: data.path });
       else setError(data.error ?? `Upload failed (${res.status}).`);
     } catch {
-      setError("Connection error. Please try again.");
+      setError("Couldn't upload the photo. Check the connection and try again.");
+    } finally {
+      setImageUploading(false);
     }
-    setImageUploading(false);
   }
 
-  // Shared drag-and-drop handlers for the cover-image box.
   const imageDragProps = {
     onDragOver: (e: React.DragEvent) => { e.preventDefault(); setDragActive(true); },
     onDragEnter: (e: React.DragEvent) => { e.preventDefault(); setDragActive(true); },
@@ -817,24 +259,9 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     },
   };
 
-  // ── Group operations ──────────────────────────────────────────────────────
-
-  function addGroup() {
-    setGroups((gs) => [...gs, defaultGroup(`Group ${gs.length + 1}`)]);
-  }
-
-  function removeGroup(groupId: string) {
-    setGroups((gs) => gs.filter((g) => g.id !== groupId));
-  }
-
-  function updateGroupName(groupId: string, name: string) {
-    setGroups((gs) => gs.map((g) => g.id === groupId ? { ...g, name } : g));
-  }
-
-  function moveGroup(groupId: string, dir: -1 | 1) {
+  // ── Ingredient groups ──
+  function moveGroup(idx: number, dir: -1 | 1) {
     setGroups((gs) => {
-      const idx = gs.findIndex((g) => g.id === groupId);
-      if (idx < 0) return gs;
       const next = idx + dir;
       if (next < 0 || next >= gs.length) return gs;
       const arr = [...gs];
@@ -843,145 +270,65 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
     });
   }
 
-  // ── Ingredient operations ─────────────────────────────────────────────────
-
-  function addIngredient(groupId: string) {
-    setGroups((gs) =>
-      gs.map((g) =>
-        g.id === groupId
-          ? { ...g, ingredients: [...g.ingredients, emptyIngredient()] }
-          : g
-      )
-    );
+  function removeGroup(group: IngredientGroup) {
+    const n = group.ingredients.length;
+    if (n > 0 && !window.confirm(`Remove ${group.name.trim() ? `“${group.name.trim()}”` : "this group"} and its ${n} ${n === 1 ? "ingredient" : "ingredients"}?`)) return;
+    setGroups((gs) => gs.filter((g) => g.id !== group.id));
   }
 
-  function removeIngredient(groupId: string, ingId: string) {
-    setGroups((gs) =>
-      gs.map((g) =>
-        g.id === groupId
-          ? { ...g, ingredients: g.ingredients.filter((i) => i.id !== ingId) }
-          : g
-      )
-    );
-  }
-
-  function moveIngredient(groupId: string, ingId: string, dir: -1 | 1) {
+  function moveIngredient(groupId: string, from: number, to: number) {
     setGroups((gs) =>
       gs.map((g) => {
         if (g.id !== groupId) return g;
-        const idx = g.ingredients.findIndex((i) => i.id === ingId);
-        if (idx < 0) return g;
-        const next = idx + dir;
-        if (next < 0 || next >= g.ingredients.length) return g;
         const arr = [...g.ingredients];
-        [arr[idx], arr[next]] = [arr[next], arr[idx]];
+        const [row] = arr.splice(from, 1);
+        arr.splice(to, 0, row);
         return { ...g, ingredients: arr };
       })
     );
   }
 
-  function updateIngredient(groupId: string, ingId: string, patch: Partial<IngredientRow>) {
-    setGroups((gs) =>
-      gs.map((g) =>
-        g.id === groupId
-          ? { ...g, ingredients: g.ingredients.map((i) => i.id === ingId ? { ...i, ...patch } : i) }
-          : g
-      )
-    );
+  // Saving a row from the sheet; it may also have moved to another group.
+  function saveIngredient(row: IngredientRow, groupId: string) {
+    setGroups((gs) => {
+      const existing = gs.find((g) => g.ingredients.some((i) => i.id === row.id));
+      if (existing && existing.id === groupId) {
+        return gs.map((g) => (g.id === groupId ? { ...g, ingredients: g.ingredients.map((i) => (i.id === row.id ? row : i)) } : g));
+      }
+      return gs.map((g) => {
+        const without = g.ingredients.filter((i) => i.id !== row.id);
+        return g.id === groupId ? { ...g, ingredients: [...without, row] } : { ...g, ingredients: without };
+      });
+    });
+    setSheet(null);
   }
 
-  function handleItemSelect(groupId: string, ingId: string, item: { id: string; unit: string | null; unit2: string | null }) {
-    const units = [item.unit, item.unit2].filter(Boolean) as string[];
-    setGroups((gs) =>
-      gs.map((g) =>
-        g.id === groupId
-          ? {
-              ...g,
-              ingredients: g.ingredients.map((i) => {
-                if (i.id !== ingId) return i;
-                const newUnit = units.length > 0 && !units.includes(i.unit) ? units[0] : i.unit;
-                return {
-                  ...i,
-                  groceryItemId: item.id,
-                  availableUnits: units.length > 0 ? units : null,
-                  unit: newUnit,
-                };
-              }),
-            }
-          : g
-      )
-    );
+  function removeIngredient(rowId: string) {
+    setGroups((gs) => gs.map((g) => ({ ...g, ingredients: g.ingredients.filter((i) => i.id !== rowId) })));
+    setSheet(null);
   }
 
-  // ── Submit ────────────────────────────────────────────────────────────────
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) { setError("The recipe name is required"); return; }
+  // ── Save / delete / leave ──
+  async function handleSave() {
+    if (!payload.name) {
+      setError("Give the recipe a name.");
+      nameRef.current?.focus();
+      return;
+    }
+    const badRef = form.refs.find((r) => r.refRecipeId && !(parseFloat(r.quantity.replace(",", ".")) > 0));
+    if (badRef) {
+      setError(`Set how much of “${badRef.name}” goes in.`);
+      return;
+    }
     setSaving(true);
     setError(null);
-
-    const ingredients = groups.flatMap((group, groupIdx) =>
-      group.ingredients
-        .filter((i) => i.groceryItemName.trim())
-        .map((ing, order) => ({
-          groceryItemName: ing.groceryItemName.trim(),
-          quantity: ing.quantity ? parseFloat(ing.quantity) : null,
-          unit: ing.unit || null,
-          notes: ing.notes.trim() || null,
-          groupOrder: groupIdx + 1,
-          groupName: group.name.trim() || null,
-          order,
-        }))
-    );
-
-    // Referenced recipes come after the ingredient groups.
-    const chosenRefs = refs.filter((r) => r.refRecipeId);
-    const badRef = chosenRefs.find((r) => !(parseFloat(r.quantity.replace(",", ".")) > 0));
-    if (badRef) { setError(`Set how much of "${badRef.name}" goes in.`); setSaving(false); return; }
-    const references = chosenRefs.map((r, i) => ({
-      refRecipeId: r.refRecipeId!,
-      quantity: parseFloat(r.quantity.replace(",", ".")),
-      unit: r.unit,
-      groupOrder: groups.length + 1 + i,
-    }));
-
-    const instructions: Array<{ text: string; isSection: boolean; step: number; instrType?: string }> = [];
-    let order = 0;
-    for (const line of instructionsText.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      order++;
-      if (trimmed.startsWith("## ")) {
-        instructions.push({ text: trimmed.slice(3).trim(), isSection: true, step: order });
-      } else if (/^\d+\.\s/.test(trimmed)) {
-        instructions.push({ text: trimmed.replace(/^\d+\.\s+/, ""), isSection: false, step: order, instrType: "numbered" });
-      } else if (/^[-*]\s/.test(trimmed)) {
-        instructions.push({ text: trimmed.slice(2).trim(), isSection: false, step: order, instrType: "bullet" });
-      } else {
-        instructions.push({ text: trimmed, isSection: false, step: order, instrType: "plain" });
-      }
-    }
-
-    const payload = {
-      name: name.trim(),
-      nameRo: nameRo.trim() || null,
-      categories,
-      servings: servings ? parseInt(servings) : null,
-      servingsStep: parseInt(servingsStep) > 1 ? parseInt(servingsStep) : null,
-      time: time ? parseInt(time) : null,
-      difficulty: difficulty || null,
-      favorite,
-      link: link.trim() || null,
-      imageUrl: imageUrl || null,
-      ingredients,
-      references,
-      instructions,
-    };
-
     try {
-      const refProblem = await checkRecipeReferences(initial?.id ?? null, references.map((r) => r.refRecipeId));
-      if (refProblem) { setError(refProblem); setSaving(false); return; }
+      const refProblem = await checkRecipeReferences(initial?.id ?? null, (payload.references ?? []).map((r) => r.refRecipeId));
+      if (refProblem) {
+        setError(refProblem);
+        setSaving(false);
+        return;
+      }
       if (initial?.id) {
         await updateRecipe(initial.id, payload);
         router.push(`/recipes/${initial.id}`);
@@ -990,586 +337,503 @@ export default function RecipeForm({ initial, noWrapper }: { initial?: InitialRe
         const id = await createRecipe(payload);
         router.push(`/recipes/${id}`);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      // `saving` stays on until the page changes, so Save can't be pressed twice.
+    } catch {
+      // Server-action messages are masked in production; the reference check above already
+      // turned the one error worth explaining into a message.
+      setError("Couldn't save the recipe. Check the connection and try again.");
       setSaving(false);
     }
   }
 
   async function handleDelete() {
     if (!initial?.id) return;
-    if (!confirm(`Delete "${name}"? This action cannot be undone.`)) return;
     setDeleting(true);
-    setError(null);
+    setDeleteError(null);
     try {
       const res = await deleteRecipe(initial.id);
-      if (res.error) { setError(res.error); setDeleting(false); return; }
+      if (res.error) {
+        setDeleteError(res.error);
+        setDeleting(false);
+        return;
+      }
       router.push("/recipes");
       router.refresh();
     } catch {
-      setError("Couldn't delete the recipe. Please try again.");
+      setDeleteError("Couldn't delete the recipe. Please try again.");
       setDeleting(false);
     }
   }
 
-  const inputCls = "w-full px-3 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
-  const unitSelectCls = "px-1.5 py-1.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]";
+  function leave() {
+    if (window.history.length > 1) router.back();
+    else router.push(initial?.id ? `/recipes/${initial.id}` : "/recipes");
+  }
+
+  const ingCount = form.groups.reduce((n, g) => n + g.ingredients.length, 0) + form.refs.length;
+  const multiGroup = form.groups.length > 1;
+  const linkHost = hostOf(form.link);
+  const difficulties = [...DIFFICULTIES, ...(form.difficulty && !DIFFICULTIES.includes(form.difficulty) ? [form.difficulty] : [])];
+  const allCategories = [...CATEGORIES, ...form.categories.filter((c) => !CATEGORIES.includes(c))];
+  const chip = "h-10 px-3.5 rounded-full border text-sm font-medium transition-colors";
+  const stepBtn = "w-11 h-11 rounded-xl bg-gray-100 dark:bg-[#2e2a24] text-gray-800 dark:text-[#eae5de] flex items-center justify-center disabled:opacity-40";
+  const ghostRow = "w-full h-12 flex items-center gap-2 px-3.5 border-t border-gray-200 dark:border-[#3a352e] text-[15px] font-semibold text-orange-700 dark:text-orange-400";
+  const secondaryChip = "flex-1 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-sm font-semibold text-gray-900 dark:text-[#eae5de]";
+  const refAmount = (r: RecipeRefRow) => {
+    const q = parseFloat(r.quantity.replace(",", "."));
+    if (r.unit === "g") return `${r.quantity} g`;
+    return `${kitchenFraction(q)} ${q > 1 ? "servings" : "serving"}`;
+  };
 
   return (
-    <form onSubmit={handleSubmit} onInput={() => { if (!dirty) setDirty(true); }} className={noWrapper ? "space-y-7" : "max-w-3xl mx-auto px-4 md:px-8 py-6 space-y-7"}>
-      {/* Name */}
-      <div>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Recipe name…"
-          required
-          className="w-full text-2xl font-bold text-gray-900 dark:text-[#eae5de] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] bg-transparent border-0 border-b-2 border-gray-200 dark:border-[#3a352e] focus:border-orange-500 focus:outline-none pb-2 transition-colors"
-        />
-        <input
-          value={nameRo}
-          onChange={(e) => setNameRo(e.target.value)}
-          placeholder="Translation for search (RO/EN) — auto-filled on save if left blank"
-          className="w-full mt-2 text-sm text-gray-600 dark:text-[#bab2a6] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] bg-transparent border-0 border-b border-gray-100 dark:border-[#2e2a24] focus:border-orange-400 focus:outline-none pb-1 transition-colors"
-          title="Title in the other language, used only for search"
-        />
-      </div>
-
-      {/* Cover image */}
-      <div>
-        <Label>Cover image</Label>
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) handleImageFile(file);
-          }}
-        />
-        {imageUrl ? (
-          <div
-            {...imageDragProps}
-            className={`relative w-full h-48 rounded-xl overflow-hidden bg-gray-100 dark:bg-[#2a2620] group ${dragActive ? "ring-2 ring-orange-400" : ""}`}
-          >
-            <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-            {dragActive && (
-              <div className="absolute inset-0 bg-orange-500/30 flex items-center justify-center text-white text-sm font-medium">
-                Drop to replace
-              </div>
-            )}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100">
-              <button
-                type="button"
-                onClick={() => imageInputRef.current?.click()}
-                className="px-4 py-2 bg-white rounded-lg text-sm font-medium text-gray-800 shadow"
-              >
-                Change
-              </button>
-              <button
-                type="button"
-                onClick={() => setImageUrl("")}
-                className="px-4 py-2 bg-red-500 rounded-lg text-sm font-medium text-white shadow"
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => imageInputRef.current?.click()}
-            disabled={imageUploading}
-            {...imageDragProps}
-            className={`w-full h-32 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-colors group disabled:opacity-50 ${
-              dragActive
-                ? "border-orange-400 bg-orange-50 dark:bg-orange-950/30"
-                : "border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20"
-            }`}
-          >
-            {imageUploading ? (
-              <Loader2 size={20} className="animate-spin text-gray-400" />
-            ) : (
-              <>
-                <ImageIcon size={20} className={dragActive ? "text-orange-400" : "text-gray-300 dark:text-[#4a443c] group-hover:text-orange-400"} />
-                <span className={`text-sm ${dragActive ? "text-orange-500" : "text-gray-400 dark:text-[#5c554b] group-hover:text-orange-500"}`}>
-                  {dragActive ? "Drop to upload" : "Drag an image here or click"}
-                </span>
-              </>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* Meta */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div>
-          <Label>Time (min)</Label>
-          <input
-            inputMode="decimal" type="number" min="1"
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
-            placeholder="30"
-            className={inputCls}
-          />
-        </div>
-        <div>
-          <Label>Difficulty</Label>
-          <select
-            value={difficulty}
-            onChange={(e) => setDifficulty(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
-          >
-            <option value="">—</option>
-            {DIFFICULTIES.map((d) => <option key={d} value={d}>{difficultyLabel(d)}</option>)}
-            {difficulty && !DIFFICULTIES.includes(difficulty) && (
-              <option value={difficulty}>{difficulty}</option>
-            )}
-          </select>
-        </div>
-        <div className="flex flex-col">
-          <Label>Favorite</Label>
-          <button
-            type="button"
-            onClick={() => setFavorite((f) => !f)}
-            className={`flex-1 px-3 py-2 text-sm border rounded-lg transition-colors flex items-center justify-center gap-1.5 ${
-              favorite
-                ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800/50 text-amber-700 dark:text-amber-300 font-medium"
-                : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-            }`}
-          >
-            <Star size={13} className={favorite ? "fill-amber-400 text-amber-400" : "text-gray-400"} />
-            {favorite ? "Yes" : "No"}
-          </button>
-        </div>
-      </div>
-
-      {/* Categories */}
-      <div>
-        <Label>Categories</Label>
-        <div className="flex flex-wrap gap-1.5">
-          {[...CATEGORIES, ...categories.filter((c) => !CATEGORIES.includes(c))].map((cat) => (
+    <>
+      <form
+        onSubmit={(e) => { e.preventDefault(); handleSave(); }}
+        noValidate
+        className="min-h-full bg-[var(--color-bg-base)]"
+      >
+        {/* ── Top bar ── */}
+        <div className="sticky top-0 z-30 bg-[var(--color-bg-base)] border-b border-gray-200 dark:border-[#3a352e]">
+          <div className="max-w-2xl mx-auto flex items-center justify-between gap-2 pl-1 pr-2 md:px-4 py-2.5">
             <button
-              key={cat}
               type="button"
-              onClick={() => toggleCategory(cat)}
-              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                categories.includes(cat)
-                  ? "bg-orange-500 text-white"
-                  : "bg-gray-100 dark:bg-[#2a2620] text-gray-600 dark:text-[#a49c90] hover:bg-gray-200 dark:hover:bg-[#322e28]"
-              }`}
+              onClick={() => (dirty ? setSheet({ kind: "discard" }) : leave())}
+              className="h-11 px-3 text-base text-gray-600 dark:text-[#a49c90]"
             >
-              {categoryLabel(cat)}
+              Cancel
             </button>
-          ))}
-
-          {/* Add a new free-form tag — chip with a + at the tail of the list */}
-          {addingTag ? (
-            <input
-              autoFocus
-              value={newTag}
-              onChange={(e) => setNewTag(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); addNewTag(); }
-                else if (e.key === "Escape") { setNewTag(""); setAddingTag(false); }
-              }}
-              onBlur={() => { addNewTag(); setAddingTag(false); }}
-              placeholder="New tag…"
-              maxLength={30}
-              className="w-28 px-3 py-1 rounded-full text-xs font-medium bg-white dark:bg-[#24211c] border border-orange-400 dark:border-orange-800/60 text-gray-900 dark:text-[#eae5de] focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          ) : (
+            <h1 className="[font-family:inherit]! text-[17px] font-bold text-gray-900 dark:text-[#eae5de]">
+              {initial ? "Edit recipe" : "New recipe"}
+            </h1>
             <button
-              type="button"
-              onClick={() => setAddingTag(true)}
-              title="Add new tag"
-              className="px-3 py-1 rounded-full text-xs font-medium border border-dashed border-gray-300 dark:border-[#3a352e] text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] hover:text-gray-700 dark:hover:text-[#ccc4b8] inline-flex items-center gap-1 transition-colors"
+              type="submit"
+              disabled={saving || imageUploading}
+              className="h-10 px-[18px] rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold flex items-center gap-1.5 disabled:opacity-60 transition-colors"
             >
-              <Plus size={12} /> Tag
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Link + Notes */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <Label>Source URL</Label>
-          <input
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://…"
-            className={inputCls}
-          />
-        </div>
-      </div>
-
-      {/* ── Servings / batch ──────────────────────────────────────────── */}
-      <div>
-        <Label>Servings</Label>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-          {/* mode toggle */}
-          <div className="inline-flex rounded-lg border border-gray-200 dark:border-[#3a352e] overflow-hidden text-sm">
-            <button
-              type="button"
-              onClick={goBatch}
-              className={`px-3 py-2 font-medium transition-colors ${
-                mode === "batch"
-                  ? "bg-orange-500 text-white"
-                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-              }`}
-            >
-              Batch{mode === "batch" ? ` — ${curServings} servings` : ""}
-            </button>
-            <button
-              type="button"
-              onClick={goPerServing}
-              className={`px-3 py-2 font-medium border-l border-gray-200 dark:border-[#3a352e] transition-colors ${
-                mode === "single"
-                  ? "bg-orange-500 text-white"
-                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-              }`}
-            >
-              1 serving
+              {saving && <Loader2 size={15} className="animate-spin" aria-hidden />}
+              {imageUploading ? "Uploading…" : "Save"}
             </button>
           </div>
-
-          {/* servings stepper (batch mode only) */}
-          {mode === "batch" && (
-            <div className="inline-flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => applyServings(Math.max(1, stepServings(curServings, -1, stepN)), curServings)}
-                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="fewer servings"
-              >
-                −
-              </button>
-              <input
-                inputMode="decimal" type="number"
-                min="1"
-                value={servings}
-                onFocus={() => { servingsAtFocus.current = curServings; }}
-                onChange={(e) => setServings(e.target.value)}
-                onBlur={(e) => commitServingsInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.target as HTMLInputElement).blur(); } }}
-                className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
-              />
-              <button
-                type="button"
-                onClick={() => applyServings(stepServings(curServings, 1, stepN), curServings)}
-                className="w-7 h-9 rounded-lg border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                aria-label="more servings"
-              >
-                +
-              </button>
-              <span className="text-sm text-gray-500 dark:text-[#7c756a] ml-1">servings</span>
-            </div>
+          {error && (
+            <p role="alert" className="max-w-2xl mx-auto px-4 pb-2.5 text-sm text-red-700 dark:text-red-300">
+              {error}
+            </p>
           )}
-
-          {/* scale switch */}
-          <label className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-[#7c756a] cursor-pointer">
-            <input
-              type="checkbox"
-              checked={scaleQty}
-              onChange={(e) => setScaleQty(e.target.checked)}
-              className="accent-orange-500"
-            />
-            Scale quantities on change
-          </label>
-
-          {/* +/− increment used by the servings steppers (here, recipe page, planner) */}
-          <label className="inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-[#7c756a]">
-            Step
-            <input
-              type="text"
-              inputMode="numeric"
-              value={servingsStep}
-              onChange={(e) => setServingsStep(e.target.value.replace(/\D/g, ""))}
-              placeholder="1"
-              aria-label="Servings increment step"
-              className="w-14 text-center px-2 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4] focus:outline-none focus:ring-2 focus:ring-orange-400"
-            />
-          </label>
-        </div>
-        <p className="mt-1.5 text-xs text-gray-400 dark:text-[#6e675c]">
-          {mode === "batch"
-            ? `Ingredient quantities are for ${curServings} servings.`
-            : "Ingredient quantities are for 1 serving."}
-          {" "}Step sets how much − / + change servings (e.g. 2 or 4); you can always type any number.
-        </p>
-      </div>
-
-      {/* ── Ingredients ──────────────────────────────────────────── */}
-      <div>
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          <button
-            type="button"
-            onClick={addGroup}
-            className="flex items-center gap-1 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] border border-gray-200 dark:border-[#3a352e] rounded-lg px-2.5 py-1 hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
-          >
-            <Plus size={13} /> Add group
-          </button>
-          <button
-            type="button"
-            onClick={addRef}
-            className="flex items-center gap-1 text-sm text-orange-700 dark:text-orange-300 hover:text-orange-800 border border-orange-200 dark:border-orange-900/60 rounded-lg px-2.5 py-1 hover:bg-orange-50 dark:hover:bg-orange-950/30 transition-colors"
-          >
-            <BookOpen size={13} /> Add recipe
-          </button>
         </div>
 
-        <div className="space-y-4">
-          {groups.map((group, groupIdx) => (
-            <div key={group.id} className="border border-gray-200 dark:border-[#3a352e] rounded-xl">
-              {/* Group header */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-[#2a2620] border-b border-gray-200 dark:border-[#3a352e] rounded-t-xl">
-                <input
-                  value={group.name}
-                  onChange={(e) => updateGroupName(group.id, e.target.value)}
-                  placeholder="Group name"
-                  className="flex-1 text-xs font-semibold text-gray-700 dark:text-[#bab2a6] bg-transparent border-0 focus:outline-none focus:ring-0 uppercase tracking-wide placeholder:normal-case placeholder:font-normal placeholder:tracking-normal dark:placeholder:text-[#5c554b]"
-                />
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button type="button" onClick={() => moveGroup(group.id, -1)} disabled={groupIdx === 0}
-                    className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors">
-                    <ChevronUp size={13} />
-                  </button>
-                  <button type="button" onClick={() => moveGroup(group.id, 1)} disabled={groupIdx === groups.length - 1}
-                    className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-gray-600 dark:hover:text-[#a49c90] disabled:opacity-30 transition-colors">
-                    <ChevronDown size={13} />
-                  </button>
-                  {groups.length > 1 && (
-                    <button type="button" onClick={() => removeGroup(group.id)}
-                      className="p-0.5 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors ml-1">
-                      <Trash2 size={13} />
-                    </button>
-                  )}
+        <div className="max-w-2xl mx-auto px-4 md:px-6 pb-8">
+          {/* ── Cover photo ── */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) handleImageFile(file);
+              e.target.value = "";
+            }}
+          />
+          {form.imageUrl ? (
+            <div {...imageDragProps} className={`relative mt-4 rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#24211c] ${dragActive ? "ring-2 ring-orange-400" : ""}`}>
+              {/* Plain <img>: imported recipes keep the source site's image URL (see UX_CONVENTIONS) */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={form.imageUrl} alt="Current cover photo" className="w-full h-[170px] md:h-56 object-cover block" />
+              {(imageUploading || dragActive) && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-sm font-semibold">
+                  {imageUploading ? <Loader2 size={22} className="animate-spin" aria-label="Uploading" /> : "Drop to replace"}
                 </div>
-              </div>
-
-              {/* Ingredient rows */}
-              <div className="p-3 space-y-3">
-                {/* Column headers — desktop only */}
-                <div className="hidden sm:grid grid-cols-[64px_80px_1fr_64px] gap-2 mb-1 px-0.5">
-                  {["Qty", "Unit", "Ingredient", ""].map((h) => (
-                    <span key={h} className="text-xs text-gray-400 font-medium">{h}</span>
-                  ))}
-                </div>
-
-                {group.ingredients.map((ing, ingIdx) => (
-                  <div key={ing.id}>
-                    {/* Mobile layout */}
-                    <div className="sm:hidden space-y-1.5">
-                      <div className="flex gap-2 items-center">
-                        <input
-                          inputMode="decimal" type="number" min="0" step="any"
-                          value={ing.quantity}
-                          onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Qty"
-                          className="w-16 px-2 py-2 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
-                        <UnitSelect
-                          value={ing.unit}
-                          availableUnits={ing.availableUnits}
-                          groceryItemId={ing.groceryItemId}
-                          onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
-                          onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                          className="w-24 px-1.5 py-2 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white dark:bg-[#24211c] text-gray-800 dark:text-[#d8d0c4]"
-                        />
-                        <GroceryItemInput
-                          value={ing.groceryItemName}
-                          onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
-                          onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
-                          onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
-                        />
-                        <IngredientReorder
-                          onUp={() => moveIngredient(group.id, ing.id, -1)}
-                          onDown={() => moveIngredient(group.id, ing.id, 1)}
-                          upDisabled={ingIdx === 0}
-                          downDisabled={ingIdx === group.ingredients.length - 1}
-                        />
-                        {ing.groceryItemId && (
-                          <button type="button" aria-label="edit item (units, nutrition)"
-                            onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                            className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors shrink-0">
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                          className="flex items-center justify-center p-1.5 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors shrink-0">
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                      <input
-                        type="text"
-                        value={ing.notes}
-                        onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                        placeholder="notes (e.g. roughly chopped)"
-                        className="w-full px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
-                      />
-                    </div>
-
-                    {/* Desktop layout */}
-                    <div className="hidden sm:block space-y-1">
-                      <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2 items-center">
-                        <input
-                          inputMode="decimal" type="number" min="0" step="any"
-                          value={ing.quantity}
-                          onChange={(e) => updateIngredient(group.id, ing.id, { quantity: e.target.value })}
-                          placeholder="Qty"
-                          className="px-2 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-                        />
-                        <UnitSelect
-                          value={ing.unit}
-                          availableUnits={ing.availableUnits}
-                          groceryItemId={ing.groceryItemId}
-                          onChange={(v) => updateIngredient(group.id, ing.id, { unit: v })}
-                          onAddUnit={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                          className={unitSelectCls}
-                        />
-                        <GroceryItemInput
-                          value={ing.groceryItemName}
-                          onChange={(n) => updateIngredient(group.id, ing.id, { groceryItemName: n })}
-                          onItemSelect={(item) => handleItemSelect(group.id, ing.id, item)}
-                          onCreateRequest={(name) => setCreateIngModal({ groupId: group.id, ingId: ing.id, initialName: name })}
-                        />
-                        <div className="flex items-center justify-end gap-0.5">
-                          <IngredientReorder
-                            onUp={() => moveIngredient(group.id, ing.id, -1)}
-                            onDown={() => moveIngredient(group.id, ing.id, 1)}
-                            upDisabled={ingIdx === 0}
-                            downDisabled={ingIdx === group.ingredients.length - 1}
-                          />
-                          {ing.groceryItemId && (
-                            <button type="button" aria-label="edit item (units, nutrition)"
-                              onClick={() => ing.groceryItemId && setEditingUnit({ groupId: group.id, ingId: ing.id, groceryItemId: ing.groceryItemId })}
-                              className="p-1 text-gray-300 dark:text-[#4a443c] hover:text-orange-500 transition-colors">
-                              <Pencil size={14} />
-                            </button>
-                          )}
-                          <button type="button" onClick={() => removeIngredient(group.id, ing.id)}
-                            className="p-1 text-gray-300 dark:text-[#4a443c] hover:text-red-500 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-[64px_80px_1fr_64px] gap-2">
-                        <div className="col-span-2" />
-                        <input
-                          type="text"
-                          value={ing.notes}
-                          onChange={(e) => updateIngredient(group.id, ing.id, { notes: e.target.value })}
-                          placeholder="notes (e.g. roughly chopped)"
-                          className="px-2 py-1 text-xs bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] placeholder:text-gray-300 dark:placeholder:text-[#4a443c] rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-400"
-                        />
-                        <div />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-
+              )}
+              <div className="absolute left-2.5 bottom-2.5 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => addIngredient(group.id)}
-                  className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
+                  onClick={() => imageInputRef.current?.click()}
+                  disabled={imageUploading}
+                  className="h-10 px-3.5 rounded-xl bg-black/60 text-white text-sm font-semibold flex items-center gap-2"
                 >
-                  <Plus size={12} /> Add ingredient
+                  <Camera size={16} aria-hidden /> Change photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => set({ imageUrl: "" })}
+                  disabled={imageUploading}
+                  aria-label="Remove photo"
+                  className="w-10 h-10 rounded-xl bg-black/60 text-white flex items-center justify-center"
+                >
+                  <Trash2 size={16} aria-hidden />
                 </button>
               </div>
             </div>
-          ))}
-          {refs.map((r) => (
-            <RecipeRefEditor
-              key={r.id}
-              row={r}
-              excludeIds={[...(initial?.id ? [initial.id] : []), ...refs.filter((x) => x.refRecipeId).map((x) => x.refRecipeId!)]}
-              onChange={(patch) => updateRef(r.id, patch)}
-              onRemove={() => removeRef(r.id)}
+          ) : (
+            <button
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              disabled={imageUploading}
+              {...imageDragProps}
+              className={`mt-4 w-full h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-1.5 transition-colors ${
+                dragActive ? "border-orange-400 bg-orange-50 dark:bg-orange-500/10" : "border-gray-200 dark:border-[#3a352e]"
+              }`}
+            >
+              {imageUploading ? (
+                <Loader2 size={22} className="animate-spin text-gray-500" aria-label="Uploading" />
+              ) : (
+                <>
+                  <ImagePlus size={22} className="text-gray-500 dark:text-[#a49c90]" aria-hidden />
+                  <span className="text-[15px] font-semibold text-gray-700 dark:text-[#d8d0c4]">{dragActive ? "Drop to upload" : "Add a photo"}</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* ── Basics ── */}
+          <label className={labelCls} htmlFor="recipe-name">Name</label>
+          <input
+            id="recipe-name"
+            ref={nameRef}
+            value={form.name}
+            onChange={(e) => set({ name: e.target.value })}
+            placeholder="What's it called?"
+            autoComplete="off"
+            className={fieldCls}
+          />
+
+          <label className={labelCls} htmlFor="recipe-link">Source link</label>
+          <div className="relative">
+            <Link2 size={18} className="absolute left-3.5 top-[15px] text-gray-500 dark:text-[#a49c90]" aria-hidden />
+            <input
+              id="recipe-link"
+              type="url"
+              inputMode="url"
+              value={form.link}
+              onChange={(e) => set({ link: e.target.value })}
+              placeholder="Paste the page you got it from"
+              autoComplete="off"
+              className={`${fieldCls} pl-[42px]`}
             />
+          </div>
+          <p className={`mt-1.5 ${hintCls}`}>{linkHost ? `Shown on the recipe as ${linkHost}` : "Optional. The recipe page links back to it."}</p>
+
+          <span className={labelCls}>Categories</span>
+          <div className="flex flex-wrap gap-2">
+            {allCategories.map((cat) => {
+              const on = form.categories.includes(cat);
+              return (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => toggleCategory(cat)}
+                  aria-pressed={on}
+                  className={`${chip} ${
+                    on ? "bg-orange-500 border-orange-500 text-white" : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
+                  }`}
+                >
+                  {categoryLabel(cat)}
+                </button>
+              );
+            })}
+            {addingTag ? (
+              <input
+                autoFocus
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); addNewTag(); }
+                  else if (e.key === "Escape") { setNewTag(""); setAddingTag(false); }
+                }}
+                onBlur={() => { addNewTag(); setAddingTag(false); }}
+                placeholder="New category"
+                aria-label="New category"
+                maxLength={30}
+                className="w-36 h-10 px-3.5 rounded-full border border-orange-500 bg-white dark:bg-[#24211c] text-sm text-gray-900 dark:text-[#eae5de] focus:outline-none"
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setAddingTag(true)}
+                className={`${chip} border-dashed border-gray-300 dark:border-[#3a352e] text-orange-700 dark:text-orange-400`}
+              >
+                + New
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-3">
+            <div>
+              <label className={labelCls} htmlFor="recipe-time">Time</label>
+              <div className="relative">
+                <input
+                  id="recipe-time"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  value={form.time}
+                  onChange={(e) => set({ time: e.target.value.replace(/\D/g, "") })}
+                  placeholder="30"
+                  className={`${fieldCls} pr-11`}
+                />
+                <span className="absolute right-3.5 top-3.5 text-[15px] text-gray-600 dark:text-[#a49c90]" aria-hidden>min</span>
+              </div>
+            </div>
+            <div className="min-w-0">
+              <span className={labelCls}>Difficulty</span>
+              <Segmented
+                label="Difficulty"
+                options={difficulties.map((d) => ({ value: d, label: difficultyLabel(d) }))}
+                value={form.difficulty}
+                onChange={(v) => set({ difficulty: v })}
+                allowNone
+              />
+            </div>
+          </div>
+
+          <div className="mt-3.5 min-h-12 flex items-center justify-between">
+            <span className="text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]">Favorite</span>
+            <Switch on={form.favorite} onChange={(on) => set({ favorite: on })} label="Favorite" />
+          </div>
+
+          {/* ── Servings ── */}
+          <h2 className={`${sectionCls} mt-6 mb-2`}>Servings</h2>
+          <div className={`${cardCls} p-3`}>
+            <Segmented
+              label="Amounts are for"
+              options={[{ value: "batch", label: "Batch" }, { value: "single", label: "1 serving" }]}
+              value={mode}
+              onChange={(v) => v && pickMode(v)}
+              className="bg-[var(--color-bg-base)]! dark:bg-[var(--color-bg-base)]! border-transparent! dark:border-transparent!"
+            />
+            {mode === "batch" && (
+              <>
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <span className="text-[15px] text-gray-900 dark:text-[#eae5de]">Makes</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label="Fewer servings"
+                      disabled={curServings <= 1}
+                      onClick={() => applyServings(stepServingsDown(curServings, stepN), curServings)}
+                      className={stepBtn}
+                    >
+                      <Minus size={18} />
+                    </button>
+                    <ServingsInput
+                      value={curServings}
+                      min={1}
+                      onCommit={(v) => applyServings(v, curServings)}
+                      ariaLabel="Servings the batch makes"
+                      className="w-11 h-11 text-lg font-bold text-gray-900 dark:text-[#eae5de]"
+                    />
+                    <button
+                      type="button"
+                      aria-label="More servings"
+                      onClick={() => applyServings(stepServings(curServings, 1, stepN), curServings)}
+                      className={stepBtn}
+                    >
+                      <Plus size={18} />
+                    </button>
+                    <span className="ml-1 text-[15px] text-gray-600 dark:text-[#a49c90]">servings</span>
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center justify-between gap-3">
+                  <span className="text-sm text-gray-600 dark:text-[#a49c90]">Scale the amounts when I change this</span>
+                  <Switch on={scaleQty} onChange={setScaleQty} label="Scale the amounts when servings change" />
+                </div>
+                <div className="mt-1 flex items-center justify-between gap-3">
+                  <label htmlFor="servings-step" className="text-sm text-gray-600 dark:text-[#a49c90]">
+                    − / + count in steps of
+                  </label>
+                  <input
+                    id="servings-step"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={form.servingsStep}
+                    onChange={(e) => set({ servingsStep: e.target.value.replace(/\D/g, "") })}
+                    placeholder="1"
+                    className="w-14 h-11 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-center text-base text-gray-900 dark:text-[#eae5de] placeholder:text-gray-500 dark:placeholder:text-[#8f877b] focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              </>
+            )}
+            <p className={`mt-3 ${hintCls}`}>
+              {mode === "batch"
+                ? `The amounts below are for the whole batch of ${curServings} servings.`
+                : "The amounts below are for one serving."}
+            </p>
+          </div>
+
+          {/* ── Ingredients ── */}
+          <div className="mt-6 flex items-baseline justify-between">
+            <h2 className={sectionCls}>Ingredients · {ingCount}</h2>
+            {ingCount > 0 && <span className={hintCls}>Tap to edit</span>}
+          </div>
+          {form.groups.map((group, gi) => (
+            <div key={group.id} className={`${cardCls} mt-2 overflow-hidden`}>
+              {multiGroup && (
+                <div className="flex items-center gap-0.5 pl-3.5 pr-1 border-b border-gray-200 dark:border-[#3a352e] bg-gray-50 dark:bg-[#2a2620]">
+                  <input
+                    value={group.name}
+                    onChange={(e) => setGroups((gs) => gs.map((g) => (g.id === group.id ? { ...g, name: e.target.value } : g)))}
+                    aria-label={`Group ${gi + 1} name`}
+                    placeholder={`Group ${gi + 1} name`}
+                    className="flex-1 min-w-0 h-11 bg-transparent text-[15px] font-bold text-gray-900 dark:text-[#eae5de] placeholder:font-normal placeholder:text-gray-500 dark:placeholder:text-[#8f877b] focus:outline-none"
+                  />
+                  <button type="button" onClick={() => moveGroup(gi, -1)} disabled={gi === 0} aria-label="Move group up" className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-[#a49c90] disabled:opacity-30">
+                    <ChevronUp size={18} />
+                  </button>
+                  <button type="button" onClick={() => moveGroup(gi, 1)} disabled={gi === form.groups.length - 1} aria-label="Move group down" className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-[#a49c90] disabled:opacity-30">
+                    <ChevronDown size={18} />
+                  </button>
+                  <button type="button" onClick={() => removeGroup(group)} aria-label="Remove group" className="w-10 h-10 flex items-center justify-center text-gray-500 dark:text-[#a49c90]">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              )}
+              <IngredientRows
+                rows={group.ingredients}
+                onOpen={(row) => setSheet({ kind: "ingredient", groupId: group.id, row })}
+                onMove={(from, to) => moveIngredient(group.id, from, to)}
+              />
+              <button
+                type="button"
+                onClick={() => setSheet({ kind: "ingredient", groupId: group.id, row: null })}
+                className={`${ghostRow} ${group.ingredients.length === 0 ? "border-t-0" : ""}`}
+              >
+                <Plus size={18} aria-hidden /> Add ingredient
+              </button>
+            </div>
           ))}
+
+          {form.refs.length > 0 && (
+            <div className={`${cardCls} mt-2 overflow-hidden`}>
+              {form.refs.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setSheet({ kind: "ref", row: r })}
+                  aria-label={`Edit ${r.name}`}
+                  className="w-full min-h-[54px] flex items-center gap-2.5 pl-3.5 pr-3 py-1.5 text-left border-t first:border-t-0 border-gray-200 dark:border-[#3a352e]"
+                >
+                  <BookOpen size={18} className="shrink-0 text-orange-600 dark:text-orange-400" aria-hidden />
+                  <span className="flex-1 min-w-0 text-base leading-[1.35] text-gray-900 dark:text-[#eae5de]">
+                    <b className="font-bold">{refAmount(r)}</b> {r.name}
+                  </span>
+                  <ChevronRight size={16} className="shrink-0 text-gray-400 dark:text-[#8f877b]" aria-hidden />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setGroups((gs) => [...gs, { id: uid(), name: "", ingredients: [] }])}
+              className={secondaryChip}
+            >
+              + Group
+            </button>
+            <button type="button" onClick={() => setSheet({ kind: "ref", row: null })} className={secondaryChip}>
+              + Another recipe
+            </button>
+          </div>
+
+          {/* ── Steps ── */}
+          <StepsEditor
+            sections={form.sections}
+            onSections={(sections) => set({ sections })}
+            mode={stepsMode}
+            onMode={setStepsMode}
+            text={stepsText}
+            onText={setStepsText}
+          />
+
+          {/* ── Delete ── */}
+          {initial?.id && (
+            <>
+              <h2 className={`${sectionCls} mt-7 mb-2`}>Danger zone</h2>
+              {confirmDelete ? (
+                <div className="p-3.5 rounded-[14px] bg-red-50 dark:bg-red-500/10" role="alertdialog" aria-labelledby="delete-q">
+                  <p id="delete-q" className="text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]">Delete this recipe for both of you?</p>
+                  <p className="mt-1 mb-3 text-sm text-gray-600 dark:text-[#a49c90]">
+                    It also disappears from every week it was planned in. This can&apos;t be undone.
+                  </p>
+                  {deleteError && <p role="alert" className="mb-3 text-sm text-red-700 dark:text-red-300">{deleteError}</p>}
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setConfirmDelete(false); setDeleteError(null); }}
+                      disabled={deleting}
+                      className="flex-1 h-12 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]"
+                    >
+                      Keep it
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="flex-1 h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {deleting && <Loader2 size={16} className="animate-spin" aria-hidden />}
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full h-[52px] rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-base font-semibold text-red-600 dark:text-red-400"
+                >
+                  Delete recipe
+                </button>
+              )}
+            </>
+          )}
         </div>
-      </div>
+      </form>
 
-      {/* ── Instructions ─────────────────────────────────────────── */}
-      <div>
-        <InstructionsEditor value={instructionsText} onChange={setInstructionsText} />
-      </div>
-
-      {/* Error */}
-      {error && (
-        <p className="text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 px-4 py-3 rounded-lg">
-          {error}
-        </p>
-      )}
-
-      {/* Actions — Delete (left) · Cancel · Save (right, primary) */}
-      <div className="flex items-center gap-3 pt-2 border-t border-gray-100 dark:border-[#2e2a24]">
-        {initial?.id && (
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {deleting && <Loader2 size={13} className="animate-spin" />}
-            Delete recipe
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => {
-            if (dirty && !window.confirm("You have unsaved changes. Are you sure you want to leave without saving?")) return;
-            router.back();
-          }}
-          className="ml-auto px-4 py-2.5 text-sm text-gray-600 dark:text-[#a49c90] hover:text-gray-900 dark:hover:text-[#eae5de] transition-colors"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving || imageUploading}
-          className="flex items-center gap-2 px-5 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 transition-colors"
-        >
-          {saving && <Loader2 size={14} className="animate-spin" />}
-          {imageUploading ? "Uploading image…" : initial?.id ? "Save changes" : "Create recipe"}
-        </button>
-      </div>
-
-      {/* Grocery item edit modal */}
-      {editingUnit && (
-        <GroceryItemEditModal
-          itemId={editingUnit.groceryItemId}
-          onClose={() => setEditingUnit(null)}
-          onSaved={(unit, unit2) => {
-            const newUnits = [unit, unit2].filter(Boolean) as string[];
-            const grp = groups.find((g) => g.id === editingUnit.groupId);
-            const ing = grp?.ingredients.find((i) => i.id === editingUnit.ingId);
-            // Keep the currently-selected unit if it's still valid (e.g. when only
-            // nutrition was edited); otherwise fall back to the newly-added unit.
-            const keepCurrent = ing?.unit && newUnits.includes(ing.unit) ? ing.unit : null;
-            updateIngredient(editingUnit.groupId, editingUnit.ingId, {
-              availableUnits: newUnits.length > 0 ? newUnits : null,
-              unit: keepCurrent ?? unit2 ?? unit ?? "",
-            });
-            setEditingUnit(null);
-          }}
+      {/* Sheets sit outside the <form> so Enter in their fields doesn't save the recipe. */}
+      {sheet?.kind === "ingredient" && (
+        <IngredientSheet
+          key={sheet.row?.id ?? "new"}
+          row={sheet.row}
+          groupId={sheet.groupId}
+          groups={form.groups.map((g) => ({ id: g.id, name: g.name }))}
+          onSave={saveIngredient}
+          onRemove={sheet.row ? () => removeIngredient(sheet.row!.id) : undefined}
+          onClose={() => setSheet(null)}
         />
       )}
-
-      {/* Grocery item create modal */}
-      {createIngModal && (
-        <GroceryItemModal
-          initialName={createIngModal.initialName}
-          onClose={() => setCreateIngModal(null)}
-          onSaved={(item) => {
-            handleItemSelect(createIngModal.groupId, createIngModal.ingId, item);
-            setCreateIngModal(null);
+      {sheet?.kind === "ref" && (
+        <RecipeRefSheet
+          row={sheet.row}
+          excludeIds={[...(initial?.id ? [initial.id] : []), ...form.refs.filter((x) => x.refRecipeId && x.id !== sheet.row?.id).map((x) => x.refRecipeId!)]}
+          onSave={(row) => {
+            set({ refs: sheet.row ? form.refs.map((r) => (r.id === row.id ? row : r)) : [...form.refs, row] });
+            setSheet(null);
           }}
+          onRemove={sheet.row ? () => { set({ refs: form.refs.filter((r) => r.id !== sheet.row!.id) }); setSheet(null); } : undefined}
+          onClose={() => setSheet(null)}
         />
       )}
-    </form>
+      {sheet?.kind === "discard" && (
+        <Sheet title="Discard your changes?" onClose={() => setSheet(null)}>
+          <p className={`mt-1 ${hintCls}`}>What you changed here hasn&apos;t been saved.</p>
+          <div className="mt-5 flex gap-2.5">
+            <button
+              type="button"
+              onClick={() => setSheet(null)}
+              className="flex-1 h-[52px] rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-bold text-gray-900 dark:text-[#eae5de]"
+            >
+              Keep editing
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSheet(null); leave(); }}
+              className="flex-1 h-[52px] rounded-[14px] bg-red-600 hover:bg-red-700 text-white text-[15px] font-bold"
+            >
+              Discard
+            </button>
+          </div>
+        </Sheet>
+      )}
+    </>
   );
 }
