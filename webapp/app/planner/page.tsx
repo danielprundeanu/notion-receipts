@@ -13,6 +13,7 @@ import {
 import { mealLabel } from "@/lib/labels";
 import { addWeeks, getMondayOf, relativeWeekTitle, shortWeekRange } from "@/lib/weeks";
 import PlanHistorySheet from "@/components/PlanHistorySheet";
+import AddRecipes from "@/components/add-recipes/AddRecipes";
 import { RecipeThumb } from "@/components/RecipesGrid";
 import AddMealSheet from "@/components/planner/AddMealSheet";
 import EntrySheet from "@/components/planner/EntrySheet";
@@ -42,6 +43,9 @@ export default function PlannerPage() {
   const [attempt, setAttempt] = useState(0); // bump to refetch the week
   const [sheet, setSheet] = useState<Sheet>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  // Recipes just added from the panel: listed first with a New badge until the page reloads.
+  const [newIds, setNewIds] = useState<string[]>([]);
   const [toast, setToast] = useState<Toast | null>(null);
   const hasRecipes = useRef(false);
 
@@ -354,6 +358,8 @@ export default function PlannerPage() {
               recipes={recipes}
               recipeList={recipeList}
               recentIds={recentIds}
+              newIds={newIds}
+              onAddRecipes={() => setAddOpen(true)}
               totals={totals}
               handlers={{
                 onAddRecipe: (r, day, meal) =>
@@ -406,6 +412,19 @@ export default function PlannerPage() {
             removeWithUndo(sheetEntry.id);
           }}
           onClose={() => setSheet(null)}
+        />
+      )}
+
+      {addOpen && (
+        <AddRecipes
+          onClose={() => setAddOpen(false)}
+          onAdded={(ids) => {
+            // Load the recipe list again so the new ones are in the panel, ready to drag.
+            hasRecipes.current = false;
+            setNewIds((prev) => [...ids, ...prev]);
+            setAttempt((a) => a + 1);
+            if (ids.length) setToast({ text: `${ids.length} ${ids.length === 1 ? "recipe" : "recipes"} added · drag them into the week` });
+          }}
         />
       )}
 
