@@ -2,7 +2,7 @@
 export default function RecipeLoading() {
   return (
     <div className="animate-pulse md:p-8 md:max-w-3xl" aria-busy="true" aria-label="Loading recipe">
-      <div className="h-60 md:h-72 md:rounded-2xl bg-gray-200 dark:bg-[#2e2a24]" />
+      <div className="h-[250px] md:h-80 md:rounded-2xl bg-gray-200 dark:bg-[#2e2a24]" />
       <div className="px-4 md:px-0 pt-5 space-y-3">
         <div className="h-3 w-24 rounded bg-gray-100 dark:bg-[#24211c]" />
         <div className="h-8 w-4/5 rounded-lg bg-gray-200 dark:bg-[#2e2a24]" />

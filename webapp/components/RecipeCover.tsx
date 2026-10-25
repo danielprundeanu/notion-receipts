@@ -12,12 +12,13 @@ function isOptimizableSrc(url: string): boolean {
 // Fills its nearest positioned ancestor (the parent needs `relative` + a size).
 // `onError` (client callers only) lets a caller swap in a placeholder when the image can't
 // load — e.g. a source site that blocks hotlinking.
+// `loading="eager"` for an above-the-fold cover (a recipe's hero), so it isn't held back.
 export default function RecipeCover({
-  src, alt, sizes, onError,
-}: { src: string; alt: string; sizes: string; onError?: () => void }) {
+  src, alt, sizes, onError, loading = "lazy",
+}: { src: string; alt: string; sizes: string; onError?: () => void; loading?: "lazy" | "eager" }) {
   if (isOptimizableSrc(src)) {
-    return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading="lazy" onError={onError} />;
+    return <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" loading={loading} onError={onError} />;
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" onError={onError} />;
+  return <img src={src} alt={alt} loading={loading} className="absolute inset-0 h-full w-full object-cover" onError={onError} />;
 }

@@ -25,7 +25,12 @@ function IosShareIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-export default function ShareButton({ id, name }: { id: string; name: string }) {
+const DEFAULT_CLASS =
+  "inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors";
+
+export default function ShareButton({
+  id, name, className = DEFAULT_CLASS, iconSize = 17,
+}: { id: string; name: string; className?: string; iconSize?: number }) {
   const [copied, setCopied] = useState(false);
 
   async function handleShare() {
@@ -61,9 +66,9 @@ export default function ShareButton({ id, name }: { id: string; name: string }) 
       onClick={handleShare}
       title={copied ? "Link copied" : "Share"}
       aria-label="Share recipe"
-      className="inline-flex items-center justify-center w-10 h-10 text-gray-700 dark:text-[#bab2a6] border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-orange-50 dark:hover:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-700 dark:hover:text-orange-400 transition-colors"
+      className={className}
     >
-      {copied ? <Check size={17} className="text-green-600 dark:text-green-400" /> : <IosShareIcon size={17} />}
+      {copied ? <Check size={iconSize} className="text-green-500" /> : <IosShareIcon size={iconSize} />}
     </button>
   );
 }
