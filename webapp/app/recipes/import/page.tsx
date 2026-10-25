@@ -10,6 +10,7 @@ import {
 import type { ParsedRecipe, ReviewIngredient } from "@/app/api/import/parse/route";
 import { getGroceryCategories, getGroceryItemDetails } from "@/lib/actions";
 import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { standardFactor } from "@/lib/units";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -261,18 +262,8 @@ function RecipeReviewCard({
 type IngredientExt = ReviewIngredient & { skipped?: boolean; reviewed?: boolean; addUnit2?: boolean; unit2Conversion?: number | null; newItem?: { name: string; unit: string | null; unit2?: string | null; conversion?: number | null; category: string | null } };
 
 function getAutoFactor(fu: string, tu: string): string {
-  const map: Record<string, number> = {
-    "tsp→tbsp": 1 / 3, "tbsp→tsp": 3,
-    "cup→ml": 240, "ml→cup": 1 / 240,
-    "cup→l": 0.24, "l→cup": 1 / 0.24,
-    "oz→g": 28.35, "g→oz": 1 / 28.35,
-    "lb→g": 453.6, "g→lb": 1 / 453.6,
-    "lb→kg": 0.4536, "kg→lb": 1 / 0.4536,
-    "kg→g": 1000, "g→kg": 1 / 1000,
-    "l→ml": 1000, "ml→l": 1 / 1000,
-  };
-  const v = map[`${fu}→${tu}`];
-  return v == null ? "" : (+v.toFixed(6)).toString();
+  const v = standardFactor(fu, tu);
+  return v == null ? "" : String(v);
 }
 
 const fmtNum = (n: number | null) => (n == null || isNaN(n) ? "–" : (+n.toFixed(4)).toString());
