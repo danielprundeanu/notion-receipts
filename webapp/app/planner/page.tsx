@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, History, Loader2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, History, ListChecks, Loader2, Plus } from "lucide-react";
 import {
   addToWeekPlan,
   getPlannerData,
@@ -211,6 +211,9 @@ export default function PlannerPage() {
           <button type="button" onClick={() => setHistoryOpen(true)} aria-label="History: reuse a past week" className={headerBtn}>
             <History size={18} aria-hidden /> History
           </button>
+          <Link href="/grocery-list" className={`${headerBtn} hidden! md:flex!`}>
+            <ListChecks size={18} aria-hidden /> {isCurrentWeek ? "Shopping list for this week" : "Shopping list"}
+          </Link>
         </div>
       </div>
 
@@ -350,6 +353,7 @@ export default function PlannerPage() {
               entries={shown}
               recipes={recipes}
               recipeList={recipeList}
+              recentIds={recentIds}
               totals={totals}
               handlers={{
                 onAddRecipe: (r, day, meal) =>
@@ -357,7 +361,6 @@ export default function PlannerPage() {
                 onMove: moveEntry,
                 onServings: setServings,
                 onRemove: removeWithUndo,
-                onOpenAdd: openAdd,
               }}
             />
           ))}
