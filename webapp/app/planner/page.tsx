@@ -11,7 +11,7 @@ import {
   updateWeekPlanServings,
 } from "@/lib/actions";
 import { mealLabel } from "@/lib/labels";
-import { MONTH_LABELS, getMondayOf } from "@/lib/weeks";
+import { addWeeks, getMondayOf, relativeWeekTitle, shortWeekRange } from "@/lib/weeks";
 import PlanHistorySheet from "@/components/PlanHistorySheet";
 import { RecipeThumb } from "@/components/RecipesGrid";
 import AddMealSheet from "@/components/planner/AddMealSheet";
@@ -31,24 +31,6 @@ import {
 
 type Toast = { text: string; error?: boolean; undo?: () => void };
 type Sheet = { kind: "add"; day: number; meal: MealType } | { kind: "entry"; id: string } | null;
-
-const WEEK_MS = 7 * 24 * 3600_000;
-
-// "This week" / "Next week" / "Last week" / "Week of Oct 5".
-function weekTitle(monday: Date): string {
-  const off = Math.round((monday.getTime() - getMondayOf(new Date()).getTime()) / WEEK_MS);
-  if (off === 0) return "This week";
-  if (off === 1) return "Next week";
-  if (off === -1) return "Last week";
-  return `Week of ${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()}`;
-}
-
-// "Oct 19 – 25", "Oct 26 – Nov 1".
-function weekRange(monday: Date): string {
-  const sunday = dateOf(monday, 6);
-  const end = sunday.getMonth() === monday.getMonth() ? `${sunday.getDate()}` : `${MONTH_LABELS[sunday.getMonth()]} ${sunday.getDate()}`;
-  return `${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()} – ${end}`;
-}
 
 export default function PlannerPage() {
   const [monday, setMonday] = useState(() => getMondayOf(new Date()));
@@ -102,9 +84,8 @@ export default function PlannerPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  // +12 h keeps a DST change from landing on the Sunday before.
   function shiftWeek(weeks: number) {
-    setMonday((m) => getMondayOf(new Date(m.getTime() + weeks * WEEK_MS + 12 * 3600_000)));
+    setMonday((m) => addWeeks(m, weeks));
   }
 
   // ── Mutations: optimistic, rolled back with a message if the save fails (shared data) ──
@@ -240,9 +221,9 @@ export default function PlannerPage() {
             <ChevronLeft size={20} />
           </button>
           <div className="text-center md:min-w-56">
-            <p className="text-base font-bold text-gray-900 dark:text-[#eae5de]">{weekTitle(monday)}</p>
+            <p className="text-base font-bold text-gray-900 dark:text-[#eae5de]">{relativeWeekTitle(monday)}</p>
             <p className="mt-px text-[13px] text-gray-600 dark:text-[#a49c90]">
-              {weekRange(monday)} · {loading ? "…" : weekKcal ? formatKcal(weekKcal) : "nothing planned"}
+              {shortWeekRange(monday)} · {loading ? "…" : weekKcal ? formatKcal(weekKcal) : "nothing planned"}
             </p>
           </div>
           <button type="button" onClick={() => shiftWeek(1)} aria-label="Next week" className={navBtn}>

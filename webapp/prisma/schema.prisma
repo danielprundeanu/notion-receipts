@@ -72,6 +72,9 @@ model GroceryItem {
   fat         Float?
   protein     Float?
   unitWeight  Float?
+  // Usually at home (salt, spices, oil): listed under "Probably at home" on the
+  // shopping list instead of with the things to buy.
+  pantryStaple Boolean     @default(false)
   notionId    String?      @unique
   createdAt   DateTime     @default(now())
   ingredients Ingredient[]
