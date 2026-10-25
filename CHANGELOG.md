@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0] — 2026-10-25
+
+Mobile-first redesign of the whole app, following the clickable prototype.
+
+### ✨ Features
+- **Navigation** — four bottom tabs (Recipes, Plan, Shop, More); Ingredients, Import and Settings live under the new More page. Recipe pages show loading skeletons instead of a blank screen.
+- **Recipes** — the whole list loads once and search, category chips and sort run on the device (no request per keystroke). Search needs every word and ignores diacritics; a category chip matches the exact tag. List or grid layout is remembered, filters come back when you return to the tab, and a "Cooked this season" row sits on top.
+- **Recipe page** — hero photo, sticky Ingredients / Steps tabs, a servings card with batch pills, kitchen fractions (½ tsp, ⅓ cup), Cook mode with bigger text and the screen kept on, the source link at the bottom and a sticky action bar. **Add to plan** opens a sheet that can pick several days and next week at once.
+- **Planner** — one request per week (about 4× faster), a day-by-day agenda on phones, add and entry sheets, Undo after Remove, and drag between slots on desktop. Nutrition totals add up on the device.
+- **Shopping list** — grouped by aisle with sticky chips that follow the scroll, one line per product with all its units, counted items rounded up (⅓ onion → 1). Pantry staples (salt, oil, dried spices…) go under "Probably at home"; ticked items move to "In the cart". Quick add, share, and items you add yourself grouped under "Added by you". Mark a staple from Ingredients ("At home" column or the item's switch).
+- **Recipe editor** — full screen with Cancel / Save (asks before discarding changes). Sections are cards; ingredients are tappable rows edited in a sheet (item search, amount accepts 1/2 or 1½, the item's own units, note, move to another group) and reordered by dragging. Steps are edited one by one in section cards — Enter starts the next step, a pasted method splits into steps — or as plain text (`#` = section, numbering dropped). Deleting asks inline.
+
+### 🐛 Fixes
+- Saving a recipe imported from Notion clears the empty "Ingredients / Steps / Method / Enjoy!" headers above its steps, and its "For the …" headers become the ingredient group names (as the recipe page already showed them). Unnamed groups no longer get "Group 2" written into the database.
+
+### ⚙️ Internals
+- New column `GroceryItem.pantryStaple` (already applied on Neon; 36 items marked). `getPlannerData` replaces the planner's four separate actions; `getGroceryList` returns merged `ShoppingLine`s; `getRecipeIndex` / `getCookedThisSeason` feed the recipe list.
+- The recipe form is split into `components/recipe-form/*` with step parsing in `lib/steps.ts`. The search alias (`nameRo`) is no longer edited by hand: the server keeps it and re-translates when the title changes.
+- `middleware.ts` renamed to `proxy.ts` (Next 16 convention); the login gate is unchanged.
+
 ## [0.37.0] — 2026-10-25
 
 ### ✨ Features
