@@ -33,6 +33,7 @@ type GroceryItem = {
   fat: number | null;
   protein: number | null;
   unitWeight: number | null;
+  pantryStaple: boolean;
   createdAt: Date;
 };
 
@@ -384,6 +385,18 @@ export default function IngredientsPage() {
     }
   }
 
+  // "Usually at home" — a checkbox, so it saves on click rather than through a cell edit.
+  async function handleToggleStaple(id: string) {
+    const prev = items.find((it) => it.id === id)?.pantryStaple ?? false;
+    setItems((all) => all.map((it) => (it.id === id ? { ...it, pantryStaple: !prev } : it)));
+    try {
+      await updateGroceryItem(id, { pantryStaple: !prev });
+    } catch {
+      setItems((all) => all.map((it) => (it.id === id ? { ...it, pantryStaple: prev } : it)));
+      showToast("Couldn't save the change. Please try again.");
+    }
+  }
+
   // ── Multi-select helpers ──────────────────────────────────────────────────
   function toggleSelectMode() {
     setSelectMode((on) => {
@@ -505,7 +518,7 @@ export default function IngredientsPage() {
 
   const sharedThProps = { sortField, sortDir, onSort: handleSort };
   const leadingCols = 1 + (selectMode ? 1 : 0); // edit icon (+ checkbox in select mode)
-  const totalCols = leadingCols + 12;
+  const totalCols = leadingCols + 13;
 
   return (
     <div className="p-4 md:p-6">
@@ -760,7 +773,7 @@ export default function IngredientsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-gray-900 dark:text-[#eae5de] truncate">{item.name}</div>
                     <div className="text-xs text-gray-500 dark:text-[#7c756a] truncate">
-                      {[item.nameRo, item.category, item.unit].filter(Boolean).join(" · ") || "—"}
+                      {[item.nameRo, item.category, item.unit, item.pantryStaple ? "usually at home" : null].filter(Boolean).join(" · ") || "—"}
                     </div>
                     <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-600 dark:text-[#a49c90]">
                       <span className="font-medium text-gray-700 dark:text-[#bab2a6]">{item.kcal != null ? `${fmt(item.kcal)} kcal` : "— kcal"}</span>
@@ -797,6 +810,7 @@ export default function IngredientsPage() {
                 <th className="px-2 py-2.5 w-10" />
                 <SortTh label="Name (EN)"  field="name"       {...sharedThProps} />
                 <SortTh label="Name (RO)"  field="nameRo"     {...sharedThProps} />
+                <SortTh label="At home"    field="pantryStaple" {...sharedThProps} />
                 <SortTh label="Category"   field="category"   {...sharedThProps} />
                 <SortTh label="Unit"    field="unit"       {...sharedThProps} />
                 <SortTh label="Unit 2"     field="unit2"      {...sharedThProps} />
@@ -853,6 +867,16 @@ export default function IngredientsPage() {
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-[#a49c90]">
                         <EditableCell value={item.nameRo} onSave={(v) => handleSave(item.id, "nameRo", v)} placeholder="—" />
+                      </td>
+                      <td className="px-4 py-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={item.pantryStaple}
+                          onChange={() => handleToggleStaple(item.id)}
+                          className="accent-orange-500 w-4 h-4 cursor-pointer"
+                          aria-label={`${item.name} is usually at home`}
+                          title="Usually at home — listed under “Probably at home” on the shopping list"
+                        />
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-[#a49c90] min-w-[9rem]">
                         <SelectCell value={item.category} options={knownCategories} onSave={(v) => handleSave(item.id, "category", v)} />
@@ -921,6 +945,7 @@ export default function IngredientsPage() {
                       carbs: updated.carbs,
                       fat: updated.fat,
                       protein: updated.protein,
+                      pantryStaple: updated.pantryStaple,
                     }
                   : item
               )
@@ -951,6 +976,7 @@ export default function IngredientsPage() {
               fat: created.fat,
               protein: created.protein,
               unitWeight: null,
+              pantryStaple: created.pantryStaple,
               createdAt: new Date(),
             }]);
             setCreatingNew(false);

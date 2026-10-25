@@ -20,6 +20,7 @@ export type GroceryItemResult = {
   fat: number | null;
   protein: number | null;
   unitWeight: number | null;
+  pantryStaple: boolean;
 };
 
 
@@ -59,6 +60,7 @@ export default function GroceryItemModal({
   const [carbs, setCarbs] = useState("");
   const [fat, setFat] = useState("");
   const [protein, setProtein] = useState("");
+  const [pantryStaple, setPantryStaple] = useState(false);
   const [saving, setSaving] = useState(false);
   const [fetchingNutrition, setFetchingNutrition] = useState(false);
   const [nutritionError, setNutritionError] = useState<string | null>(null);
@@ -128,6 +130,7 @@ export default function GroceryItemModal({
       setCarbs(data.carbs?.toString() ?? "");
       setFat(data.fat?.toString() ?? "");
       setProtein(data.protein?.toString() ?? "");
+      setPantryStaple(data.pantryStaple);
       setLoading(false);
     });
   }, [itemId]);
@@ -174,6 +177,7 @@ export default function GroceryItemModal({
       carbs: carbs ? parseFloat(carbs) : null,
       fat: fat ? parseFloat(fat) : null,
       protein: protein ? parseFloat(protein) : null,
+      pantryStaple,
     };
 
     try {
@@ -192,6 +196,7 @@ export default function GroceryItemModal({
           carbs: payload.carbs,
           fat: payload.fat,
           protein: payload.protein,
+          pantryStaple,
         });
       } else {
         const item = await createGroceryItem(payload);
@@ -259,6 +264,21 @@ export default function GroceryItemModal({
                 ))}
               </select>
             </div>
+
+            <label className="flex items-center justify-between gap-3 min-h-11 cursor-pointer">
+              <span>
+                <span className="block text-sm font-medium text-gray-700 dark:text-[#bab2a6]">Usually at home</span>
+                <span className="block text-xs text-gray-400 dark:text-[#7c756a]">
+                  Shown under &ldquo;Probably at home&rdquo; on the shopping list, not with what to buy.
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                checked={pantryStaple}
+                onChange={(e) => setPantryStaple(e.target.checked)}
+                className="accent-orange-500 w-5 h-5 shrink-0"
+              />
+            </label>
 
             <div className="grid grid-cols-2 gap-3">
               <div>

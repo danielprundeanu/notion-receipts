@@ -31,3 +31,29 @@ export function formatAmount(q: number, unit: string | null): string {
   if (unit && METRIC.has(unit)) return q >= 10 ? String(Math.round(q)) : trimDecimal(q, 1);
   return kitchenFraction(q);
 }
+
+// ── Shopping list ──
+// What you buy whole (onions, cans, garlic cloves) is rounded UP to what the shop
+// sells: ⅓ of an onion is still one onion. Spoons and cups stay kitchen fractions.
+
+const COUNTED = new Set(["piece", "can", "slice", "clove", "bunch", "pack", "bottle", "jar", "bag", "sachet"]);
+const PLURAL: Record<string, string> = {
+  cup: "cups", can: "cans", slice: "slices", clove: "cloves", pinch: "pinches", handful: "handfuls",
+  scoop: "scoops", bunch: "bunches", pack: "packs", bottle: "bottles", jar: "jars", bag: "bags", sachet: "sachets",
+};
+
+function shoppingAmount(q: number, unit: string | null): string {
+  const u = unit?.trim().toLowerCase() || null;
+  if (!u || COUNTED.has(u)) {
+    const n = Math.max(1, Math.ceil(q - 1e-6));
+    if (!u || u === "piece") return String(n);
+    return `${n} ${n > 1 ? PLURAL[u] ?? u : u}`;
+  }
+  const num = formatAmount(q, u);
+  return `${num} ${q > 1 && PLURAL[u] ? PLURAL[u] : u}`;
+}
+
+/** "5", "2½ cups + 180 g", "3 cans" — every unit an item is needed in, joined. */
+export function formatShoppingAmounts(amounts: { quantity: number; unit: string | null }[]): string {
+  return amounts.filter((a) => a.quantity > 0).map((a) => shoppingAmount(a.quantity, a.unit)).join(" + ");
+}

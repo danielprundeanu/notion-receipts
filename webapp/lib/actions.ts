@@ -74,7 +74,7 @@ export async function getGroceryItemDetails(id: string) {
     where: { id },
     select: {
       id: true, name: true, nameRo: true, category: true, unit: true, unit2: true,
-      conversion: true, kcal: true, carbs: true, fat: true, protein: true, unitWeight: true,
+      conversion: true, kcal: true, carbs: true, fat: true, protein: true, unitWeight: true, pantryStaple: true,
     },
   });
 }
@@ -728,7 +728,7 @@ export async function copyWeekPlan(
 
 // ─── Grocery List ─────────────────────────────────────────────────────────────
 
-type GroceryEntry = {
+export type GroceryEntry = {
   id: string;
   name: string;
   quantity: number;
@@ -740,87 +740,72 @@ type GroceryEntry = {
   manual?: boolean;
 };
 
+export type ShoppingAmount = { quantity: number; unit: string | null };
+
+// One line of the shopping list per grocery item. Amounts in different units stay
+// separate ("2½ cups + 180 g") — summing 200 g with 1 cup would be a nonsense total.
+export type ShoppingLine = {
+  id: string; // the grocery item's id, or `manual::<dbId>` for a hand-added product
+  name: string;
+  category: string;
+  amounts: ShoppingAmount[];
+  staple: boolean; // GroceryItem.pantryStaple — "Probably at home"
+  manual?: boolean;
+};
+
 export async function getGroceryList(
   weekStartIso: string
-): Promise<Record<string, GroceryEntry[]>> {
+): Promise<{ lines: ShoppingLine[]; meals: number }> {
   const weekStart = new Date(weekStartIso);
+  if (isNaN(weekStart.getTime())) throw new Error("Invalid date");
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const plans = await prisma.weekPlan.findMany({
-    where: { weekStart: { gte: weekStart, lt: weekEnd } },
-    include: { recipe: { select: { servings: true } } },
-  });
+  const [plans, manual] = await Promise.all([
+    prisma.weekPlan.findMany({
+      where: { weekStart: { gte: weekStart, lt: weekEnd } },
+      include: { recipe: { select: { servings: true } } },
+    }),
+    prisma.groceryListItem.findMany({ where: { weekStart: { gte: weekStart, lt: weekEnd } } }),
+  ]);
   // Each recipe's ingredients with referenced recipes expanded in.
   const flat = await flattenRecipes(plans.map((p) => p.recipeId));
 
-  const map = new Map<
-    string,
-    { name: string; quantity: number; unit: string | null; category: string }
-  >();
-
+  const byItem = new Map<string, ShoppingLine & { units: Map<string, ShoppingAmount> }>();
   for (const plan of plans) {
-    const recipeServings = plan.recipe.servings || 1;
-    const scale = plan.servings / recipeServings;
-
+    const scale = plan.servings / (plan.recipe.servings || 1);
     for (const ing of flat.get(plan.recipeId) ?? []) {
-      if (!ing.groceryItem) continue;
-      const unit = ing.unit ?? ing.groceryItem.unit;
-      // Key by item AND unit: never sum incompatible units (e.g. 200 g + 1 cup)
-      // into a nonsense total. Same-unit lines still aggregate; mixed-unit ones
-      // show as separate lines on the list — correct rather than misleading.
-      const key = `${ing.groceryItem.id}::${(unit ?? "").trim().toLowerCase()}`;
-      const qty = (ing.quantity || 0) * scale;
-
-      if (map.has(key)) {
-        map.get(key)!.quantity += qty;
-      } else {
-        map.set(key, {
-          name: ing.groceryItem.name,
-          quantity: qty,
-          unit,
-          category: ing.groceryItem.category ?? "Other",
-        });
+      const gi = ing.groceryItem;
+      if (!gi) continue;
+      let line = byItem.get(gi.id);
+      if (!line) {
+        line = { id: gi.id, name: gi.name, category: gi.category ?? "Other", amounts: [], staple: gi.pantryStaple, units: new Map() };
+        byItem.set(gi.id, line);
       }
+      const unit = ing.unit ?? gi.unit;
+      const key = (unit ?? "").trim().toLowerCase();
+      const amount = line.units.get(key) ?? { quantity: 0, unit };
+      amount.quantity += (ing.quantity || 0) * scale;
+      line.units.set(key, amount);
     }
   }
 
-  const grouped: Record<string, GroceryEntry[]> = {};
-  for (const [id, data] of map) {
-    const cat = data.category;
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push({
-      id,
-      name: data.name,
-      quantity: Math.round(data.quantity * 10) / 10,
-      unit: data.unit,
-      category: cat,
-    });
-  }
-
-  // Merge in this week's hand-added products.
-  const manual = await prisma.groceryListItem.findMany({
-    where: { weekStart: { gte: weekStart, lt: weekEnd } },
-  });
+  const lines: ShoppingLine[] = [...byItem.values()].map(({ units, ...line }) => ({
+    ...line,
+    amounts: [...units.values()].filter((a) => a.quantity > 0),
+  }));
   for (const m of manual) {
-    const cat = m.category || "Other";
-    if (!grouped[cat]) grouped[cat] = [];
-    grouped[cat].push({
+    lines.push({
       id: `manual::${m.id}`,
       name: m.name,
-      quantity: m.quantity ?? 0,
-      unit: m.unit,
-      category: cat,
+      category: m.category || "Other",
+      amounts: m.quantity ? [{ quantity: m.quantity, unit: m.unit }] : [],
+      staple: false,
       manual: true,
     });
   }
-
-  // Sort items within each category
-  for (const cat of Object.keys(grouped)) {
-    grouped[cat].sort((a, b) => a.name.localeCompare(b.name));
-  }
-
-  return grouped;
+  lines.sort((a, b) => a.name.localeCompare(b.name));
+  return { lines, meals: plans.length };
 }
 
 // Add a product to a specific week's shopping list by hand (not from a recipe).
@@ -936,10 +921,11 @@ export async function createGroceryItem(data: {
   fat?: number | null;
   protein?: number | null;
   unitWeight?: number | null;
-}): Promise<{ id: string; name: string; nameRo: string | null; category: string | null; unit: string | null; unit2: string | null; conversion: number | null; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null; unitWeight: number | null }> {
+  pantryStaple?: boolean;
+}): Promise<{ id: string; name: string; nameRo: string | null; category: string | null; unit: string | null; unit2: string | null; conversion: number | null; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null; unitWeight: number | null; pantryStaple: boolean }> {
   const item = await prisma.groceryItem.create({ data });
   revalidatePath("/ingredients");
-  return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein, unitWeight: item.unitWeight };
+  return { id: item.id, name: item.name, nameRo: item.nameRo, category: item.category, unit: item.unit, unit2: item.unit2, conversion: item.conversion, kcal: item.kcal, carbs: item.carbs, fat: item.fat, protein: item.protein, unitWeight: item.unitWeight, pantryStaple: item.pantryStaple };
 }
 
 export async function updateGroceryItem(
@@ -956,6 +942,7 @@ export async function updateGroceryItem(
     fat?: number | null;
     protein?: number | null;
     unitWeight?: number | null;
+    pantryStaple?: boolean;
   }
 ): Promise<void> {
   await prisma.groceryItem.update({ where: { id }, data });
@@ -1049,6 +1036,7 @@ export async function getGroceryItems() {
       fat: true,
       protein: true,
       unitWeight: true,
+      pantryStaple: true,
       createdAt: true,
     },
   });

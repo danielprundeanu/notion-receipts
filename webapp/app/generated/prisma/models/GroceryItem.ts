@@ -57,6 +57,7 @@ export type GroceryItemMinAggregateOutputType = {
   fat: number | null
   protein: number | null
   unitWeight: number | null
+  pantryStaple: boolean | null
   notionId: string | null
   createdAt: Date | null
 }
@@ -74,6 +75,7 @@ export type GroceryItemMaxAggregateOutputType = {
   fat: number | null
   protein: number | null
   unitWeight: number | null
+  pantryStaple: boolean | null
   notionId: string | null
   createdAt: Date | null
 }
@@ -91,6 +93,7 @@ export type GroceryItemCountAggregateOutputType = {
   fat: number
   protein: number
   unitWeight: number
+  pantryStaple: number
   notionId: number
   createdAt: number
   _all: number
@@ -128,6 +131,7 @@ export type GroceryItemMinAggregateInputType = {
   fat?: true
   protein?: true
   unitWeight?: true
+  pantryStaple?: true
   notionId?: true
   createdAt?: true
 }
@@ -145,6 +149,7 @@ export type GroceryItemMaxAggregateInputType = {
   fat?: true
   protein?: true
   unitWeight?: true
+  pantryStaple?: true
   notionId?: true
   createdAt?: true
 }
@@ -162,6 +167,7 @@ export type GroceryItemCountAggregateInputType = {
   fat?: true
   protein?: true
   unitWeight?: true
+  pantryStaple?: true
   notionId?: true
   createdAt?: true
   _all?: true
@@ -266,6 +272,7 @@ export type GroceryItemGroupByOutputType = {
   fat: number | null
   protein: number | null
   unitWeight: number | null
+  pantryStaple: boolean
   notionId: string | null
   createdAt: Date
   _count: GroceryItemCountAggregateOutputType | null
@@ -306,6 +313,7 @@ export type GroceryItemWhereInput = {
   fat?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
   protein?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
   unitWeight?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
+  pantryStaple?: Prisma.BoolFilter<"GroceryItem"> | boolean
   notionId?: Prisma.StringNullableFilter<"GroceryItem"> | string | null
   createdAt?: Prisma.DateTimeFilter<"GroceryItem"> | Date | string
   ingredients?: Prisma.IngredientListRelationFilter
@@ -325,6 +333,7 @@ export type GroceryItemOrderByWithRelationInput = {
   fat?: Prisma.SortOrderInput | Prisma.SortOrder
   protein?: Prisma.SortOrderInput | Prisma.SortOrder
   unitWeight?: Prisma.SortOrderInput | Prisma.SortOrder
+  pantryStaple?: Prisma.SortOrder
   notionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   ingredients?: Prisma.IngredientOrderByRelationAggregateInput
@@ -348,6 +357,7 @@ export type GroceryItemWhereUniqueInput = Prisma.AtLeast<{
   fat?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
   protein?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
   unitWeight?: Prisma.FloatNullableFilter<"GroceryItem"> | number | null
+  pantryStaple?: Prisma.BoolFilter<"GroceryItem"> | boolean
   createdAt?: Prisma.DateTimeFilter<"GroceryItem"> | Date | string
   ingredients?: Prisma.IngredientListRelationFilter
   nameMappings?: Prisma.IngredientNameMappingListRelationFilter
@@ -366,6 +376,7 @@ export type GroceryItemOrderByWithAggregationInput = {
   fat?: Prisma.SortOrderInput | Prisma.SortOrder
   protein?: Prisma.SortOrderInput | Prisma.SortOrder
   unitWeight?: Prisma.SortOrderInput | Prisma.SortOrder
+  pantryStaple?: Prisma.SortOrder
   notionId?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.GroceryItemCountOrderByAggregateInput
@@ -391,6 +402,7 @@ export type GroceryItemScalarWhereWithAggregatesInput = {
   fat?: Prisma.FloatNullableWithAggregatesFilter<"GroceryItem"> | number | null
   protein?: Prisma.FloatNullableWithAggregatesFilter<"GroceryItem"> | number | null
   unitWeight?: Prisma.FloatNullableWithAggregatesFilter<"GroceryItem"> | number | null
+  pantryStaple?: Prisma.BoolWithAggregatesFilter<"GroceryItem"> | boolean
   notionId?: Prisma.StringNullableWithAggregatesFilter<"GroceryItem"> | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"GroceryItem"> | Date | string
 }
@@ -408,6 +420,7 @@ export type GroceryItemCreateInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientCreateNestedManyWithoutGroceryItemInput
@@ -427,6 +440,7 @@ export type GroceryItemUncheckedCreateInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutGroceryItemInput
@@ -446,6 +460,7 @@ export type GroceryItemUpdateInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUpdateManyWithoutGroceryItemNestedInput
@@ -465,6 +480,7 @@ export type GroceryItemUncheckedUpdateInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutGroceryItemNestedInput
@@ -484,6 +500,7 @@ export type GroceryItemCreateManyInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
 }
@@ -501,6 +518,7 @@ export type GroceryItemUpdateManyMutationInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -518,6 +536,7 @@ export type GroceryItemUncheckedUpdateManyInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
@@ -535,6 +554,7 @@ export type GroceryItemCountOrderByAggregateInput = {
   fat?: Prisma.SortOrder
   protein?: Prisma.SortOrder
   unitWeight?: Prisma.SortOrder
+  pantryStaple?: Prisma.SortOrder
   notionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -561,6 +581,7 @@ export type GroceryItemMaxOrderByAggregateInput = {
   fat?: Prisma.SortOrder
   protein?: Prisma.SortOrder
   unitWeight?: Prisma.SortOrder
+  pantryStaple?: Prisma.SortOrder
   notionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -578,6 +599,7 @@ export type GroceryItemMinOrderByAggregateInput = {
   fat?: Prisma.SortOrder
   protein?: Prisma.SortOrder
   unitWeight?: Prisma.SortOrder
+  pantryStaple?: Prisma.SortOrder
   notionId?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
@@ -652,6 +674,7 @@ export type GroceryItemCreateWithoutIngredientsInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   nameMappings?: Prisma.IngredientNameMappingCreateNestedManyWithoutGroceryItemInput
@@ -670,6 +693,7 @@ export type GroceryItemUncheckedCreateWithoutIngredientsInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   nameMappings?: Prisma.IngredientNameMappingUncheckedCreateNestedManyWithoutGroceryItemInput
@@ -704,6 +728,7 @@ export type GroceryItemUpdateWithoutIngredientsInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   nameMappings?: Prisma.IngredientNameMappingUpdateManyWithoutGroceryItemNestedInput
@@ -722,6 +747,7 @@ export type GroceryItemUncheckedUpdateWithoutIngredientsInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   nameMappings?: Prisma.IngredientNameMappingUncheckedUpdateManyWithoutGroceryItemNestedInput
@@ -740,6 +766,7 @@ export type GroceryItemCreateWithoutNameMappingsInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientCreateNestedManyWithoutGroceryItemInput
@@ -758,6 +785,7 @@ export type GroceryItemUncheckedCreateWithoutNameMappingsInput = {
   fat?: number | null
   protein?: number | null
   unitWeight?: number | null
+  pantryStaple?: boolean
   notionId?: string | null
   createdAt?: Date | string
   ingredients?: Prisma.IngredientUncheckedCreateNestedManyWithoutGroceryItemInput
@@ -792,6 +820,7 @@ export type GroceryItemUpdateWithoutNameMappingsInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUpdateManyWithoutGroceryItemNestedInput
@@ -810,6 +839,7 @@ export type GroceryItemUncheckedUpdateWithoutNameMappingsInput = {
   fat?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   protein?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   unitWeight?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
+  pantryStaple?: Prisma.BoolFieldUpdateOperationsInput | boolean
   notionId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   ingredients?: Prisma.IngredientUncheckedUpdateManyWithoutGroceryItemNestedInput
@@ -868,6 +898,7 @@ export type GroceryItemSelect<ExtArgs extends runtime.Types.Extensions.InternalA
   fat?: boolean
   protein?: boolean
   unitWeight?: boolean
+  pantryStaple?: boolean
   notionId?: boolean
   createdAt?: boolean
   ingredients?: boolean | Prisma.GroceryItem$ingredientsArgs<ExtArgs>
@@ -888,6 +919,7 @@ export type GroceryItemSelectCreateManyAndReturn<ExtArgs extends runtime.Types.E
   fat?: boolean
   protein?: boolean
   unitWeight?: boolean
+  pantryStaple?: boolean
   notionId?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["groceryItem"]>
@@ -905,6 +937,7 @@ export type GroceryItemSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.E
   fat?: boolean
   protein?: boolean
   unitWeight?: boolean
+  pantryStaple?: boolean
   notionId?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["groceryItem"]>
@@ -922,11 +955,12 @@ export type GroceryItemSelectScalar = {
   fat?: boolean
   protein?: boolean
   unitWeight?: boolean
+  pantryStaple?: boolean
   notionId?: boolean
   createdAt?: boolean
 }
 
-export type GroceryItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameRo" | "category" | "unit" | "unit2" | "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight" | "notionId" | "createdAt", ExtArgs["result"]["groceryItem"]>
+export type GroceryItemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "nameRo" | "category" | "unit" | "unit2" | "conversion" | "kcal" | "carbs" | "fat" | "protein" | "unitWeight" | "pantryStaple" | "notionId" | "createdAt", ExtArgs["result"]["groceryItem"]>
 export type GroceryItemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   ingredients?: boolean | Prisma.GroceryItem$ingredientsArgs<ExtArgs>
   nameMappings?: boolean | Prisma.GroceryItem$nameMappingsArgs<ExtArgs>
@@ -954,6 +988,7 @@ export type $GroceryItemPayload<ExtArgs extends runtime.Types.Extensions.Interna
     fat: number | null
     protein: number | null
     unitWeight: number | null
+    pantryStaple: boolean
     notionId: string | null
     createdAt: Date
   }, ExtArgs["result"]["groceryItem"]>
@@ -1393,6 +1428,7 @@ export interface GroceryItemFieldRefs {
   readonly fat: Prisma.FieldRef<"GroceryItem", 'Float'>
   readonly protein: Prisma.FieldRef<"GroceryItem", 'Float'>
   readonly unitWeight: Prisma.FieldRef<"GroceryItem", 'Float'>
+  readonly pantryStaple: Prisma.FieldRef<"GroceryItem", 'Boolean'>
   readonly notionId: Prisma.FieldRef<"GroceryItem", 'String'>
   readonly createdAt: Prisma.FieldRef<"GroceryItem", 'DateTime'>
 }

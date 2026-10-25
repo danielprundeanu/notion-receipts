@@ -42,6 +42,30 @@ export function weekAnchor(monday: Date): { year: number; month: number } {
 
 export const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+const WEEK_MS = 7 * 24 * 3600_000;
+
+/** `monday` moved by whole weeks, landing on a Monday again (+12 h rides out a DST change). */
+export function addWeeks(monday: Date, weeks: number): Date {
+  return getMondayOf(new Date(monday.getTime() + weeks * WEEK_MS + 12 * 3600_000));
+}
+
+// "This week" / "Next week" / "Last week" / "Week of Oct 5".
+export function relativeWeekTitle(monday: Date): string {
+  const off = Math.round((monday.getTime() - getMondayOf(new Date()).getTime()) / WEEK_MS);
+  if (off === 0) return "This week";
+  if (off === 1) return "Next week";
+  if (off === -1) return "Last week";
+  return `Week of ${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()}`;
+}
+
+// "Oct 19 – 25", "Oct 26 – Nov 1".
+export function shortWeekRange(monday: Date): string {
+  const sunday = new Date(monday);
+  sunday.setDate(sunday.getDate() + 6);
+  const end = sunday.getMonth() === monday.getMonth() ? `${sunday.getDate()}` : `${MONTH_LABELS[sunday.getMonth()]} ${sunday.getDate()}`;
+  return `${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()} – ${end}`;
+}
+
 // Meteorological seasons (month indexes, in season order).
 export const SEASONS = [
   { key: "winter", label: "Winter", emoji: "❄️", months: [11, 0, 1] },

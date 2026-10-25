@@ -1,841 +1,744 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Copy, CalendarDays, Loader2, Plus, Trash2, X } from "lucide-react";
 import {
   getGroceryList,
   addGroceryListItem,
-  deleteGroceryListItem,
   addGroceryListItems,
+  deleteGroceryListItem,
   deleteGroceryListItems,
+  type GroceryEntry,
+  type ShoppingLine,
 } from "@/lib/actions";
-import { groceryCategoryLabel } from "@/lib/labels";
-import { GROCERY_CATEGORIES, categoryIcon } from "@/lib/constants";
+import { AISLES, aisleOf } from "@/lib/aisles";
+import { GROCERY_CATEGORIES } from "@/lib/constants";
+import { formatShoppingAmounts } from "@/lib/quantities";
+import { parseIngredientLine } from "@/lib/shopping-lines";
+import { addWeeks, getMondayOf, relativeWeekTitle, shortWeekRange } from "@/lib/weeks";
 import BulkGroceryAdd, { type BulkProductRow } from "@/components/BulkGroceryAdd";
-import { ChevronLeft, ChevronRight, ShoppingCart, Loader2, Trash2, Plus, Minus, Copy, CalendarDays, X, ClipboardList } from "lucide-react";
 
-// Categories come from the one canonical list (lib/constants) — this page used to
-// keep its own, older copy, so hand-added products were filed under names that no
-// longer existed elsewhere and silently ended up grouped under "Other".
-const CATEGORY_ORDER = GROCERY_CATEGORIES;
+type Group = { key: string; title: string; short: string; items: ShoppingLine[] };
+type Toast = { text: string; error?: boolean; undo?: () => void };
 
-function getMondayOf(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
+const INPUT_CLS =
+  "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#7c756a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+
+function manualLine(e: GroceryEntry): ShoppingLine {
+  return {
+    id: e.id,
+    name: e.name,
+    category: e.category,
+    amounts: e.quantity > 0 ? [{ quantity: e.quantity, unit: e.unit }] : [],
+    staple: false,
+    manual: true,
+  };
 }
 
-function formatWeekRange(monday: Date): string {
-  const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
-  return `${monday.toLocaleDateString("en-US", { day: "numeric", month: "short" })} – ${sunday.toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" })}`;
+function byName(a: ShoppingLine, b: ShoppingLine): number {
+  return a.name.localeCompare(b.name);
 }
 
-// "Next week" / "In 3 weeks" / "2 weeks ago" — makes the picked week unambiguous
-// next to the date range.
+// "Next week" / "In 3 weeks" / "2 weeks ago" — relative to the week on screen.
 function weekOffsetLabel(from: Date, to: Date): string {
-  const weeks = Math.round((to.getTime() - from.getTime()) / (7 * 24 * 60 * 60 * 1000));
-  if (weeks === 0) return "This week (the one you are viewing)";
+  const weeks = Math.round((to.getTime() - from.getTime()) / (7 * 24 * 3600_000));
+  if (weeks === 0) return "The week you are viewing";
   if (weeks === 1) return "Next week";
   if (weeks === -1) return "Last week";
   return weeks > 0 ? `In ${weeks} weeks` : `${Math.abs(weeks)} weeks ago`;
 }
 
-type GroceryEntry = { id: string; name: string; quantity: number; unit: string | null; category: string; manual?: boolean };
-
-// Hand-added products can be carried to another week: select them, then pick the
-// target week. They are written straight into that week — same app, same database,
-// so there is no clipboard to manage and nothing to remember between screens.
-const COPYABLE_CATEGORY = "Other";
-
-// Stepper helpers for the quantity box. Steps by whole units for counts and by 0.1
-// below 1, so "0.5 kg" stays adjustable without jumping straight past it.
-function qtyNumber(v: string): number {
-  const n = parseFloat(v);
-  return isFinite(n) ? n : 0;
-}
-
-function stepQty(v: string, dir: 1 | -1): string {
-  const cur = qtyNumber(v);
-  const step = cur < 1 && cur > 0 ? 0.1 : 1;
-  const next = Math.max(0, +(cur + dir * step).toFixed(2));
-  return next === 0 ? "" : String(next);
-}
-
-const INPUT_CLS =
-  "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
-
 export default function GroceryListPage() {
-  const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()));
-  const [grouped, setGrouped] = useState<Record<string, GroceryEntry[]>>({});
-  const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState(false);
+  const [monday, setMonday] = useState(() => getMondayOf(new Date()));
+  const weekIso = monday.toISOString();
+  const [lines, setLines] = useState<ShoppingLine[]>([]);
+  const [meals, setMeals] = useState(0);
+  const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
+  const [failedWeek, setFailedWeek] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  // Ticked = in the cart. Kept per device and per week, so ticks survive a reload mid-shop.
   const [checked, setChecked] = useState<Set<string>>(new Set());
-  const [isStuck, setIsStuck] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
-
-  // Hand-added ("manual") products for this week.
-  const [newName, setNewName] = useState("");
-  const [newQty, setNewQty] = useState("");
-  const [newUnit, setNewUnit] = useState("");
-  const [newCategory, setNewCategory] = useState("Other");
+  const [showStaples, setShowStaples] = useState(false);
+  const [showCart, setShowCart] = useState(true);
+  const [active, setActive] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
   const [adding, setAdding] = useState(false);
-  const [addError, setAddError] = useState(false);
-  const [deleteError, setDeleteError] = useState(false);
-  // "Paste a list" mode — adds many products at once instead of one at a time.
-  const [bulkMode, setBulkMode] = useState(false);
-
-  // ── Selection: copy hand-added products to another week, or delete them ──
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [toast, setToast] = useState<Toast | null>(null);
+  // Selecting hand-added products to copy them to another week, or delete them.
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [targetWeek, setTargetWeek] = useState<Date | null>(null);
-  const [copying, setCopying] = useState(false);
-  const [deletingSelected, setDeletingSelected] = useState(false);
-  const [confirmDeleteSelected, setConfirmDeleteSelected] = useState(false);
-  const [toast, setToast] = useState<{ msg: string; error?: boolean; undo?: () => void } | null>(null);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [copyTarget, setCopyTarget] = useState<Date | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const jumpingUntil = useRef(0);
 
-  function showToast(msg: string, opts?: { error?: boolean; undo?: () => void }) {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ msg, error: opts?.error, undo: opts?.undo });
-    // Undo needs longer to be reachable than a plain confirmation.
-    toastTimer.current = setTimeout(() => setToast(null), opts?.undo ? 8000 : 3500);
-  }
+  const checkedKey = `grocery-checked:${weekIso}`;
 
-  useEffect(() => (() => { if (toastTimer.current) clearTimeout(toastTimer.current); }), []);
-
-  // Leaving select mode whenever the week changes avoids acting on a stale selection.
   useEffect(() => {
+    let current = true;
+    getGroceryList(weekIso)
+      .then((data) => {
+        if (!current) return;
+        setLines(data.lines);
+        setMeals(data.meals);
+        try {
+          const saved = localStorage.getItem(`grocery-checked:${weekIso}`);
+          setChecked(saved ? new Set(JSON.parse(saved) as string[]) : new Set());
+        } catch {
+          setChecked(new Set());
+        }
+        setLoadedWeek(weekIso);
+      })
+      .catch(() => {
+        if (current) setFailedWeek(weekIso);
+      });
+    return () => {
+      current = false;
+    };
+  }, [weekIso, attempt]);
+
+  const loadError = failedWeek === weekIso && loadedWeek !== weekIso;
+  const loading = loadedWeek !== weekIso && !loadError;
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), toast.undo ? 8000 : 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  function shiftWeek(weeks: number) {
+    setMonday((m) => addWeeks(m, weeks));
     setSelectMode(false);
     setSelected(new Set());
-    setConfirmDeleteSelected(false);
-  }, [weekStart]);
+    setConfirmDelete(false);
+    setActive(null);
+  }
 
-  const checkedKey = `grocery-checked:${weekStart.toISOString()}`;
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const data = await getGroceryList(weekStart.toISOString());
-      setGrouped(data);
-      // Restore this week's ticked items (persisted per-device) instead of wiping them,
-      // so checkmarks survive a refresh or a tab switch mid-shop on mobile.
-      try {
-        const saved = localStorage.getItem(`grocery-checked:${weekStart.toISOString()}`);
-        setChecked(saved ? new Set(JSON.parse(saved) as string[]) : new Set());
-      } catch {
-        setChecked(new Set());
-      }
-    } catch {
-      setGrouped({});
-      setLoadError(true); // show an error + retry instead of a false "no items"
-    } finally {
-      setLoading(false);
-    }
-  }, [weekStart]);
-
-  useEffect(() => { load(); }, [load]);
-
-  // Persist on toggle (keyed to the current week) rather than in an effect: a
-  // week-change re-render updates checkedKey before load() flips `loading`, so an
-  // effect could write the old week's ticks under the new week's key.
-  const toggleCheck = (id: string) =>
+  // Persist on toggle (keyed to this week) rather than in an effect, so a week change
+  // can never write one week's ticks under another week's key.
+  function toggleCheck(id: string) {
     setChecked((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
-      try { localStorage.setItem(checkedKey, JSON.stringify([...n])); } catch { /* non-fatal */ }
-      return n;
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(checkedKey, JSON.stringify([...next]));
+      } catch {
+        // Storage blocked: the tick still shows, it just won't survive a reload.
+      }
+      return next;
     });
+  }
 
-  async function handleAddItem(e: FormEvent) {
+  // ── Sections ──
+  const inCart = (l: ShoppingLine) => checked.has(l.id);
+  const toBuy = lines.filter((l) => !l.staple && !inCart(l));
+  const added = toBuy.filter((l) => l.manual);
+  const groups: Group[] = [
+    ...(added.length ? [{ key: "added", title: "Added by you", short: "Added", items: added }] : []),
+    ...AISLES.map((a) => ({ key: a.key as string, title: a.title as string, short: a.short as string, items: toBuy.filter((l) => !l.manual && aisleOf(l.category) === a.key) })),
+  ].filter((g) => g.items.length > 0);
+  const staples = lines.filter((l) => l.staple && !inCart(l));
+  const cart = lines.filter(inCart).sort(byName);
+  const countable = lines.filter((l) => !l.staple);
+  const done = countable.filter(inCart).length;
+  const chips = [
+    ...groups.map((g) => ({ key: g.key, label: g.short, count: g.items.length })),
+    ...(staples.length ? [{ key: "home", label: "At home", count: staples.length }] : []),
+    ...(cart.length ? [{ key: "cart", label: "In cart", count: cart.length }] : []),
+  ];
+  const activeKey = active ?? chips[0]?.key ?? null;
+  const manualLines = lines.filter((l) => l.manual);
+  const selectedLines = manualLines.filter((l) => selected.has(l.id));
+
+  // ── Scroll-spy: the chip of the section under the sticky bar lights up ──
+  const hasBar = !loading && !loadError && lines.length > 0;
+  useEffect(() => {
+    const bar = barRef.current;
+    const scroller = bar?.closest("main");
+    if (!bar || !scroller) return;
+    let frame = 0;
+    const onScroll = () => {
+      // While a chip tap is smooth-scrolling, keep that chip lit instead of flickering
+      // through every section it passes — each scroll event extends the hold.
+      if (Date.now() < jumpingUntil.current) {
+        jumpingUntil.current = Date.now() + 150;
+        return;
+      }
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const limit = bar.getBoundingClientRect().bottom + 8;
+        let current: string | null = null;
+        for (const el of scroller.querySelectorAll<HTMLElement>("[data-section]")) {
+          if (el.getBoundingClientRect().top <= limit) current = el.dataset.section ?? null;
+        }
+        setActive(current);
+      });
+    };
+    scroller.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      scroller.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(frame);
+    };
+  }, [loadedWeek, hasBar]);
+
+  // Keep the lit chip visible in the chip row.
+  useEffect(() => {
+    const row = chipsRef.current;
+    const chip = row?.querySelector<HTMLElement>(`[data-chip="${activeKey}"]`);
+    if (row && chip) row.scrollTo({ left: Math.max(0, chip.offsetLeft - 16), behavior: "smooth" });
+  }, [activeKey]);
+
+  function jumpTo(key: string) {
+    if (key === "home") setShowStaples(true);
+    if (key === "cart") setShowCart(true);
+    setActive(key);
+    jumpingUntil.current = Date.now() + 800;
+    // A section's header doesn't move when it expands (its rows open below it), so the
+    // target can be measured right away. Land it under the bar where the bar will be
+    // once stuck (top of the scroller) — near the top of the page it hasn't stuck yet.
+    const el = document.getElementById(`shop-${key}`);
+    const bar = barRef.current;
+    const scroller = bar?.closest("main");
+    if (!el || !bar || !scroller) return;
+    scroller.scrollTo({
+      top: scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - bar.offsetHeight,
+      behavior: "smooth",
+    });
+  }
+
+  // ── Hand-added products ──
+  async function quickAdd(e: FormEvent) {
     e.preventDefault();
-    const name = newName.trim();
-    if (!name || adding) return;
+    const parsed = parseIngredientLine(draft);
+    if (!parsed || adding) return;
     setAdding(true);
-    setAddError(false);
     try {
-      const entry = await addGroceryListItem(weekStart.toISOString(), {
-        name,
-        quantity: newQty ? parseFloat(newQty) : null,
-        unit: newUnit.trim() || null,
-        category: newCategory || "Other",
-      });
-      // Insert into the right category, keeping the alphabetical order load() uses.
-      setGrouped((prev) => {
-        const next = { ...prev };
-        const arr = [...(next[entry.category] ?? []), entry].sort((a, b) => a.name.localeCompare(b.name));
-        next[entry.category] = arr;
-        return next;
-      });
-      setNewName(""); setNewQty(""); setNewUnit(""); // keep category for repeated adds
+      const entry = await addGroceryListItem(weekIso, { name: parsed.name, quantity: parsed.qty, unit: parsed.unit, category: "Other" });
+      setLines((prev) => [...prev, manualLine(entry)].sort(byName));
+      setDraft("");
     } catch {
-      setAddError(true); // no silent failure — keep inputs, show the error
+      setToast({ text: `Couldn't add ${parsed.name}. Try again.`, error: true });
     } finally {
       setAdding(false);
     }
   }
 
-  async function handleDeleteItem(entryId: string) {
-    const dbId = entryId.replace(/^manual::/, "");
-    const prev = grouped;
-    setDeleteError(false);
-    // Optimistic removal; drop now-empty categories.
-    setGrouped((g) => {
-      const next: Record<string, GroceryEntry[]> = {};
-      for (const [cat, items] of Object.entries(g)) {
-        const filtered = items.filter((i) => i.id !== entryId);
-        if (filtered.length) next[cat] = filtered;
-      }
-      return next;
-    });
-    try {
-      await deleteGroceryListItem(dbId);
-    } catch {
-      setGrouped(prev); // roll back to the pre-delete list
-      setDeleteError(true);
-    }
-  }
-
-  // Only hand-added products can be copied — recipe-derived lines are computed from
-  // the planner, so copying them would create duplicates that double up once the
-  // recipe is planned in the target week too.
-  const copyableItems = (grouped[COPYABLE_CATEGORY] ?? []).filter((i) => i.manual);
-
-  const selectedItems = copyableItems.filter((i) => selected.has(i.id));
-
-  // Copy opens the week picker; the products are written straight into the week you
-  // pick (same app, same database — no clipboard round-trip, nothing to remember).
-  function openWeekPicker() {
-    if (!selectedItems.length) return;
-    const next = new Date(weekStart);
-    next.setDate(next.getDate() + 7); // next week is the common case
-    setTargetWeek(next);
-    setPickerOpen(true);
-  }
-
-  async function handleCopyToWeek() {
-    if (!targetWeek || !selectedItems.length || copying) return;
-    setCopying(true);
-    try {
-      const payload = selectedItems.map(({ name, quantity, unit, category }) => ({ name, quantity, unit, category }));
-      const { added, skipped } = await addGroceryListItems(targetWeek.toISOString(), payload);
-
-      // Only merge into the visible list when we copied into the week on screen.
-      const sameWeek = targetWeek.getTime() === weekStart.getTime();
-      if (sameWeek && added.length) {
-        setGrouped((prev) => {
-          const next = { ...prev };
-          for (const entry of added) {
-            next[entry.category] = [...(next[entry.category] ?? []), entry]
-              .sort((a, b) => a.name.localeCompare(b.name));
-          }
-          return next;
-        });
-      }
-
-      setPickerOpen(false);
-      setSelectMode(false);
-      setSelected(new Set());
-
-      const where = formatWeekRange(targetWeek);
-      const parts = [`${added.length} copied to ${where}`];
-      if (skipped) parts.push(`${skipped} already there`);
-      showToast(
-        added.length ? parts.join(" · ") : `All of them were already in ${where}`,
-        added.length ? { undo: () => undoCopy(added.map((e) => e.id), sameWeek) } : undefined
-      );
-    } catch {
-      showToast("Could not copy the products. Please try again.", { error: true });
-    } finally {
-      setCopying(false);
-    }
-  }
-
-  // Returns false so the bulk form keeps what was typed and shows its own error.
   async function handleBulkAdd(rows: BulkProductRow[]): Promise<boolean> {
     try {
-      const { added, skipped } = await addGroceryListItems(weekStart.toISOString(), rows);
-      if (added.length) {
-        setGrouped((prev) => {
-          const next = { ...prev };
-          for (const entry of added) {
-            next[entry.category] = [...(next[entry.category] ?? []), entry]
-              .sort((a, b) => a.name.localeCompare(b.name));
-          }
-          return next;
-        });
-      }
-      const parts = [`${added.length} added`];
-      if (skipped) parts.push(`${skipped} already here`);
-      showToast(
-        added.length ? parts.join(" · ") : "All of them were already in this week",
-        added.length ? { undo: () => undoCopy(added.map((e) => e.id), true) } : undefined
-      );
+      const res = await addGroceryListItems(weekIso, rows);
+      if (res.added.length) setLines((prev) => [...prev, ...res.added.map(manualLine)].sort(byName));
+      setPasteOpen(false);
+      setToast({
+        text: res.added.length
+          ? `${res.added.length} added${res.skipped ? ` · ${res.skipped} already here` : ""}`
+          : "All of them were already on this week's list",
+        undo: res.added.length ? () => removeManual(res.added.map((a) => a.id), "Couldn't undo. They're still on the list.") : undefined,
+      });
       return true;
     } catch {
+      return false; // the paste form keeps what was typed and shows its own error
+    }
+  }
+
+  // Optimistic delete of hand-added rows; put them back with a message if it fails.
+  async function removeManual(ids: string[], failText: string): Promise<boolean> {
+    const removed = lines.filter((l) => ids.includes(l.id));
+    setToast(null);
+    setLines((prev) => prev.filter((l) => !ids.includes(l.id)));
+    try {
+      const dbIds = ids.map((id) => id.replace(/^manual::/, ""));
+      if (dbIds.length === 1) await deleteGroceryListItem(dbIds[0]);
+      else await deleteGroceryListItems(dbIds);
+      return true;
+    } catch {
+      setLines((prev) => [...prev, ...removed].sort(byName));
+      setToast({ text: failText, error: true });
       return false;
     }
   }
 
-  async function undoCopy(entryIds: string[], sameWeek: boolean) {
-    const prev = grouped;
-    const ids = new Set(entryIds);
-    setToast(null);
-    if (sameWeek) {
-      setGrouped((g) => {
-        const next: Record<string, GroceryEntry[]> = {};
-        for (const [cat, items] of Object.entries(g)) {
-          const filtered = items.filter((i) => !ids.has(i.id));
-          if (filtered.length) next[cat] = filtered;
-        }
-        return next;
-      });
-    }
-    try {
-      await deleteGroceryListItems(entryIds.map((id) => id.replace(/^manual::/, "")));
-    } catch {
-      if (sameWeek) setGrouped(prev); // roll back the rollback — they are still there
-      showToast("Could not undo. The products are still in the list.", { error: true });
-    }
-  }
-
-  async function handleDeleteSelected() {
-    if (!selectedItems.length || deletingSelected) return;
-    setDeletingSelected(true);
-    const prev = grouped;
-    const ids = new Set(selectedItems.map((i) => i.id));
-    // Optimistic removal; drop now-empty categories.
-    setGrouped((g) => {
-      const next: Record<string, GroceryEntry[]> = {};
-      for (const [cat, list] of Object.entries(g)) {
-        const filtered = list.filter((i) => !ids.has(i.id));
-        if (filtered.length) next[cat] = filtered;
-      }
-      return next;
-    });
-    try {
-      await deleteGroceryListItems([...ids].map((id) => id.replace(/^manual::/, "")));
-      showToast(`${ids.size} product${ids.size === 1 ? "" : "s"} deleted`);
+  async function deleteSelected() {
+    setBusy(true);
+    const n = selectedLines.length;
+    const ok = await removeManual(selectedLines.map((l) => l.id), "Couldn't delete them. Try again.");
+    setBusy(false);
+    setConfirmDelete(false);
+    if (ok) {
       setSelectMode(false);
       setSelected(new Set());
-    } catch {
-      setGrouped(prev); // no silent failure — put them back
-      showToast("Could not delete the products. Please try again.", { error: true });
-    } finally {
-      setDeletingSelected(false);
-      setConfirmDeleteSelected(false);
+      setToast({ text: `${n} product${n === 1 ? "" : "s"} deleted` });
     }
   }
 
-  const allItems = Object.values(grouped).flat();
-  const totalCount = allItems.length;
-  // Only hand-added rows are stored, so only those can collide with a bulk add.
-  const manualItems = allItems.filter((i) => i.manual);
+  async function copySelected() {
+    if (!copyTarget || !selectedLines.length) return;
+    setBusy(true);
+    try {
+      const payload = selectedLines.map((l) => ({
+        name: l.name,
+        quantity: l.amounts[0]?.quantity ?? null,
+        unit: l.amounts[0]?.unit ?? null,
+        category: l.category,
+      }));
+      const res = await addGroceryListItems(copyTarget.toISOString(), payload);
+      const sameWeek = copyTarget.getTime() === monday.getTime();
+      if (sameWeek && res.added.length) setLines((prev) => [...prev, ...res.added.map(manualLine)].sort(byName));
+      const where = shortWeekRange(copyTarget);
+      setCopyTarget(null);
+      setSelectMode(false);
+      setSelected(new Set());
+      setToast({
+        text: res.added.length
+          ? `${res.added.length} copied to ${where}${res.skipped ? ` · ${res.skipped} already there` : ""}`
+          : `All of them were already in ${where}`,
+        undo: res.added.length
+          ? async () => {
+              setToast(null);
+              try {
+                await deleteGroceryListItems(res.added.map((a) => a.id.replace(/^manual::/, "")));
+                if (sameWeek) setLines((prev) => prev.filter((l) => !res.added.some((a) => a.id === l.id)));
+              } catch {
+                setToast({ text: "Couldn't undo. The copies are still there.", error: true });
+              }
+            }
+          : undefined,
+      });
+    } catch {
+      setToast({ text: "Couldn't copy the products. Try again.", error: true });
+    } finally {
+      setBusy(false);
+    }
+  }
 
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-    const obs = new IntersectionObserver(([e]) => setIsStuck(!e.isIntersecting), { threshold: 0 });
-    obs.observe(sentinel);
-    return () => obs.disconnect();
-  }, [loading, totalCount]);
-  const checkedCount = allItems.filter((i) => checked.has(i.id)).length;
+  async function share() {
+    const text = [
+      `Shopping list · ${shortWeekRange(monday)}`,
+      ...groups.flatMap((g) => [
+        "",
+        g.title.toUpperCase(),
+        ...g.items.map((l) => {
+          const q = formatShoppingAmounts(l.amounts);
+          return `• ${l.name}${q ? ` — ${q}` : ""}`;
+        }),
+      ]),
+    ].join("\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "Shopping list", text });
+        return;
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast({ text: "List copied" });
+    } catch {
+      setToast({ text: "Couldn't share the list.", error: true });
+    }
+  }
 
-  const sortedCategories = Object.keys(grouped).sort((a, b) => {
-    const order = CATEGORY_ORDER;
-    return (order.indexOf(a) ?? 99) - (order.indexOf(b) ?? 99);
-  });
-
-
-
-  const addForm = (
-    <form onSubmit={handleAddItem} className="space-y-2">
-      <input
-        value={newName}
-        onChange={(e) => { setNewName(e.target.value); if (addError) setAddError(false); }}
-        placeholder="Product (e.g. napkins)"
-        aria-label="Product name"
-        className={`w-full ${INPUT_CLS}`}
-      />
-      <div className="flex gap-2">
-        {/* Quantity with steppers — typing still works, the buttons are for thumbs */}
-        <div className="flex items-center shrink-0 rounded-lg border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setNewQty(stepQty(newQty, -1))}
-            disabled={qtyNumber(newQty) <= 0}
-            aria-label="Decrease quantity"
-            className="w-10 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] disabled:opacity-30 transition-colors"
-          >
-            <Minus size={15} />
-          </button>
-          <input
-            value={newQty}
-            onChange={(e) => setNewQty(e.target.value)}
-            inputMode="decimal" type="number" step="any" min="0"
-            placeholder="Qty"
-            aria-label="Quantity"
-            className="w-12 h-11 px-1 text-sm text-center bg-transparent text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-          />
-          <button
-            type="button"
-            onClick={() => setNewQty(stepQty(newQty, 1))}
-            aria-label="Increase quantity"
-            className="w-10 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] transition-colors"
-          >
-            <Plus size={15} />
-          </button>
-        </div>
-        <input
-          value={newUnit}
-          onChange={(e) => setNewUnit(e.target.value)}
-          placeholder="pcs"
-          aria-label="Unit"
-          className={`w-20 ${INPUT_CLS}`}
-        />
-        <select
-          value={newCategory}
-          onChange={(e) => setNewCategory(e.target.value)}
-          aria-label="Category"
-          className={`flex-1 min-w-0 ${INPUT_CLS}`}
-        >
-          {CATEGORY_ORDER.map((cat) => (
-            <option key={cat} value={cat}>
-              {categoryIcon(cat)} {groceryCategoryLabel(cat)}
-            </option>
-          ))}
-        </select>
-      </div>
-      {addError && (
-        <p className="text-sm text-red-600 dark:text-red-400">Could not add the product. Please try again.</p>
-      )}
-      <button
-        type="submit"
-        disabled={adding || !newName.trim()}
-        className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
-      >
-        {adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={16} />}
-        Add product
-      </button>
-    </form>
-  );
-
-  // One product at a time, or a whole pasted list — same place, same styling.
-  const addSection = (
-    <div>
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <p className="text-sm font-semibold text-gray-700 dark:text-[#bab2a6]">Add product</p>
+  // ── Rendering ──
+  function row(line: ShoppingLine, opts: { onDelete?: () => void } = {}) {
+    const ticked = inCart(line);
+    const qty = formatShoppingAmounts(line.amounts);
+    const picking = selectMode && line.manual && !ticked;
+    const picked = selected.has(line.id);
+    return (
+      <li key={line.id} className="flex items-center">
         <button
           type="button"
-          onClick={() => setBulkMode((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-2 -mr-1 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-        >
-          {bulkMode ? <Plus size={14} /> : <ClipboardList size={14} />}
-          {bulkMode ? "One at a time" : "Paste a list"}
-        </button>
-      </div>
-      {bulkMode ? (
-        <BulkGroceryAdd
-          categories={CATEGORY_ORDER}
-          existing={manualItems.map((i) => ({ name: i.name, unit: i.unit }))}
-          inputCls={INPUT_CLS}
-          onAdd={handleBulkAdd}
-        />
-      ) : (
-        addForm
-      )}
-    </div>
-  );
-
-  return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto">
-      {/* Copy/paste feedback — sits above the bottom nav on mobile */}
-      {toast && (
-        <div
-          role="status"
-          className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-lg shadow-lg text-sm font-medium max-w-[92vw] ${
-            toast.error ? "bg-red-600 text-white" : "bg-gray-900 dark:bg-[#3a352e] text-white"
+          onClick={() =>
+            picking
+              ? setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(line.id)) next.delete(line.id);
+                  else next.add(line.id);
+                  return next;
+                })
+              : toggleCheck(line.id)
+          }
+          aria-pressed={picking ? picked : ticked}
+          className={`flex-1 min-w-0 min-h-[52px] flex items-center gap-3.5 px-4 py-1.5 text-left transition-colors ${
+            picking && picked ? "bg-orange-50 dark:bg-orange-500/10" : "active:bg-gray-50 dark:active:bg-[#24211c]"
           }`}
         >
-          <span className="min-w-0">{toast.msg}</span>
-          {toast.undo && (
-            <button
-              onClick={toast.undo}
-              className="shrink-0 px-2.5 py-1 rounded-md font-semibold text-orange-300 hover:text-orange-200 hover:bg-white/10 transition-colors"
-            >
-              Undo
-            </button>
-          )}
-          <button
-            onClick={() => setToast(null)}
-            aria-label="Dismiss"
-            className="shrink-0 p-1 rounded-md text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+          <span
+            aria-hidden
+            className={`w-[26px] h-[26px] shrink-0 border-2 flex items-center justify-center transition-colors ${
+              picking ? "rounded-md" : "rounded-full"
+            } ${
+              (picking ? picked : ticked)
+                ? "bg-orange-500 border-orange-500 text-white"
+                : "border-gray-300 dark:border-[#3a352e]"
+            }`}
           >
-            <X size={14} />
+            {(picking ? picked : ticked) && <Check size={14} strokeWidth={3} />}
+          </span>
+          <span className={`flex-1 min-w-0 text-base leading-snug text-gray-900 dark:text-[#eae5de] ${ticked ? "opacity-45 line-through" : ""}`}>
+            {line.name}
+          </span>
+          {qty && (
+            <span className={`shrink-0 text-right text-[15px] font-semibold text-gray-600 dark:text-[#a49c90] ${ticked ? "opacity-45 line-through" : ""}`}>
+              {qty}
+            </span>
+          )}
+        </button>
+        {opts.onDelete && !selectMode && (
+          <button
+            type="button"
+            onClick={opts.onDelete}
+            aria-label={`Delete ${line.name}`}
+            className="w-11 h-11 mr-2 shrink-0 flex items-center justify-center rounded-xl text-gray-400 dark:text-[#7c756a] hover:text-red-600 dark:hover:text-red-400"
+          >
+            <Trash2 size={16} />
+          </button>
+        )}
+      </li>
+    );
+  }
+
+  const sectionHead = "scroll-mt-4 flex items-center justify-between gap-2 px-4 pt-4 pb-1.5 text-[13px] font-semibold tracking-[.04em] uppercase text-gray-500 dark:text-[#a49c90]";
+  const toggleRow = "w-full h-[52px] flex items-center justify-between px-4 border-t border-gray-100 dark:border-[#3a352e] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]";
+  const smallBtn = "h-9 px-2.5 rounded-lg text-xs font-semibold normal-case tracking-normal";
+
+  return (
+    <div className="max-w-2xl mx-auto md:px-8 md:pt-8 flex flex-col min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:min-h-dvh">
+      {/* Header */}
+      <div className="px-4 pt-4 md:px-0 md:pt-0">
+        <div className="flex items-center justify-between gap-2">
+          <h1 className="text-3xl text-gray-900 dark:text-[#eae5de]">Shopping list</h1>
+          <button
+            type="button"
+            onClick={share}
+            disabled={groups.length === 0}
+            aria-label="Share the list"
+            className="w-11 h-11 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] flex items-center justify-center disabled:opacity-40"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5" />
+            </svg>
           </button>
         </div>
-      )}
-
-      {/* Week picker — choose where the selected products go */}
-      {pickerOpen && targetWeek && (
-        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center p-4">
-          <div className="w-full sm:max-w-sm bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-                Copy {selected.size} product{selected.size === 1 ? "" : "s"} to…
-              </h3>
-              <button
-                onClick={() => setPickerOpen(false)}
-                aria-label="Close"
-                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90] rounded-lg transition-colors"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <button
-                onClick={() => setTargetWeek((d) => { const n = new Date(d!); n.setDate(n.getDate() - 7); return n; })}
-                aria-label="Previous week"
-                className="p-3 rounded-lg text-gray-500 dark:text-[#7c756a] hover:bg-gray-100 dark:hover:bg-[#2a2620] transition-colors"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div className="flex-1 text-center">
-                <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-[#eae5de]">
-                  <CalendarDays size={15} className="text-orange-500" />
-                  {formatWeekRange(targetWeek)}
-                </div>
-                <p className="text-xs text-gray-400 dark:text-[#6e675c] mt-0.5">{weekOffsetLabel(weekStart, targetWeek)}</p>
-              </div>
-              <button
-                onClick={() => setTargetWeek((d) => { const n = new Date(d!); n.setDate(n.getDate() + 7); return n; })}
-                aria-label="Next week"
-                className="p-3 rounded-lg text-gray-500 dark:text-[#7c756a] hover:bg-gray-100 dark:hover:bg-[#2a2620] transition-colors"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            <button
-              onClick={handleCopyToWeek}
-              disabled={copying}
-              className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
-            >
-              {copying ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
-              Copy here
-            </button>
-            <p className="mt-2 text-center text-xs text-gray-400 dark:text-[#6e675c]">
-              Products already in that week are skipped.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">Shopping list</h1>
-          {totalCount > 0 && (
-            <p className="text-sm text-gray-500 dark:text-[#7c756a] mt-0.5">
-              {checkedCount}/{totalCount} items checked
-            </p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() - 7); return n; })}
-            aria-label="Previous week"
-            className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
-          >
+        <div className="mt-1 -ml-2.5 flex items-center gap-0.5">
+          <button type="button" onClick={() => shiftWeek(-1)} aria-label="Previous week" className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#24211c]">
             <ChevronLeft size={18} />
           </button>
-          <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] text-center">
-            {formatWeekRange(weekStart)}
-          </span>
-          <button
-            onClick={() => setWeekStart((d) => { const n = new Date(d); n.setDate(n.getDate() + 7); return n; })}
-            aria-label="Next week"
-            className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
-          >
+          <p className="text-sm text-gray-600 dark:text-[#a49c90]">
+            <span className="font-semibold text-gray-900 dark:text-[#eae5de]">{relativeWeekTitle(monday)}</span> · {shortWeekRange(monday)}
+            {!loading && meals > 0 && ` · from ${meals} planned meal${meals === 1 ? "" : "s"}`}
+          </p>
+          <button type="button" onClick={() => shiftWeek(1)} aria-label="Next week" className="w-10 h-10 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#24211c]">
             <ChevronRight size={18} />
           </button>
         </div>
       </div>
 
-      {deleteError && (
-        <p className="mb-4 text-sm text-red-600 dark:text-red-400">Could not delete the product. Please try again.</p>
-      )}
-
-      {/* Sticky: chips + progress bar */}
-      {!loading && totalCount > 0 && (
-        <>
-          {/* Sentinel — triggers isStuck when scrolled past */}
-          <div ref={sentinelRef} className="h-0" />
-
-          <div className="sticky-safe-top z-10 -mx-4 md:-mx-8 mb-4" style={{ backgroundColor: "var(--color-bg-base)" }}>
-            {/* Progress bar — rounded above chips when not stuck */}
-            {!isStuck && (
-              <div className="mx-4 md:mx-8 mt-2 mb-2 h-1.5 bg-gray-100 dark:bg-[#2a2620] rounded-full overflow-hidden">
-                <div className="h-full bg-orange-500 transition-all duration-300"
-                  style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
-              </div>
-            )}
-
-            {/* Chips row */}
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-none px-4 md:px-8 pt-2 pb-2">
-              {sortedCategories.map((cat) => {
-                const icon = categoryIcon(cat);
-                const catName = groceryCategoryLabel(cat);
-                const allCatChecked = grouped[cat].every((i) => checked.has(i.id));
-                return (
-                  <button
-                    key={cat}
-                    onClick={() => document.getElementById(`cat-${cat}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    className={`shrink-0 flex items-center gap-1 px-2.5 py-2 rounded-full text-xs font-medium border transition-colors ${
-                      allCatChecked
-                        ? "border-gray-100 dark:border-[#2e2a24] text-gray-300 dark:text-[#4a443c]"
-                        : "border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-orange-300 dark:hover:border-orange-800 hover:text-orange-600 dark:hover:text-orange-400 bg-white dark:bg-[#24211c]"
-                    }`}
-                  >
-                    <span>{icon}</span>
-                    {catName}
-                  </button>
-                );
-              })}
+      {/* Sticky progress + section chips */}
+      {hasBar && (
+        <div ref={barRef} className="sticky top-0 z-20 mt-2 bg-[var(--color-bg-base)] border-b border-gray-100 dark:border-[#3a352e]">
+          <div className="px-4 md:px-0 pt-3 flex items-center gap-3">
+            <div className="flex-1 h-2 rounded-full bg-gray-100 dark:bg-[#2e2a24] overflow-hidden">
+              <div
+                className="h-2 rounded-full bg-orange-500 transition-[width] duration-300"
+                style={{ width: `${countable.length ? Math.round((done / countable.length) * 100) : 0}%` }}
+              />
             </div>
-
-            {/* Progress bar — thin full-width under chips when stuck */}
-            {isStuck && (
-              <div className="h-[3px] bg-gray-100 dark:bg-[#2a2620]">
-                <div className="h-full bg-orange-500 transition-all duration-300"
-                  style={{ width: `${(checkedCount / totalCount) * 100}%` }} />
-              </div>
-            )}
+            <span className="text-sm font-semibold text-gray-900 dark:text-[#eae5de]">
+              {done} of {countable.length}
+            </span>
           </div>
-        </>
+          <div ref={chipsRef} className="relative flex gap-2 overflow-x-auto scrollbar-none px-4 md:px-0 py-3">
+            {chips.map((c) => {
+              const on = c.key === activeKey;
+              return (
+                <button
+                  key={c.key}
+                  type="button"
+                  data-chip={c.key}
+                  onClick={() => jumpTo(c.key)}
+                  aria-pressed={on}
+                  className={`shrink-0 h-10 px-3.5 rounded-full border flex items-center gap-1.5 text-sm font-semibold transition-colors ${
+                    on
+                      ? "bg-orange-500 border-orange-500 text-white"
+                      : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
+                  }`}
+                >
+                  {c.label}
+                  <span className={`text-xs ${on ? "opacity-85" : "opacity-70"}`}>{c.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={20} className="animate-spin text-gray-400" />
-        </div>
-      ) : loadError ? (
-        <div className="text-center py-20 text-gray-500 dark:text-[#7c756a]">
-          <p className="font-medium">Could not load the list</p>
-          <button
-            onClick={() => load()}
-            className="mt-3 px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
-      ) : totalCount === 0 ? (
-        <div>
-          <div className="text-center py-14 text-gray-400 dark:text-[#5c554b]">
-            <ShoppingCart size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No items this week</p>
-            <p className="text-sm mt-1">Add recipes to the planner or a product directly below</p>
+      {/* List */}
+      <div className="flex-1">
+        {loading ? (
+          <div className="px-4 md:px-0 pt-5 space-y-3 animate-pulse" aria-busy="true" aria-label="Loading the list">
+            {[60, 75, 50, 70, 55, 65].map((w, i) => (
+              <div key={i} className="flex items-center gap-3.5">
+                <div className="w-[26px] h-[26px] rounded-full bg-gray-100 dark:bg-[#24211c]" />
+                <div className="h-4 rounded bg-gray-100 dark:bg-[#24211c]" style={{ width: `${w}%` }} />
+              </div>
+            ))}
           </div>
-          {addSection}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {sortedCategories.map((cat) => {
-            const items = grouped[cat] ?? [];
-            const icon = categoryIcon(cat);
-            const catName = groceryCategoryLabel(cat); // strip emoji prefix
-            const allCatChecked = items.length > 0 && items.every((i) => checked.has(i.id));
-            const isCopyable = cat === COPYABLE_CATEGORY;
-            const allCopySelected = copyableItems.length > 0 && copyableItems.every((i) => selected.has(i.id));
-
-            return (
-              <div key={cat} id={`cat-${cat}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span>{icon}</span>
-                  <h2 className={`text-sm font-semibold ${allCatChecked ? "text-gray-300 dark:text-[#4a443c]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
-                    {catName}
-                  </h2>
-                  <span className="text-xs text-gray-400 dark:text-[#5c554b]">({items.length})</span>
-
-                  {/* Copy / paste of hand-added products — right-aligned on this category */}
-                  {isCopyable && (
-                    <div className="ml-auto flex items-center gap-0.5">
+        ) : loadError ? (
+          <div className="py-16 text-center">
+            <p className="text-[17px] font-semibold text-gray-900 dark:text-[#eae5de]">Couldn&apos;t load the list</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-[#a49c90]">Check your connection and try again.</p>
+            <button
+              type="button"
+              onClick={() => { setFailedWeek(null); setAttempt((a) => a + 1); }}
+              className="mt-4 h-11 px-5 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-medium text-gray-900 dark:text-[#eae5de]"
+            >
+              Try again
+            </button>
+          </div>
+        ) : lines.length === 0 ? (
+          <div className="py-14 px-8 text-center">
+            <p className="text-[17px] font-semibold text-gray-900 dark:text-[#eae5de]">Nothing to buy this week</p>
+            <p className="mt-1.5 text-sm text-gray-600 dark:text-[#a49c90]">Plan some meals, or add an item below.</p>
+          </div>
+        ) : (
+          <>
+            {groups.map((g) => (
+              <section key={g.key} aria-labelledby={`shop-${g.key}`}>
+                <h2 id={`shop-${g.key}`} data-section={g.key} className={sectionHead}>
+                  <span>{g.title}</span>
+                  {g.key === "added" ? (
+                    <span className="flex items-center gap-1">
                       {selectMode ? (
                         <>
                           <button
-                            onClick={() =>
-                              setSelected(allCopySelected ? new Set() : new Set(copyableItems.map((i) => i.id)))
-                            }
-                            className="px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
+                            type="button"
+                            onClick={() => setSelected(selectedLines.length === added.length ? new Set() : new Set(added.map((l) => l.id)))}
+                            className={`${smallBtn} text-gray-600 dark:text-[#a49c90]`}
                           >
-                            {allCopySelected ? "None" : "All"}
+                            {selectedLines.length === added.length ? "None" : "All"}
                           </button>
+                          {selectedLines.length > 0 && !confirmDelete && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setCopyTarget(addWeeks(monday, 1))}
+                                aria-label={`Copy ${selectedLines.length} to another week`}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center text-orange-600 dark:text-orange-400"
+                              >
+                                <Copy size={16} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDelete(true)}
+                                aria-label={`Delete ${selectedLines.length}`}
+                                className="w-9 h-9 rounded-lg flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:text-red-600"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </>
+                          )}
+                          {confirmDelete && (
+                            <button type="button" onClick={deleteSelected} disabled={busy} className={`${smallBtn} bg-red-600 text-white disabled:opacity-50`}>
+                              {busy ? "Deleting…" : `Delete ${selectedLines.length}`}
+                            </button>
+                          )}
                           <button
-                            onClick={() => { setSelectMode(false); setSelected(new Set()); setConfirmDeleteSelected(false); }}
-                            className="px-2 py-1.5 text-xs font-medium text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] transition-colors"
+                            type="button"
+                            onClick={() => { setSelectMode(false); setSelected(new Set()); setConfirmDelete(false); }}
+                            className={`${smallBtn} text-gray-500 dark:text-[#a49c90]`}
                           >
                             Cancel
                           </button>
                         </>
                       ) : (
-                        copyableItems.length > 0 && (
-                          <button
-                            onClick={() => setSelectMode(true)}
-                            className="px-2 py-1.5 text-xs font-medium text-gray-500 dark:text-[#a49c90] hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
-                          >
-                            Select
-                          </button>
-                        )
+                        <button type="button" onClick={() => setSelectMode(true)} className={`${smallBtn} text-orange-700 dark:text-orange-400`}>
+                          Select
+                        </button>
                       )}
-
-                      {/* Actions on the selection — copying everything is Select → All → Copy */}
-                      {selectMode && selected.size > 0 && (
-                        confirmDeleteSelected ? (
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs text-gray-500 dark:text-[#7c756a]">Delete {selected.size}?</span>
-                            <button
-                              onClick={handleDeleteSelected}
-                              disabled={deletingSelected}
-                              className="px-2 py-1.5 text-xs font-semibold text-white bg-red-600 hover:bg-red-700 rounded-lg disabled:opacity-50 transition-colors"
-                            >
-                              {deletingSelected ? "Deleting…" : "Delete"}
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteSelected(false)}
-                              className="px-2 py-1.5 text-xs text-gray-500 dark:text-[#7c756a] hover:text-gray-700 dark:hover:text-[#bab2a6] transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <button
-                              onClick={openWeekPicker}
-                              aria-label={`Copy ${selected.size} selected products to another week`}
-                              title="Copy to another week"
-                              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-orange-500 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors"
-                            >
-                              <Copy size={16} />
-                            </button>
-                            <button
-                              onClick={() => setConfirmDeleteSelected(true)}
-                              aria-label={`Delete ${selected.size} selected products`}
-                              title="Delete selected"
-                              className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-gray-400 dark:text-[#5c554b] hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </>
-                        )
-                      )}
-                    </div>
+                    </span>
+                  ) : (
+                    <span>{g.items.length}</span>
                   )}
-                </div>
-
-                <ul className="space-y-1">
-                  {items.map((item) => {
-                    const done = checked.has(item.id);
-                    // In select mode this category's hand-added rows pick items for
-                    // copying instead of ticking them off the shopping list.
-                    const selectable = isCopyable && selectMode && !!item.manual;
-                    const picked = selected.has(item.id);
-                    if (selectable) {
-                      return (
-                        <li key={item.id}>
-                          <button
-                            onClick={() =>
-                              setSelected((prev) => {
-                                const n = new Set(prev);
-                                if (n.has(item.id)) n.delete(item.id); else n.add(item.id);
-                                return n;
-                              })
-                            }
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                              picked ? "bg-orange-50 dark:bg-orange-950/20" : "hover:bg-gray-50 dark:hover:bg-[#2c2822]"
-                            }`}
-                          >
-                            {/* Round checkbox — signals "selecting to copy", not "bought" */}
-                            <span
-                              className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                picked ? "bg-orange-500 border-orange-500" : "border-gray-300 dark:border-[#5c554b]"
-                              }`}
-                            >
-                              {picked && (
-                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
-                                  <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </span>
-                            <span className="flex-1 min-w-0 truncate text-base text-gray-700 dark:text-[#bab2a6]">
-                              {item.name}
-                            </span>
-                            {item.quantity > 0 && (
-                              <span className="shrink-0 text-base font-medium text-gray-900 dark:text-[#eae5de]">
-                                {item.quantity}
-                                {item.unit && ` ${item.unit}`}
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    }
-                    return (
-                      <li key={item.id}>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => toggleCheck(item.id)}
-                            className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors hover:bg-gray-50 dark:hover:bg-[#2c2822] active:bg-orange-50 dark:active:bg-orange-950/20"
-                          >
-                            {/* Checkbox — matches the recipe ingredient checkbox (RecipeDetail) */}
-                            <span
-                              className={`w-6 h-6 shrink-0 rounded-md border-2 flex items-center justify-center transition-colors ${
-                                done
-                                  ? "bg-orange-400 border-orange-400"
-                                  : "border-gray-300 dark:border-[#5c554b]"
-                              }`}
-                            >
-                              {done && (
-                                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 10 8">
-                                  <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              )}
-                            </span>
-                            <span className={`flex-1 min-w-0 truncate text-base ${done ? "line-through text-gray-400 dark:text-[#ffffff]" : "text-gray-700 dark:text-[#bab2a6]"}`}>
-                              {item.name}
-                            </span>
-                            {item.quantity > 0 && (
-                              <span className={`shrink-0 text-base font-medium ${done ? "line-through text-gray-400 dark:text-[#eae5de]" : "text-gray-900 dark:text-[#eae5de]"}`}>
-                                {item.quantity}
-                                {item.unit && ` ${item.unit}`}
-                              </span>
-                            )}
-                          </button>
-                          {item.manual && (
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              aria-label={`Delete ${item.name}`}
-                              className="shrink-0 min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-300 dark:text-[#5c554b] hover:text-red-500 dark:hover:text-red-400 rounded-lg transition-colors"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </li>
-                    );
-                  })}
+                </h2>
+                <ul>
+                  {g.items.map((l) =>
+                    row(l, l.manual ? { onDelete: () => removeManual([l.id], `Couldn't delete ${l.name}. Try again.`) } : {})
+                  )}
                 </ul>
-              </div>
-            );
-          })}
+              </section>
+            ))}
 
-          {/* Add a product by hand to this week — one at a time, or a pasted block */}
-          <div className="border-t border-gray-100 dark:border-[#2a2620] pt-5">
-            {addSection}
+            {groups.length === 0 && countable.length > 0 && (
+              <div className="py-8 px-6 text-center">
+                <p className="text-lg font-bold text-gray-900 dark:text-[#eae5de]">Everything is in the cart</p>
+                <p className="mt-1.5 text-sm text-gray-600 dark:text-[#a49c90]">Nice. Staples below, if you need any.</p>
+              </div>
+            )}
+
+            {staples.length > 0 && (
+              <section className="mt-2">
+                <button
+                  type="button"
+                  id="shop-home"
+                  data-section="home"
+                  onClick={() => setShowStaples((v) => !v)}
+                  aria-expanded={showStaples}
+                  className={`${toggleRow} scroll-mt-4`}
+                >
+                  <span>Probably at home · {staples.length}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-[#a49c90]">
+                    {showStaples ? "Hide" : "Show"}
+                    <ChevronDown size={18} className={`transition-transform ${showStaples ? "rotate-180" : ""}`} />
+                  </span>
+                </button>
+                {showStaples && <ul>{staples.map((l) => row(l))}</ul>}
+              </section>
+            )}
+
+            {cart.length > 0 && (
+              <section>
+                <button
+                  type="button"
+                  id="shop-cart"
+                  data-section="cart"
+                  onClick={() => setShowCart((v) => !v)}
+                  aria-expanded={showCart}
+                  className={`${toggleRow} scroll-mt-4`}
+                >
+                  <span>In the cart · {cart.length}</span>
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-[#a49c90]">
+                    {showCart ? "Hide" : "Show"}
+                    <ChevronDown size={18} className={`transition-transform ${showCart ? "rotate-180" : ""}`} />
+                  </span>
+                </button>
+                {showCart && <ul>{cart.map((l) => row(l))}</ul>}
+              </section>
+            )}
+            {/* Room for the last sections to scroll up under the bar, so their chips can light up. */}
+            <div className="h-[45dvh]" aria-hidden />
+          </>
+        )}
+      </div>
+
+      {/* Quick add — sits above the bottom nav on mobile */}
+      <form
+        onSubmit={quickAdd}
+        className="sticky z-20 bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] md:bottom-0 flex gap-2 px-4 md:px-0 py-2.5 border-t border-gray-100 dark:border-[#3a352e] bg-[var(--color-bg-base)]"
+      >
+        <button
+          type="button"
+          onClick={() => setPasteOpen(true)}
+          aria-label="Paste a list"
+          title="Paste a list"
+          className="w-12 h-12 shrink-0 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] flex items-center justify-center"
+        >
+          <ClipboardList size={20} />
+        </button>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          aria-label="Add an item"
+          placeholder="Add an item, e.g. 2 lemons"
+          enterKeyHint="done"
+          className="flex-1 min-w-0 h-12 px-3.5 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-500 dark:placeholder:text-[#8f877b] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500"
+        />
+        <button
+          type="submit"
+          aria-label="Add item"
+          disabled={adding || !draft.trim()}
+          className="w-12 h-12 shrink-0 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center disabled:opacity-50 transition-colors"
+        >
+          {adding ? <Loader2 size={20} className="animate-spin" /> : <Plus size={22} />}
+        </button>
+      </form>
+
+      {toast && (
+        <div
+          role={toast.error ? "alert" : "status"}
+          className={`fixed z-[60] left-4 right-4 md:left-auto md:right-8 md:w-96 bottom-[calc(4rem+env(safe-area-inset-bottom)+5rem)] md:bottom-24 flex items-center justify-between gap-2 rounded-[14px] pl-4 pr-2 py-2 min-h-12 text-[15px] font-medium shadow-lg ${
+            toast.error ? "bg-red-600 text-white" : "bg-gray-900 dark:bg-[#eae5de] text-white dark:text-[#1a1714]"
+          }`}
+        >
+          <span className="min-w-0">{toast.text}</span>
+          {toast.undo && (
+            <button type="button" onClick={toast.undo} className="h-9 px-3 rounded-[10px] font-bold shrink-0">
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Paste a list */}
+      {pasteOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 flex flex-col justify-end md:items-center md:justify-center"
+          onClick={(e) => { if (e.target === e.currentTarget) setPasteOpen(false); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="paste-title"
+            className="w-full md:max-w-lg max-h-[88dvh] overflow-y-auto bg-[var(--color-bg-base)] rounded-t-3xl md:rounded-3xl px-4 pt-3 shadow-xl"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h2 id="paste-title" className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Paste a list</h2>
+              <button type="button" onClick={() => setPasteOpen(false)} aria-label="Close" className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90]">
+                <X size={20} />
+              </button>
+            </div>
+            <BulkGroceryAdd
+              categories={GROCERY_CATEGORIES}
+              existing={manualLines.map((l) => ({ name: l.name, unit: l.amounts[0]?.unit ?? null }))}
+              inputCls={INPUT_CLS}
+              onAdd={handleBulkAdd}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Copy selected products to another week */}
+      {copyTarget && (
+        <div className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 flex items-end sm:items-center justify-center p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="copy-title" className="w-full sm:max-w-sm bg-white dark:bg-[#24211c] rounded-2xl shadow-xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 id="copy-title" className="font-semibold text-gray-900 dark:text-[#eae5de]">
+                Copy {selectedLines.length} product{selectedLines.length === 1 ? "" : "s"} to…
+              </h3>
+              <button type="button" onClick={() => setCopyTarget(null)} aria-label="Close" className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-[#a49c90]">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <button type="button" onClick={() => setCopyTarget((d) => d && addWeeks(d, -1))} aria-label="Previous week" className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2a2620]">
+                <ChevronLeft size={18} />
+              </button>
+              <div className="flex-1 text-center">
+                <div className="flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-900 dark:text-[#eae5de]">
+                  <CalendarDays size={15} className="text-orange-500" />
+                  {shortWeekRange(copyTarget)}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-[#8f877b] mt-0.5">{weekOffsetLabel(monday, copyTarget)}</p>
+              </div>
+              <button type="button" onClick={() => setCopyTarget((d) => d && addWeeks(d, 1))} aria-label="Next week" className="w-11 h-11 rounded-lg flex items-center justify-center text-gray-500 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#2a2620]">
+                <ChevronRight size={18} />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={copySelected}
+              disabled={busy}
+              className="w-full h-11 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+            >
+              {busy ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
+              Copy here
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-500 dark:text-[#8f877b]">Products already in that week are skipped.</p>
           </div>
         </div>
       )}
