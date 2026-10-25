@@ -371,6 +371,7 @@ export type RecipeListItem = {
   category: string | null;
   time: number | null;
   servings: number | null;
+  servingsStep: number | null;
   difficulty: string | null;
   favorite: boolean;
   imageUrl: string | null;
@@ -389,6 +390,7 @@ export async function getRecipeIndex(): Promise<RecipeListItem[]> {
       category: true,
       time: true,
       servings: true,
+      servingsStep: true,
       difficulty: true,
       favorite: true,
       imageUrl: true,
@@ -525,102 +527,73 @@ export async function searchRecipesForPlanner(query: string) {
   });
 }
 
-export async function getRecipesPanel(search?: string, category?: string, favorites?: boolean) {
-  return prisma.recipe.findMany({
-    where: {
-      AND: [
-        search
-          ? {
-              OR: [
-                { searchText: { contains: normalizeSearch(search) } },
-                { name: { contains: search, mode: "insensitive" } },
-                { ingredients: { some: { groceryItem: { name:   { contains: search, mode: "insensitive" } } } } },
-                { ingredients: { some: { groceryItem: { nameRo: { contains: search, mode: "insensitive" } } } } },
-              ],
-            }
-          : {},
-        category ? { category: { contains: category, mode: "insensitive" } } : {},
-        favorites ? { favorite: true } : {},
-      ],
-    },
-    take: 80,
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, category: true, servings: true, servingsStep: true, imageUrl: true, favorite: true },
-  });
-}
-
-export async function getRecipeCategories(): Promise<string[]> {
-  const recipes = await prisma.recipe.findMany({
-    where: { category: { not: null } },
-    select: { category: true },
-  });
-  const cats = new Set<string>();
-  for (const r of recipes) {
-    if (r.category) {
-      for (const cat of r.category.split(",")) {
-        const t = cat.trim();
-        if (t) cats.add(t);
-      }
-    }
-  }
-  return Array.from(cats).sort();
-}
-
 // ─── Week Plan ────────────────────────────────────────────────────────────────
 
-export async function getWeekPlan(weekStartIso: string) {
-  const weekStart = new Date(weekStartIso);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+export type Macros = { kcal: number; carbs: number; fat: number; protein: number };
 
-  return prisma.weekPlan.findMany({
-    where: {
-      weekStart: { gte: weekStart, lt: weekEnd },
-    },
-    include: {
-      recipe: {
-        select: { id: true, name: true, category: true, servings: true, servingsStep: true, imageUrl: true },
-      },
-    },
-  });
+export type PlannerEntry = { id: string; dayOfWeek: number; mealType: string; servings: number; recipeId: string };
+
+// A recipe as the planner uses it: the /recipes index row plus its nutrition per serving
+// (null when none of its ingredients has nutrition data).
+export type PlannerRecipe = RecipeListItem & { nutrition: Macros | null };
+
+// One serving's macros, from a recipe's ingredients with referenced recipes expanded in.
+// Nutrition on GroceryItem is per 100 g.
+function nutritionPerServing(ingredients: FlatIngredient[], servings: number | null): Macros | null {
+  const total: Macros = { kcal: 0, carbs: 0, fat: 0, protein: 0 };
+  let known = false;
+  for (const ing of ingredients) {
+    const gi = ing.groceryItem;
+    if (!gi || !ing.quantity) continue;
+    if (!gi.kcal && !gi.carbs && !gi.fat && !gi.protein) continue;
+    const grams = ingredientGrams(ing.quantity, ing.unit, gi);
+    if (grams == null) continue;
+    known = true;
+    const f = grams / 100;
+    total.kcal += (gi.kcal ?? 0) * f;
+    total.carbs += (gi.carbs ?? 0) * f;
+    total.fat += (gi.fat ?? 0) * f;
+    total.protein += (gi.protein ?? 0) * f;
+  }
+  if (!known) return null;
+  const per = (n: number) => Math.round((n / (servings || 1)) * 10) / 10;
+  return { kcal: per(total.kcal), carbs: per(total.carbs), fat: per(total.fat), protein: per(total.protein) };
 }
 
-export async function getWeekNutrition(
-  weekStartIso: string
-): Promise<Record<number, { kcal: number; carbs: number; fat: number; protein: number }>> {
+// Everything the planner needs in ONE request — Next runs server actions one after
+// another, so separate calls queue up. Always the week's entries; on first load also
+// every recipe (with nutrition per serving, so the browser sums day totals itself and
+// a change never waits on a second request) and the recipes cooked before this week.
+export async function getPlannerData(
+  weekStartIso: string,
+  includeRecipes: boolean
+): Promise<{ entries: PlannerEntry[]; recipes?: PlannerRecipe[]; recentIds?: string[] }> {
   const weekStart = new Date(weekStartIso);
+  if (isNaN(weekStart.getTime())) throw new Error("Invalid date");
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 7);
 
-  const plans = await prisma.weekPlan.findMany({
+  const entriesQuery = prisma.weekPlan.findMany({
     where: { weekStart: { gte: weekStart, lt: weekEnd } },
-    include: { recipe: { select: { servings: true } } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, dayOfWeek: true, mealType: true, servings: true, recipeId: true },
   });
-  // Each recipe's ingredients with referenced recipes expanded in.
-  const flat = await flattenRecipes(plans.map((p) => p.recipeId));
+  if (!includeRecipes) return { entries: await entriesQuery };
 
-  const totals: Record<number, { kcal: number; carbs: number; fat: number; protein: number }> = {};
-
-  for (const plan of plans) {
-    const recipeServings = plan.recipe.servings || 1;
-    const scale = plan.servings / recipeServings;
-
-    for (const ing of flat.get(plan.recipeId) ?? []) {
-      if (!ing.groceryItem || !ing.quantity) continue;
-      const gi = ing.groceryItem;
-      if (!gi.kcal && !gi.protein) continue;
-      const grams = ingredientGrams(ing.quantity, ing.unit, gi);
-      if (grams == null) continue;
-      const factor = (grams * scale) / 100;
-      if (!totals[plan.dayOfWeek]) totals[plan.dayOfWeek] = { kcal: 0, carbs: 0, fat: 0, protein: 0 };
-      totals[plan.dayOfWeek].kcal    += (gi.kcal    ?? 0) * factor;
-      totals[plan.dayOfWeek].carbs   += (gi.carbs   ?? 0) * factor;
-      totals[plan.dayOfWeek].fat     += (gi.fat     ?? 0) * factor;
-      totals[plan.dayOfWeek].protein += (gi.protein ?? 0) * factor;
-    }
-  }
-
-  return totals;
+  const [entries, index, earlier] = await Promise.all([
+    entriesQuery,
+    getRecipeIndex(),
+    prisma.weekPlan.findMany({
+      where: { weekStart: { lt: weekStart } },
+      orderBy: [{ weekStart: "desc" }, { createdAt: "desc" }],
+      take: 200,
+      select: { recipeId: true },
+    }),
+  ]);
+  const flat = await flattenRecipes(index.map((r) => r.id));
+  const recipes = index.map((r) => ({ ...r, nutrition: nutritionPerServing(flat.get(r.id) ?? [], r.servings) }));
+  const recentIds = [...new Set(earlier.map((e) => e.recipeId))].slice(0, 12);
+  return { entries, recipes, recentIds };
 }
 
 export async function addToWeekPlan(data: {

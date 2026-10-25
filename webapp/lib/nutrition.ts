@@ -1,5 +1,5 @@
 // Ingredient → grams conversion, shared by every nutrition consumer
-// (getWeekNutrition, RecipeDetail). Nutrition values on GroceryItem are per 100 g.
+// (getPlannerData, RecipeDetail). Nutrition values on GroceryItem are per 100 g.
 
 export type NutritionGrocery = {
   unit: string | null;

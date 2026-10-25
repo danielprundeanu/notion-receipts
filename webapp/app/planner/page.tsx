@@ -1,1294 +1,442 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft, ChevronRight, History, Loader2, Plus } from "lucide-react";
 import {
-  DndContext,
-  DragOverlay,
-  useDraggable,
-  useDroppable,
-  type DragEndEvent,
-  type DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  pointerWithin,
-} from "@dnd-kit/core";
-import {
-  getWeekPlan,
-  getWeekNutrition,
   addToWeekPlan,
+  getPlannerData,
+  moveWeekPlanEntry,
   removeFromWeekPlan,
   updateWeekPlanServings,
-  moveWeekPlanEntry,
-  getRecipesPanel,
-  getRecipeCategories,
 } from "@/lib/actions";
-import { servingsStepOf, stepServings, stepServingsDown } from "@/lib/servings";
-import ServingsInput from "@/components/ServingsInput";
-import RecipeCover from "@/components/RecipeCover";
+import { mealLabel } from "@/lib/labels";
+import { MONTH_LABELS, getMondayOf } from "@/lib/weeks";
 import PlanHistorySheet from "@/components/PlanHistorySheet";
-import { mealLabel, categoryLabel } from "@/lib/labels";
-import { getMondayOf, formatWeekRange } from "@/lib/weeks";
+import { RecipeThumb } from "@/components/RecipesGrid";
+import AddMealSheet from "@/components/planner/AddMealSheet";
+import EntrySheet from "@/components/planner/EntrySheet";
+import DesktopWeek from "@/components/planner/DesktopWeek";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  X,
-  Search,
-  Loader2,
-  Minus,
-  Star,
-  Trash2,
-  GripVertical,
-  History,
-} from "lucide-react";
+  DAY_NAMES,
+  MEALS,
+  byMeal,
+  dateOf,
+  dayTotals,
+  formatKcal,
+  type MealType,
+  type PlannerEntry,
+  type PlannerRecipe,
+} from "@/components/planner/shared";
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-// Stored/compared as WeekPlan.mealType — keep the English values; show mealLabel() for display.
-const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
+type Toast = { text: string; error?: boolean; undo?: () => void };
+type Sheet = { kind: "add"; day: number; meal: MealType } | { kind: "entry"; id: string } | null;
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Breakfast:       "bg-yellow-100 text-yellow-700 dark:bg-[#3f3217] dark:text-yellow-300",
-  Lunch:           "bg-green-100  text-green-700  dark:bg-[#1b3725] dark:text-green-300",
-  Dinner:          "bg-blue-100   text-blue-700   dark:bg-[#1e2a45] dark:text-blue-300",
-  Snack:           "bg-purple-100 text-purple-700 dark:bg-[#342045] dark:text-purple-300",
-  Smoothie:        "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  "Smoothie Bowl": "bg-pink-100   text-pink-700   dark:bg-[#421e2e] dark:text-pink-300",
-  Soup:            "bg-orange-100 text-orange-700 dark:bg-[#452819] dark:text-orange-300",
-  "High Protein":  "bg-red-100    text-red-700    dark:bg-[#421e1e] dark:text-red-300",
-};
-type MealType = (typeof MEALS)[number];
+const WEEK_MS = 7 * 24 * 3600_000;
 
-type RecipeRef = {
-  id: string;
-  name: string;
-  category: string | null;
-  servings: number | null;
-  servingsStep?: number | null;
-  imageUrl: string | null;
-  favorite?: boolean;
-};
-
-type PlanEntry = {
-  id: string;
-  dayOfWeek: number;
-  mealType: string;
-  servings: number;
-  recipe: RecipeRef;
-};
-
-function isThisWeek(monday: Date): boolean {
-  return (
-    monday.toISOString().slice(0, 10) ===
-    getMondayOf(new Date()).toISOString().slice(0, 10)
-  );
+// "This week" / "Next week" / "Last week" / "Week of Oct 5".
+function weekTitle(monday: Date): string {
+  const off = Math.round((monday.getTime() - getMondayOf(new Date()).getTime()) / WEEK_MS);
+  if (off === 0) return "This week";
+  if (off === 1) return "Next week";
+  if (off === -1) return "Last week";
+  return `Week of ${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()}`;
 }
 
-function todayDayIndex(): number {
-  const d = new Date().getDay();
-  return d === 0 ? 6 : d - 1;
+// "Oct 19 – 25", "Oct 26 – Nov 1".
+function weekRange(monday: Date): string {
+  const sunday = dateOf(monday, 6);
+  const end = sunday.getMonth() === monday.getMonth() ? `${sunday.getDate()}` : `${MONTH_LABELS[sunday.getMonth()]} ${sunday.getDate()}`;
+  return `${MONTH_LABELS[monday.getMonth()]} ${monday.getDate()} – ${end}`;
 }
-
-// ─── Recipe Thumb ──────────────────────────────────────────────────────────────
-
-function RecipeThumb({
-  recipe,
-  size = "sm",
-}: {
-  recipe: RecipeRef;
-  size?: "sm" | "md";
-}) {
-  const dim = size === "md" ? "w-10 h-10" : "w-8 h-8";
-  if (recipe.imageUrl) {
-    return (
-      <img
-        src={recipe.imageUrl}
-        alt=""
-        className={`${dim} rounded-md object-cover shrink-0`}
-      />
-    );
-  }
-  const colors = [
-    "bg-orange-200",
-    "bg-blue-200",
-    "bg-green-200",
-    "bg-purple-200",
-    "bg-pink-200",
-    "bg-yellow-200",
-  ];
-  const color = colors[recipe.name.charCodeAt(0) % colors.length];
-  return (
-    <div
-      className={`${dim} rounded-md ${color} flex items-center justify-center shrink-0`}
-    >
-      <span className="text-xs font-bold text-gray-700">
-        {recipe.name.charAt(0).toUpperCase()}
-      </span>
-    </div>
-  );
-}
-
-// ─── Recipe Card (in planner slot) ────────────────────────────────────────────
-
-const SWIPE_REVEAL_WIDTH = 56;
-
-function RecipeCard({
-  entry,
-  onRemove,
-  onServingsChange,
-  draggable = false,
-}: {
-  entry: PlanEntry;
-  onRemove: () => void;
-  onServingsChange: (n: number) => void;
-  draggable?: boolean;
-}) {
-  const [swipeX, setSwipeX] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  const step = servingsStepOf(entry.recipe);
-  const servingsDown = () => onServingsChange(stepServingsDown(entry.servings, step));
-  const servingsUp = () => onServingsChange(stepServings(entry.servings, 1, step));
-  const contentRef = useRef<HTMLDivElement>(null);
-  const swipeXRef = useRef(0);
-  const revealedRef = useRef(false);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const isHorizontal = useRef(false);
-  const draggingRef = useRef(false);
-  const ignoreSwipeRef = useRef(false); // touch started on the drag handle → not a swipe
-
-  // Long-press to drag (mobile move between slots). `disabled` keeps desktop slot
-  // cards non-draggable — nothing about the desktop flow changes.
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `entry-${entry.id}`,
-    data: { entry },
-    disabled: !draggable,
-  });
-
-  // While a drag is active, freeze the swipe gesture so the source card doesn't
-  // slide under the drag overlay.
-  useEffect(() => {
-    draggingRef.current = isDragging;
-    if (isDragging) {
-      setSwipeX(0);
-      swipeXRef.current = 0;
-    }
-  }, [isDragging]);
-
-  useEffect(() => {
-    const el = contentRef.current;
-    if (!el) return;
-
-    function onTouchStart(e: TouchEvent) {
-      // Touch that begins on the drag handle is a drag, not a swipe — ignore it here.
-      ignoreSwipeRef.current = !!(e.target as HTMLElement).closest?.("[data-drag-handle]");
-      if (ignoreSwipeRef.current) return;
-      touchStartX.current = e.touches[0].clientX;
-      touchStartY.current = e.touches[0].clientY;
-      isHorizontal.current = false;
-    }
-
-    function onTouchMove(e: TouchEvent) {
-      if (ignoreSwipeRef.current || draggingRef.current) return;
-      const dx = e.touches[0].clientX - touchStartX.current;
-      const dy = e.touches[0].clientY - touchStartY.current;
-      if (!isHorizontal.current) {
-        if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
-        if (Math.abs(dy) >= Math.abs(dx)) return;
-        isHorizontal.current = true;
-      }
-      e.preventDefault();
-      const base = revealedRef.current ? -SWIPE_REVEAL_WIDTH : 0;
-      const next = Math.min(0, Math.max(-SWIPE_REVEAL_WIDTH - 12, base + dx));
-      swipeXRef.current = next;
-      setSwipeX(next);
-    }
-
-    function onTouchEnd() {
-      if (ignoreSwipeRef.current) { ignoreSwipeRef.current = false; return; }
-      if (!isHorizontal.current) return;
-      const shouldReveal = swipeXRef.current < -(SWIPE_REVEAL_WIDTH / 2);
-      revealedRef.current = shouldReveal;
-      setRevealed(shouldReveal);
-      setSwipeX(shouldReveal ? -SWIPE_REVEAL_WIDTH : 0);
-      swipeXRef.current = shouldReveal ? -SWIPE_REVEAL_WIDTH : 0;
-    }
-
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-    };
-  }, []);
-
-  function collapseSwipe() {
-    revealedRef.current = false;
-    setRevealed(false);
-    setSwipeX(0);
-    swipeXRef.current = 0;
-  }
-
-  return (
-    <div
-      ref={draggable ? setNodeRef : undefined}
-      className={`relative overflow-hidden rounded-xl ${isDragging ? "opacity-30" : ""} ${draggable ? "select-none [-webkit-touch-callout:none]" : ""}`}
-    >
-      {/* Delete button — mobile only, hidden until swipe */}
-      <div
-        className="md:hidden absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500 rounded-r-xl"
-        style={{ width: SWIPE_REVEAL_WIDTH, visibility: swipeX < 0 ? "visible" : "hidden" }}
-      >
-        <button
-          onClick={onRemove}
-          className="w-full h-full flex items-center justify-center active:bg-red-600"
-        >
-          <Trash2 size={18} className="text-white" />
-        </button>
-      </div>
-
-      {/* Card content */}
-      <div
-        ref={contentRef}
-        style={{ transform: `translateX(${swipeX}px)`, transition: isHorizontal.current ? "none" : "transform 0.2s ease" }}
-        onClick={revealed ? collapseSwipe : undefined}
-        className="flex items-center gap-2 bg-orange-50 dark:bg-[#2d1a08] border border-orange-100 dark:border-orange-900/40 rounded-xl px-2.5 py-2 group relative"
-      >
-        {/* Drag handle (mobile) — the only place drag starts, so it no longer
-            fights the swipe-to-delete gesture on the rest of the card. */}
-        {draggable && (
-          <div
-            {...listeners}
-            {...attributes}
-            data-drag-handle
-            aria-label="Drag to move"
-            className="md:hidden shrink-0 -ml-1 self-stretch flex items-center px-0.5 touch-none select-none [-webkit-touch-callout:none] [-webkit-user-select:none] cursor-grab active:cursor-grabbing text-orange-300 dark:text-orange-700/70 active:text-orange-500 transition-colors"
-          >
-            <GripVertical size={16} />
-          </div>
-        )}
-        <RecipeThumb recipe={entry.recipe} />
-
-        {/* Desktop layout: title + servings below */}
-        <div className="hidden md:flex flex-col flex-1 min-w-0 gap-1">
-          <Link
-            href={`/recipes/${entry.recipe.id}`}
-            className="text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
-          >
-            {entry.recipe.name}
-          </Link>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={(e) => { e.stopPropagation(); servingsDown(); }}
-              className="w-6 h-6 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
-            >
-              <Minus size={10} />
-            </button>
-            <ServingsInput
-              value={entry.servings}
-              onCommit={onServingsChange}
-              className="w-8 h-6 text-xs font-semibold text-orange-700 dark:text-orange-300"
-            />
-            <button
-              onClick={(e) => { e.stopPropagation(); servingsUp(); }}
-              className="w-6 h-6 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
-            >
-              <Plus size={10} />
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile layout: title + inline servings */}
-        <Link
-          href={`/recipes/${entry.recipe.id}`}
-          onClick={(e) => revealed && e.preventDefault()}
-          className="md:hidden flex-1 min-w-0 text-xs font-medium text-orange-900 dark:text-orange-300 leading-snug line-clamp-2 hover:underline"
-        >
-          {entry.recipe.name}
-        </Link>
-        <div className="md:hidden flex items-center gap-1.5 shrink-0">
-          <button
-            onClick={(e) => { e.stopPropagation(); servingsDown(); }}
-            className="w-10 h-10 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
-          >
-            <Minus size={12} />
-          </button>
-          <ServingsInput
-            value={entry.servings}
-            onCommit={onServingsChange}
-            className="w-9 h-10 text-sm font-semibold text-orange-700 dark:text-orange-300"
-          />
-          <button
-            onClick={(e) => { e.stopPropagation(); servingsUp(); }}
-            className="w-10 h-10 rounded-full border border-orange-200 dark:border-orange-800/50 flex items-center justify-center hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 transition-colors"
-          >
-            <Plus size={12} />
-          </button>
-        </div>
-
-        {/* Delete — always-visible affordance on mobile (swipe still works as a shortcut) */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          aria-label="Remove from planner"
-          className="md:hidden shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-orange-300 dark:text-orange-700/70 active:text-red-500 hover:text-red-500 transition-colors"
-        >
-          <X size={17} />
-        </button>
-
-        {/* X — desktop hover only */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          className="hidden md:flex absolute top-1 right-1 w-6 h-6 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity text-orange-300 dark:text-orange-600 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40"
-        >
-          <X size={13} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Draggable Large Recipe Card (in panel) ───────────────────────────────────
-
-function DraggableLargeCard({ recipe }: { recipe: RecipeRef }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: `drag-${recipe.id}`, data: { recipe } });
-
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)` }
-    : undefined;
-
-  const cats = (recipe.category ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .slice(0, 2);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`bg-white dark:bg-[#24211c] rounded-xl border border-gray-100 dark:border-[#2e2a24] overflow-hidden cursor-grab active:cursor-grabbing hover:shadow-md hover:border-orange-200 dark:hover:border-orange-800/50 transition-all select-none ${
-        isDragging ? "opacity-30" : ""
-      }`}
-    >
-      <div className="relative h-32 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
-        {recipe.imageUrl ? (
-          <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="200px" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-3xl opacity-20">🍽️</span>
-          </div>
-        )}
-        {cats.length > 0 && (
-          <div className="absolute top-1.5 right-1.5 flex gap-1">
-            {cats.map((c) => {
-              const cls = CATEGORY_COLORS[c] ?? "bg-gray-100 text-gray-600 dark:bg-[#2e2a24] dark:text-[#bab2a6]";
-              return (
-                <span key={c} className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${cls}`}>
-                  {categoryLabel(c)}
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <div className="p-2.5 flex items-start justify-between gap-1">
-        <p className="text-xs font-semibold text-gray-900 dark:text-[#eae5de] leading-snug line-clamp-2">
-          {recipe.name}
-        </p>
-        {recipe.favorite && (
-          <Star size={11} className="text-amber-400 fill-amber-400 shrink-0 mt-0.5" />
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Drag Overlay Card ────────────────────────────────────────────────────────
-
-function DragOverlayCard({ recipe }: { recipe: RecipeRef }) {
-  return (
-    <div className="bg-white dark:bg-[#24211c] rounded-xl border border-orange-300 shadow-2xl w-44 overflow-hidden rotate-1 opacity-95">
-      <div className="relative h-28 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
-        {recipe.imageUrl ? (
-          <RecipeCover src={recipe.imageUrl} alt={recipe.name} sizes="176px" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-2xl opacity-20">🍽️</span>
-          </div>
-        )}
-      </div>
-      <div className="p-2">
-        <p className="text-xs font-semibold text-gray-800 dark:text-[#eae5de] leading-snug line-clamp-2">
-          {recipe.name}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Droppable Meal Slot ──────────────────────────────────────────────────────
-
-function DroppableMealSlot({
-  dayIdx,
-  meal,
-  entries,
-  onRemove,
-  onServingsChange,
-  onAddClick,
-}: {
-  dayIdx: number;
-  meal: MealType;
-  entries: PlanEntry[];
-  onRemove: (id: string) => void;
-  onServingsChange: (id: string, n: number) => void;
-  onAddClick: () => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: `${dayIdx}::${meal}` });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`h-full flex flex-col gap-1.5 rounded-xl p-0.5 transition-all ${
-        isOver
-          ? "bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-300 dark:ring-orange-700 ring-inset"
-          : ""
-      }`}
-    >
-      {entries.map((entry) => (
-        <RecipeCard
-          key={entry.id}
-          entry={entry}
-          onRemove={() => onRemove(entry.id)}
-          onServingsChange={(n) => onServingsChange(entry.id, n)}
-        />
-      ))}
-      <button
-        onClick={onAddClick}
-        className="flex-1 min-h-[40px] w-full bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
-      >
-        <Plus
-          size={16}
-          className="text-gray-300 group-hover:text-orange-400"
-        />
-      </button>
-    </div>
-  );
-}
-
-// ─── Mobile Meal Section (droppable — long-press a card to move it here) ───────
-
-function MobileMealSection({
-  dayIdx,
-  meal,
-  entries,
-  onRemove,
-  onServingsChange,
-  onAddClick,
-}: {
-  dayIdx: number;
-  meal: MealType;
-  entries: PlanEntry[];
-  onRemove: (id: string) => void;
-  onServingsChange: (id: string, n: number) => void;
-  onAddClick: () => void;
-}) {
-  const { setNodeRef, isOver } = useDroppable({ id: `${dayIdx}::${meal}` });
-
-  return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-[#5c554b] mb-2">
-        {mealLabel(meal)}
-      </h3>
-      <div
-        ref={setNodeRef}
-        className={`space-y-2 rounded-xl p-1 -m-1 transition-all ${
-          isOver
-            ? "bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-300 dark:ring-orange-700 ring-inset"
-            : ""
-        }`}
-      >
-        {entries.map((entry) => (
-          <RecipeCard
-            key={entry.id}
-            entry={entry}
-            draggable
-            onRemove={() => onRemove(entry.id)}
-            onServingsChange={(n) => onServingsChange(entry.id, n)}
-          />
-        ))}
-        <button
-          onClick={onAddClick}
-          className="w-full min-h-[44px] py-2.5 bg-white dark:bg-[#24211c] border border-dashed border-gray-200 dark:border-[#3a352e] rounded-xl flex items-center justify-center hover:border-orange-300 dark:hover:border-orange-800 hover:bg-orange-50 dark:hover:bg-orange-950/20 transition-colors group"
-        >
-          <Plus
-            size={15}
-            className="text-gray-300 group-hover:text-orange-400"
-          />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Recipe Panel ─────────────────────────────────────────────────────────────
-
-function RecipePanel() {
-  const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [favOnly, setFavOnly] = useState(false);
-  const [recipes, setRecipes] = useState<RecipeRef[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    getRecipeCategories().then(setCategories);
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      setLoading(true);
-      const r = await getRecipesPanel(
-        search || undefined,
-        activeCategory || undefined,
-        favOnly || undefined
-      );
-      setRecipes(r as RecipeRef[]);
-      setLoading(false);
-    }, 250);
-    return () => clearTimeout(t);
-  }, [search, activeCategory, favOnly]);
-
-  return (
-    <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2e2a24] shrink-0">
-      {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm font-semibold text-gray-700 dark:text-[#eae5de] shrink-0">
-          Recipes
-        </span>
-        <div className="relative">
-          <Search
-            size={13}
-            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]"
-          />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search…"
-            className="pl-7 pr-3 py-1.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-orange-400"
-          />
-        </div>
-        <button
-          onClick={() => setFavOnly((v) => !v)}
-          className={`flex items-center gap-1 px-2.5 py-1.5 text-xs rounded-lg border transition-colors shrink-0 ${
-            favOnly
-              ? "bg-amber-400 text-white border-amber-400"
-              : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:border-amber-300 dark:hover:border-amber-700"
-          }`}
-        >
-          <Star size={11} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-          Favorites
-        </button>
-        <div className="flex gap-1.5 overflow-x-auto pb-0.5 flex-1">
-          <button
-            onClick={() => setActiveCategory(null)}
-            className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
-              activeCategory === null
-                ? "bg-orange-500 text-white border-orange-500"
-                : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
-            }`}
-          >
-            All
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() =>
-                setActiveCategory(activeCategory === cat ? null : cat)
-              }
-              className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                activeCategory === cat
-                  ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] border-gray-200 dark:border-[#3a352e] hover:border-orange-300 dark:hover:border-orange-700"
-              }`}
-            >
-              {categoryLabel(cat)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Recipe grid */}
-      {loading ? (
-        <div className="flex justify-center py-6">
-          <Loader2 size={16} className="animate-spin text-gray-400" />
-        </div>
-      ) : recipes.length === 0 ? (
-        <p className="text-sm text-gray-400 py-4">No recipes found.</p>
-      ) : (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-          {recipes.map((recipe) => (
-            <DraggableLargeCard key={recipe.id} recipe={recipe} />
-          ))}
-        </div>
-      )}
-
-      <p className="text-xs text-gray-400 dark:text-[#5c554b]">
-        Drag a recipe onto a day / meal above to add it to the plan.
-      </p>
-    </div>
-  );
-}
-
-// ─── Recipe Selector Modal ────────────────────────────────────────────────────
-
-function RecipeSelectorModal({
-  day,
-  mealType,
-  weekStart,
-  onClose,
-  onSelect,
-}: {
-  day: number;
-  mealType: MealType;
-  weekStart: Date;
-  onClose: () => void;
-  onSelect: (entry: PlanEntry) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [favOnly, setFavOnly] = useState(false);
-  const [results, setResults] = useState<RecipeRef[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [servings, setServings] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<RecipeRef | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getRecipeCategories().then(setCategories).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const t = setTimeout(async () => {
-      setLoading(true);
-      try {
-        const r = await getRecipesPanel(
-          query || undefined,
-          activeCategory || undefined,
-          favOnly || undefined
-        );
-        setResults(r as RecipeRef[]);
-      } catch {
-        setResults([]); // don't leave the spinner hanging on a failed search
-      } finally {
-        setLoading(false);
-      }
-    }, 250);
-    return () => clearTimeout(t);
-  }, [query, activeCategory, favOnly]);
-
-  async function handleSave() {
-    if (!selected) return;
-    setSaving(true);
-    setAddError(null);
-    try {
-      const { id: realId } = await addToWeekPlan({
-        recipeId: selected.id,
-        weekStartIso: weekStart.toISOString(),
-        dayOfWeek: day,
-        mealType,
-        servings,
-      });
-      onSelect({ id: realId, dayOfWeek: day, mealType, servings, recipe: selected });
-    } catch {
-      setAddError("Couldn't add. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div
-      className="fixed inset-0 bg-black/30 dark:bg-black/50 flex items-end sm:items-center justify-center z-50"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-white dark:bg-[#24211c] rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-lg flex flex-col h-[88svh] sm:h-auto sm:max-h-[80vh]">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
-          <h3 className="font-semibold text-gray-900 dark:text-[#eae5de]">
-            {DAYS[day]} · {mealLabel(mealType)}
-          </h3>
-          <button onClick={onClose} className="text-gray-400 dark:text-[#5c554b] hover:text-gray-600 dark:hover:text-[#a49c90] p-3">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Search — 16px font prevents iOS zoom */}
-        <div className="px-4 pb-2 shrink-0">
-          <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-[#5c554b]" />
-            <input
-              value={query}
-              onChange={(e) => { setQuery(e.target.value); setSelected(null); }}
-              placeholder="Search recipe…"
-              style={{ fontSize: "16px" }}
-              className="w-full pl-9 pr-3 py-2.5 bg-gray-50 dark:bg-[#2a2620] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#5c554b] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="px-4 pb-3 shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            <button
-              onClick={() => { setFavOnly((v) => !v); setSelected(null); }}
-              className={`flex items-center gap-1 shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                favOnly
-                  ? "bg-amber-400 text-white border-amber-400"
-                  : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
-              }`}
-            >
-              <Star size={10} className={favOnly ? "fill-white" : "fill-amber-400 text-amber-400"} />
-              Fav
-            </button>
-            <button
-              onClick={() => { setActiveCategory(null); setSelected(null); }}
-              className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                activeCategory === null
-                  ? "bg-orange-500 text-white border-orange-500"
-                  : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
-              }`}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => { setActiveCategory(activeCategory === cat ? null : cat); setSelected(null); }}
-                className={`shrink-0 px-2.5 py-1 text-xs rounded-full border transition-colors ${
-                  activeCategory === cat
-                    ? "bg-orange-500 text-white border-orange-500"
-                    : "bg-white dark:bg-[#2a2620] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
-                }`}
-              >
-                {categoryLabel(cat)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recipe list — scrollable */}
-        <div className="flex-1 overflow-y-auto px-4">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 size={18} className="animate-spin text-gray-400" />
-            </div>
-          ) : results.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No recipes found.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pb-2">
-              {results.map((r) => (
-                <button
-                  key={r.id}
-                  onClick={() => { setSelected(r); setServings(r.servings ?? 1); }}
-                  className={`flex flex-col rounded-xl overflow-hidden border text-left transition-all ${
-                    selected?.id === r.id
-                      ? "border-orange-400 ring-2 ring-orange-400/40"
-                      : "border-gray-100 dark:border-[#2e2a24] hover:border-orange-200 dark:hover:border-orange-800/50"
-                  }`}
-                >
-                  <div className="h-20 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-[#2a2620] dark:to-[#24211c] overflow-hidden">
-                    {r.imageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={r.imageUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <span className="text-2xl opacity-20">🍽️</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="px-2 py-1.5 bg-white dark:bg-[#24211c]">
-                    <p className="text-xs font-medium text-gray-800 dark:text-[#eae5de] leading-snug line-clamp-2">
-                      {r.name}
-                    </p>
-                    {r.category && (
-                      <p className="text-[10px] text-gray-400 dark:text-[#5c554b] mt-0.5 truncate">
-                        {r.category.split(",")[0]}
-                      </p>
-                    )}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Footer — servings + add */}
-        {addError && (
-          <p className="px-4 pt-2 text-xs text-red-600 dark:text-red-400 text-center shrink-0">{addError}</p>
-        )}
-        <div className="px-4 pt-3 border-t border-gray-100 dark:border-[#2e2a24] shrink-0 flex items-center gap-3" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
-          {selected && (
-            <div className="flex items-center gap-1.5 mr-auto min-w-0">
-              <RecipeThumb recipe={selected} size="sm" />
-              <span className="text-xs font-medium text-gray-700 dark:text-[#bab2a6] truncate">{selected.name}</span>
-            </div>
-          )}
-          {!selected && (
-            <span className="text-xs text-gray-400 dark:text-[#5c554b] mr-auto">Select a recipe above</span>
-          )}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setServings((s) => stepServingsDown(s, selected ? servingsStepOf(selected) : 1))}
-              aria-label="Fewer servings"
-              className="w-10 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
-            >−</button>
-            <ServingsInput
-              value={servings}
-              onCommit={setServings}
-              className="w-10 h-10 text-sm font-semibold text-gray-800 dark:text-[#eae5de]"
-            />
-            <button
-              onClick={() => setServings((s) => stepServings(s, 1, selected ? servingsStepOf(selected) : 1))}
-              aria-label="More servings"
-              className="w-10 h-10 rounded-full border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2c2822] flex items-center justify-center text-sm"
-            >+</button>
-          </div>
-          <button
-            onClick={handleSave}
-            disabled={!selected || saving}
-            className="px-4 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center gap-1.5 shrink-0"
-          >
-            {saving && <Loader2 size={13} className="animate-spin" />}
-            Add
-          </button>
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-// ─── Planner Page ─────────────────────────────────────────────────────────────
 
 export default function PlannerPage() {
-  const [weekStart, setWeekStart] = useState(() => getMondayOf(new Date()));
-  const [plans, setPlans] = useState<PlanEntry[]>([]);
-  const [dayNutrition, setDayNutrition] = useState<Record<number, { kcal: number; carbs: number; fat: number; protein: number }>>({});
-  const [loadingPlans, setLoadingPlans] = useState(false);
-  const [modal, setModal] = useState<{ day: number; meal: MealType } | null>(
-    null
-  );
-  const [mobileDay, setMobileDay] = useState(todayDayIndex);
-  const [dragActive, setDragActive] = useState<RecipeRef | null>(null);
+  const [monday, setMonday] = useState(() => getMondayOf(new Date()));
+  const [entries, setEntries] = useState<PlannerEntry[]>([]);
+  const [recipeList, setRecipeList] = useState<PlannerRecipe[] | null>(null);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+  const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
+  const [failedWeek, setFailedWeek] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0); // bump to refetch the week
+  const [sheet, setSheet] = useState<Sheet>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
-  // Transient toast: errors for failed mutations (add/remove/servings) — planner data is
-  // shared, so a silent failure must never look like it saved — plus import confirmations.
-  const [toast, setToast] = useState<{ msg: string; ok?: boolean } | null>(null);
-  function showError(msg: string) {
-    setToast({ msg });
-    setTimeout(() => setToast(null), 4000);
-  }
-  function showSuccess(msg: string) {
-    setToast({ msg, ok: true });
-    setTimeout(() => setToast(null), 3000);
-  }
+  const [toast, setToast] = useState<Toast | null>(null);
+  const hasRecipes = useRef(false);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } })
-  );
+  const recipes = new Map((recipeList ?? []).map((r) => [r.id, r]));
+  const weekIso = monday.toISOString();
 
-  const loadPlans = useCallback(async () => {
-    setLoadingPlans(true);
-    try {
-      const [data, nutrition] = await Promise.all([
-        getWeekPlan(weekStart.toISOString()),
-        getWeekNutrition(weekStart.toISOString()),
-      ]);
-      setPlans(data as PlanEntry[]);
-      setDayNutrition(nutrition);
-    } catch {
-      showError("Couldn't load the planner. Please reload the page.");
-    } finally {
-      setLoadingPlans(false); // never leave the spinner hanging
-    }
-  }, [weekStart]);
+  // One request per week: its entries, plus the recipe list on the first load. A
+  // superseded request (weeks flicked through quickly) is ignored.
+  useEffect(() => {
+    let current = true;
+    getPlannerData(weekIso, !hasRecipes.current)
+      .then((data) => {
+        if (!current) return;
+        setEntries(data.entries);
+        if (data.recipes) {
+          hasRecipes.current = true;
+          setRecipeList(data.recipes);
+        }
+        if (data.recentIds) setRecentIds(data.recentIds);
+        setLoadedWeek(weekIso);
+      })
+      .catch(() => {
+        if (current) setFailedWeek(weekIso);
+      });
+    return () => {
+      current = false;
+    };
+  }, [weekIso, attempt]);
+
+  const loadError = failedWeek === weekIso && loadedWeek !== weekIso;
+  const loading = loadedWeek !== weekIso && !loadError;
+  function reload() {
+    setFailedWeek(null);
+    setAttempt((a) => a + 1);
+  }
 
   useEffect(() => {
-    loadPlans();
-  }, [loadPlans]);
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), toast.undo ? 5000 : 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
-  function getEntries(day: number, meal: string): PlanEntry[] {
-    return plans.filter((p) => p.dayOfWeek === day && p.mealType === meal);
+  // +12 h keeps a DST change from landing on the Sunday before.
+  function shiftWeek(weeks: number) {
+    setMonday((m) => getMondayOf(new Date(m.getTime() + weeks * WEEK_MS + 12 * 3600_000)));
   }
 
-  async function handleRemove(id: string) {
-    const snapshot = plans;
-    setPlans((prev) => prev.filter((p) => p.id !== id));
+  // ── Mutations: optimistic, rolled back with a message if the save fails (shared data) ──
+
+  async function addEntry(recipe: PlannerRecipe, day: number, meal: MealType, servings = recipe.servings ?? 1): Promise<string> {
+    const tempId = `temp-${Math.random().toString(36).slice(2)}`;
+    setEntries((prev) => [...prev, { id: tempId, dayOfWeek: day, mealType: meal, servings, recipeId: recipe.id }]);
+    try {
+      const { id } = await addToWeekPlan({ recipeId: recipe.id, weekStartIso: weekIso, dayOfWeek: day, mealType: meal, servings });
+      setEntries((prev) => prev.map((e) => (e.id === tempId ? { ...e, id } : e)));
+      return id;
+    } catch (err) {
+      setEntries((prev) => prev.filter((e) => e.id !== tempId));
+      throw err;
+    }
+  }
+
+  async function removeEntry(id: string): Promise<PlannerEntry | undefined> {
+    const removed = entries.find((e) => e.id === id);
+    if (!removed) return;
+    setEntries((prev) => prev.filter((e) => e.id !== id));
     try {
       await removeFromWeekPlan(id);
-      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
-    } catch {
-      setPlans(snapshot); // rollback — the delete didn't persist
-      showError("Couldn't remove from the planner. Please try again.");
+      return removed;
+    } catch (err) {
+      setEntries((prev) => [...prev, removed]);
+      throw err;
     }
   }
 
-  async function handleServingsChange(id: string, newServings: number) {
-    const snapshot = plans;
-    setPlans((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, servings: newServings } : p))
-    );
+  // Remove with an Undo that puts the same meal back (as a new row).
+  async function removeWithUndo(id: string) {
+    const recipe = recipes.get(entries.find((e) => e.id === id)?.recipeId ?? "");
     try {
-      await updateWeekPlanServings(id, newServings);
-      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
-    } catch {
-      setPlans(snapshot); // rollback — the servings change didn't persist
-      showError("Couldn't update servings. Please try again.");
-    }
-  }
-
-  function handleDragStart(event: DragStartEvent) {
-    const data = event.active.data.current;
-    setDragActive(data?.recipe ?? data?.entry?.recipe ?? null);
-    // Haptic feedback when card "locks in" to drag
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      navigator.vibrate(12);
-    }
-  }
-
-  async function handleDragEnd(event: DragEndEvent) {
-    setDragActive(null);
-    const { active, over } = event;
-    if (!over) return;
-
-    const parts = (over.id as string).split("::");
-    if (parts.length !== 2) return;
-    const dayIdx = parseInt(parts[0]);
-    const meal = parts[1] as MealType;
-    if (isNaN(dayIdx) || !MEALS.includes(meal)) return;
-
-    // Moving an existing plan entry between slots (mobile drag-and-drop).
-    const dragged = active.data.current?.entry as PlanEntry | undefined;
-    if (dragged) {
-      // A still-saving optimistic entry has no real DB id yet — can't move it.
-      if (dragged.id.startsWith("temp-")) return;
-      if (dragged.dayOfWeek === dayIdx && dragged.mealType === meal) return; // dropped on itself
-      const snapshot = plans;
-      setPlans((prev) =>
-        prev.map((p) =>
-          p.id === dragged.id ? { ...p, dayOfWeek: dayIdx, mealType: meal } : p
-        )
-      );
-      try {
-        await moveWeekPlanEntry(dragged.id, dayIdx, meal);
-        getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
-      } catch {
-        setPlans(snapshot); // rollback — the move didn't persist
-        showError("Couldn't move the recipe. Please try again.");
-      }
-      return;
-    }
-
-    const recipe = active.data.current?.recipe as RecipeRef | undefined;
-    if (!recipe) return;
-
-    const servings = recipe.servings ?? 1;
-    const tempId = `temp-${Math.random()}`;
-
-    // Optimistic update
-    setPlans((prev) => [
-      ...prev,
-      { id: tempId, dayOfWeek: dayIdx, mealType: meal, servings, recipe },
-    ]);
-
-    try {
-      const { id: realId } = await addToWeekPlan({
-        recipeId: recipe.id,
-        weekStartIso: weekStart.toISOString(),
-        dayOfWeek: dayIdx,
-        mealType: meal,
-        servings,
+      const removed = await removeEntry(id);
+      if (!removed || !recipe) return;
+      setToast({
+        text: `Removed ${recipe.name}`,
+        undo: () => {
+          setToast(null);
+          addEntry(recipe, removed.dayOfWeek, removed.mealType as MealType, removed.servings).catch(() =>
+            setToast({ text: "Couldn't put it back. Add it again from the day.", error: true })
+          );
+        },
       });
-
-      // Replace temp ID with real DB id (no full reload)
-      setPlans((prev) =>
-        prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p))
-      );
-      getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
     } catch {
-      // Drop the optimistic entry so no dangling `temp-` row lingers in the UI.
-      setPlans((prev) => prev.filter((p) => p.id !== tempId));
-      showError("Couldn't add to the planner. Please try again.");
+      setToast({ text: "Couldn't remove it. Try again.", error: true });
     }
   }
 
-  const weekNav = (
-    <div className="flex items-center gap-1">
-      {!isThisWeek(weekStart) && (
-        <button
-          onClick={() => setWeekStart(getMondayOf(new Date()))}
-          className="px-3 py-2.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
-        >
-          Today
-        </button>
-      )}
+  async function setServings(id: string, servings: number) {
+    const before = entries.find((e) => e.id === id)?.servings;
+    if (before === undefined || id.startsWith("temp-")) return;
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, servings } : e)));
+    try {
+      await updateWeekPlanServings(id, servings);
+    } catch {
+      setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, servings: before } : e)));
+      setToast({ text: "Couldn't change the servings. Try again.", error: true });
+    }
+  }
+
+  async function moveEntry(id: string, day: number, meal: MealType) {
+    const before = entries.find((e) => e.id === id);
+    if (!before || id.startsWith("temp-")) return;
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, dayOfWeek: day, mealType: meal } : e)));
+    try {
+      await moveWeekPlanEntry(id, day, meal);
+    } catch {
+      setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, dayOfWeek: before.dayOfWeek, mealType: before.mealType } : e)));
+      setToast({ text: "Couldn't move it. Try again.", error: true });
+    }
+  }
+
+  function openAdd(day: number, meal?: MealType) {
+    // From a day card: the first meal that day doesn't have yet.
+    const taken = new Set(entries.filter((e) => e.dayOfWeek === day).map((e) => e.mealType));
+    setSheet({ kind: "add", day, meal: meal ?? MEALS.find((m) => !taken.has(m)) ?? "Snack" });
+  }
+
+  function jumpToDay(day: number) {
+    document.getElementById(`day-${day}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Until the new week arrives, show nothing rather than last week's meals under new dates.
+  const shown = loading ? [] : entries;
+  const totals = dayTotals(shown, recipes);
+  const weekKcal = Object.values(totals).reduce((sum, t) => sum + t.kcal, 0);
+  const todayStr = new Date().toDateString();
+  const isCurrentWeek = monday.getTime() === getMondayOf(new Date()).getTime();
+  const sheetEntry = sheet?.kind === "entry" ? entries.find((e) => e.id === sheet.id) : undefined;
+  const sheetRecipe = sheetEntry ? recipes.get(sheetEntry.recipeId) : undefined;
+
+  const headerBtn =
+    "h-11 px-3.5 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] flex items-center gap-2 text-sm font-semibold hover:bg-gray-50 dark:hover:bg-[#2a2620] transition-colors";
+  const navBtn = "w-11 h-11 rounded-xl flex items-center justify-center text-gray-600 dark:text-[#a49c90] hover:bg-gray-100 dark:hover:bg-[#24211c]";
+
+  const body = loadError ? (
+    <div className="py-16 text-center">
+      <p className="text-[17px] font-semibold text-gray-900 dark:text-[#eae5de]">Couldn&apos;t load the plan</p>
+      <p className="mt-1 text-sm text-gray-600 dark:text-[#a49c90]">Check your connection and try again.</p>
       <button
-        onClick={() =>
-          setWeekStart((d) => {
-            const n = new Date(d);
-            n.setDate(n.getDate() - 7);
-            return n;
-          })
-        }
-        aria-label="Previous week"
-        className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
+        type="button"
+        onClick={reload}
+        className="mt-4 h-11 px-5 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-medium text-gray-900 dark:text-[#eae5de]"
       >
-        <ChevronLeft size={18} />
-      </button>
-      <span className="text-sm font-medium text-gray-700 dark:text-[#bab2a6] hidden sm:block w-44 text-center">
-        {formatWeekRange(weekStart)}
-      </span>
-      <button
-        onClick={() =>
-          setWeekStart((d) => {
-            const n = new Date(d);
-            n.setDate(n.getDate() + 7);
-            return n;
-          })
-        }
-        aria-label="Next week"
-        className="p-3 hover:bg-gray-100 dark:hover:bg-[#2a2620] rounded-lg text-gray-500 dark:text-[#7c756a]"
-      >
-        <ChevronRight size={18} />
+        Try again
       </button>
     </div>
-  );
+  ) : null;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerWithin}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      {toast && (
-        <div
-          role={toast.ok ? "status" : "alert"}
-          className={`fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2.5 rounded-lg text-white text-sm font-medium shadow-lg max-w-[90vw] text-center ${
-            toast.ok ? "bg-teal-600" : "bg-red-600"
-          }`}
-        >
-          {toast.msg}
-        </div>
-      )}
-      <div className="p-4 md:p-6 h-full flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-2 mb-4">
-          <h1 className="text-xl md:text-2xl font-semibold text-gray-900 dark:text-[#eae5de]">
-            Planner
-          </h1>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setHistoryOpen(true)}
-              aria-label="History"
-              className="flex items-center gap-1.5 p-3 sm:px-3 sm:py-2.5 text-sm border border-gray-200 dark:border-[#3a352e] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2c2822] text-gray-600 dark:text-[#a49c90]"
-            >
-              <History size={16} />
-              <span className="hidden sm:inline">History</span>
+    <div className="md:p-6 md:h-full md:flex md:flex-col">
+      {/* Header */}
+      <div className="px-4 pt-4 md:p-0 md:mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-3xl text-gray-900 dark:text-[#eae5de]">Plan</h1>
+        <div className="flex items-center gap-2">
+          {!isCurrentWeek && (
+            <button type="button" onClick={() => setMonday(getMondayOf(new Date()))} className={headerBtn}>
+              Today
             </button>
-            {weekNav}
-          </div>
+          )}
+          <button type="button" onClick={() => setHistoryOpen(true)} aria-label="History: reuse a past week" className={headerBtn}>
+            <History size={18} aria-hidden /> History
+          </button>
         </div>
-
-        {/* Week label on mobile */}
-        <p className="sm:hidden text-xs text-gray-400 dark:text-[#5c554b] text-center mb-3">
-          {formatWeekRange(weekStart)}
-        </p>
-
-        {loadingPlans ? (
-          <div className="flex items-center justify-center h-48">
-            <Loader2 size={20} className="animate-spin text-gray-400" />
-          </div>
-        ) : (
-          <>
-            {/* ── Mobile view ─────────────────────────────────────── */}
-            <div className="md:hidden flex flex-col gap-4">
-              <div className="grid grid-cols-7 gap-1 pb-1">
-                {DAYS.map((day, i) => {
-                  const date = new Date(weekStart);
-                  date.setDate(date.getDate() + i);
-                  const isToday =
-                    date.toLocaleDateString() ===
-                    new Date().toLocaleDateString();
-                  const hasEntries = MEALS.some(
-                    (m) => getEntries(i, m).length > 0
-                  );
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => setMobileDay(i)}
-                      className={`flex flex-col items-center justify-center px-0.5 py-2 rounded-xl text-xs font-medium transition-colors relative ${
-                        mobileDay === i
-                          ? "bg-orange-500 text-white"
-                          : isToday
-                          ? "bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border border-orange-200 dark:border-orange-800/50"
-                          : "bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
-                      }`}
-                    >
-                      <span className="uppercase tracking-wide text-[10px]">
-                        {day}
-                      </span>
-                      <span className="font-bold text-sm">{date.getDate()}</span>
-                      {dayNutrition[i] && (
-                        <span className="text-[9px] font-medium opacity-80 leading-tight">
-                          {Math.round(dayNutrition[i].kcal)}
-                        </span>
-                      )}
-                      {hasEntries && mobileDay !== i && (
-                        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-orange-400" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="space-y-4">
-                {MEALS.map((meal) => (
-                  <MobileMealSection
-                    key={meal}
-                    dayIdx={mobileDay}
-                    meal={meal}
-                    entries={getEntries(mobileDay, meal)}
-                    onRemove={handleRemove}
-                    onServingsChange={handleServingsChange}
-                    onAddClick={() => setModal({ day: mobileDay, meal })}
-                  />
-                ))}
-              </div>
-              <p className="text-xs text-gray-400 dark:text-[#5c554b] text-center">
-                Tip: press &amp; hold a recipe to move it to another meal.
-              </p>
-
-            </div>
-
-            {/* ── Desktop view ────────────────────────────────────── */}
-            <div className="hidden md:flex flex-col flex-1 overflow-auto">
-              <div className="min-w-[700px]">
-                {/* Day headers */}
-                <div className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2">
-                  <div />
-                  {DAYS.map((day, i) => {
-                    const date = new Date(weekStart);
-                    date.setDate(date.getDate() + i);
-                    const isToday =
-                      date.toLocaleDateString() ===
-                      new Date().toLocaleDateString();
-                    const nut = dayNutrition[i];
-                    return (
-                      <div key={day} className="text-center">
-                        <span
-                          className={`text-xs font-semibold uppercase tracking-wide ${
-                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-400 dark:text-[#5c554b]"
-                          }`}
-                        >
-                          {day}
-                        </span>
-                        <div
-                          className={`text-sm font-medium mt-0.5 ${
-                            isToday ? "text-orange-600 dark:text-orange-400" : "text-gray-600 dark:text-[#a49c90]"
-                          }`}
-                        >
-                          {date.getDate()}
-                        </div>
-                        {nut && (
-                          <div className="mt-1 space-y-0.5">
-                            <div className="text-[10px] font-semibold text-gray-500 dark:text-[#7c756a]">
-                              {Math.round(nut.kcal)} kcal
-                            </div>
-                            <div className="text-[9px] text-gray-400 dark:text-[#5c554b] leading-tight">
-                              P {Math.round(nut.protein)}g · C {Math.round(nut.carbs)}g · F {Math.round(nut.fat)}g
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Meal rows */}
-                {MEALS.map((meal) => (
-                  <div
-                    key={meal}
-                    className="grid grid-cols-[80px_repeat(7,1fr)] gap-2 mb-2 items-stretch"
-                  >
-                    <div className="flex items-start pt-2">
-                      <span className="text-xs font-medium text-gray-400 dark:text-[#5c554b] uppercase tracking-wide">
-                        {mealLabel(meal)}
-                      </span>
-                    </div>
-                    {DAYS.map((_, dayIdx) => (
-                      <DroppableMealSlot
-                        key={dayIdx}
-                        dayIdx={dayIdx}
-                        meal={meal}
-                        entries={getEntries(dayIdx, meal)}
-                        onRemove={handleRemove}
-                        onServingsChange={handleServingsChange}
-                        onAddClick={() => setModal({ day: dayIdx, meal })}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              {/* Recipe panel */}
-              <RecipePanel />
-            </div>
-          </>
-        )}
-
-        {modal && (
-          <RecipeSelectorModal
-            day={modal.day}
-            mealType={modal.meal}
-            weekStart={weekStart}
-            onClose={() => setModal(null)}
-            onSelect={(entry) => {
-              setPlans((prev) => [...prev, entry]);
-              setModal(null);
-              getWeekNutrition(weekStart.toISOString()).then(setDayNutrition).catch(() => {});
-            }}
-          />
-        )}
-
-        {historyOpen && (
-          <PlanHistorySheet
-            targetWeek={weekStart}
-            targetCount={plans.length}
-            onClose={() => setHistoryOpen(false)}
-            onImported={(copied) => {
-              setHistoryOpen(false);
-              loadPlans();
-              showSuccess(copied ? `Imported ${copied} meal${copied === 1 ? "" : "s"}.` : "That week had nothing to import.");
-            }}
-          />
-        )}
       </div>
 
-      <DragOverlay>
-        {dragActive && <DragOverlayCard recipe={dragActive} />}
-      </DragOverlay>
-    </DndContext>
+      {/* Week switcher (+ day strip on mobile) — sticky on mobile */}
+      <div className="sticky top-0 z-20 bg-[var(--color-bg-base)] pb-3 md:static md:pb-4">
+        <div className="px-2 md:px-0 pt-1.5 pb-2 flex items-center justify-between md:justify-start md:gap-2">
+          <button type="button" onClick={() => shiftWeek(-1)} aria-label="Previous week" className={navBtn}>
+            <ChevronLeft size={20} />
+          </button>
+          <div className="text-center md:min-w-56">
+            <p className="text-base font-bold text-gray-900 dark:text-[#eae5de]">{weekTitle(monday)}</p>
+            <p className="mt-px text-[13px] text-gray-600 dark:text-[#a49c90]">
+              {weekRange(monday)} · {loading ? "…" : weekKcal ? formatKcal(weekKcal) : "nothing planned"}
+            </p>
+          </div>
+          <button type="button" onClick={() => shiftWeek(1)} aria-label="Next week" className={navBtn}>
+            <ChevronRight size={20} />
+          </button>
+          {loading && <Loader2 size={18} aria-label="Loading" className="hidden md:block animate-spin text-gray-400" />}
+        </div>
+        <div className="md:hidden px-4 grid grid-cols-7 gap-1.5">
+          {DAY_NAMES.map((name, i) => {
+            const date = dateOf(monday, i);
+            const isToday = date.toDateString() === todayStr;
+            const has = shown.some((e) => e.dayOfWeek === i);
+            return (
+              <button
+                key={name}
+                type="button"
+                onClick={() => jumpToDay(i)}
+                aria-label={`Jump to ${name} ${date.getDate()}`}
+                className={`relative h-[58px] rounded-[14px] border flex flex-col items-center justify-center gap-0.5 text-xs font-semibold ${
+                  isToday
+                    ? "border-orange-500 bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400"
+                    : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
+                }`}
+              >
+                {name.slice(0, 3)}
+                <b className="text-[17px] text-gray-900 dark:text-[#eae5de]">{date.getDate()}</b>
+                {has && <span aria-hidden className="absolute bottom-1.5 w-[5px] h-[5px] rounded-full bg-orange-500" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Mobile: the whole week as an agenda ── */}
+      <div className="md:hidden">
+        {body ??
+          (loading ? (
+            <div className="space-y-3 px-4 animate-pulse" aria-busy="true" aria-label="Loading the plan">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-40 rounded-[20px] bg-gray-100 dark:bg-[#24211c]" />
+              ))}
+            </div>
+          ) : (
+            <div>
+              {DAY_NAMES.map((name, i) => {
+                const date = dateOf(monday, i);
+                const isToday = date.toDateString() === todayStr;
+                const dayEntries = shown.filter((e) => e.dayOfWeek === i).sort(byMeal);
+                const kcal = totals[i]?.kcal;
+                return (
+                  <section
+                    key={name}
+                    id={`day-${i}`}
+                    aria-labelledby={`day-${i}-title`}
+                    className={`scroll-mt-[136px] mx-4 mb-3 rounded-[20px] border overflow-hidden bg-white dark:bg-[#24211c] ${
+                      isToday ? "border-orange-500" : "border-gray-100 dark:border-[#3a352e]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 px-3.5 pt-3 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <h2 id={`day-${i}-title`} className="text-[17px] font-bold text-gray-900 dark:text-[#eae5de]">
+                          {name} {date.getDate()}
+                        </h2>
+                        {isToday && <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-xs font-bold">Today</span>}
+                      </div>
+                      {kcal ? <span className="text-[13px] text-gray-600 dark:text-[#a49c90]">{formatKcal(kcal)}</span> : null}
+                    </div>
+                    {dayEntries.map((e) => {
+                      const r = recipes.get(e.recipeId);
+                      if (!r) return null;
+                      return (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onClick={() => setSheet({ kind: "entry", id: e.id })}
+                          aria-label={`${mealLabel(e.mealType)}: ${r.name}, ${e.servings} serving${e.servings === 1 ? "" : "s"}`}
+                          className={`w-full min-h-[58px] flex items-center gap-3 px-3.5 py-2 border-t border-gray-100 dark:border-[#3a352e] text-left active:bg-gray-50 dark:active:bg-[#2a2620] ${
+                            e.id.startsWith("temp-") ? "opacity-60" : ""
+                          }`}
+                        >
+                          <span className="w-[70px] shrink-0 text-xs font-semibold tracking-[.03em] uppercase text-gray-500 dark:text-[#a49c90]">
+                            {mealLabel(e.mealType)}
+                          </span>
+                          <RecipeThumb recipe={r} sizes="40px" className="w-10 h-10 rounded-[10px] shrink-0" initialClass="text-lg" />
+                          <span className="flex-1 min-w-0 truncate text-[15px] font-medium text-gray-900 dark:text-[#eae5de]">{r.name}</span>
+                          <span className="shrink-0 text-sm font-semibold text-gray-600 dark:text-[#a49c90]">{e.servings}×</span>
+                        </button>
+                      );
+                    })}
+                    {dayEntries.length === 0 && (
+                      <p className="px-3.5 pb-3 text-sm text-gray-600 dark:text-[#a49c90]">Nothing planned yet.</p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openAdd(i)}
+                      className="w-full h-12 flex items-center gap-2 px-3.5 border-t border-gray-100 dark:border-[#3a352e] text-[15px] font-semibold text-orange-700 dark:text-orange-400 active:bg-gray-50 dark:active:bg-[#2a2620]"
+                    >
+                      <Plus size={18} aria-hidden /> Add meal
+                    </button>
+                  </section>
+                );
+              })}
+              <Link
+                href="/grocery-list"
+                className="mx-4 mt-1 mb-4 px-4 py-3.5 rounded-[18px] bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400 flex items-center justify-between text-[15px] font-bold"
+              >
+                {isCurrentWeek ? "Shopping list for this week" : "Shopping list"}
+                <ChevronRight size={20} aria-hidden />
+              </Link>
+            </div>
+          ))}
+      </div>
+
+      {/* ── Desktop: the grid ── */}
+      <div className="hidden md:flex md:flex-col md:flex-1 md:min-h-0">
+        {body ??
+          (recipeList === null ? (
+            <div className="flex items-center justify-center h-48">
+              <Loader2 size={20} className="animate-spin text-gray-400" />
+            </div>
+          ) : (
+            <DesktopWeek
+              monday={monday}
+              entries={shown}
+              recipes={recipes}
+              recipeList={recipeList}
+              totals={totals}
+              handlers={{
+                onAddRecipe: (r, day, meal) =>
+                  addEntry(r, day, meal).catch(() => setToast({ text: "Couldn't add it. Try again.", error: true })),
+                onMove: moveEntry,
+                onServings: setServings,
+                onRemove: removeWithUndo,
+                onOpenAdd: openAdd,
+              }}
+            />
+          ))}
+      </div>
+
+      {toast && (
+        <div
+          role={toast.error ? "alert" : "status"}
+          className={`fixed z-[60] left-4 right-4 md:left-auto md:right-8 md:w-96 bottom-[calc(4rem+env(safe-area-inset-bottom)+0.75rem)] md:bottom-6 flex items-center justify-between gap-2 rounded-[14px] pl-4 pr-2 py-2 min-h-12 text-[15px] font-medium shadow-lg ${
+            toast.error ? "bg-red-600 text-white" : "bg-gray-900 dark:bg-[#eae5de] text-white dark:text-[#1a1714]"
+          }`}
+        >
+          <span className="truncate">{toast.text}</span>
+          {toast.undo && (
+            <button type="button" onClick={toast.undo} className="h-9 px-3 rounded-[10px] font-bold shrink-0">
+              Undo
+            </button>
+          )}
+        </div>
+      )}
+
+      {sheet?.kind === "add" && recipeList && (
+        <AddMealSheet
+          title={`Add to ${DAY_NAMES[sheet.day]} ${dateOf(monday, sheet.day).getDate()}`}
+          defaultMeal={sheet.meal}
+          recipes={recipeList}
+          recentIds={recentIds}
+          onAdd={(r, meal) => addEntry(r, sheet.day, meal)}
+          onRemove={async (id) => { await removeEntry(id); }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {sheetEntry && sheetRecipe && (
+        <EntrySheet
+          entry={sheetEntry}
+          recipe={sheetRecipe}
+          monday={monday}
+          onServings={(n) => setServings(sheetEntry.id, n)}
+          onMove={(day, meal) => moveEntry(sheetEntry.id, day, meal)}
+          onRemove={() => {
+            setSheet(null);
+            removeWithUndo(sheetEntry.id);
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+
+      {historyOpen && (
+        <PlanHistorySheet
+          targetWeek={monday}
+          targetCount={entries.length}
+          onClose={() => setHistoryOpen(false)}
+          onImported={(copied) => {
+            setHistoryOpen(false);
+            reload();
+            setToast({ text: copied ? `Imported ${copied} meal${copied === 1 ? "" : "s"}.` : "That week had nothing to import." });
+          }}
+        />
+      )}
+    </div>
   );
 }
