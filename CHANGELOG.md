@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1] — 2026-10-26
+
+### ✨ Features
+- **Recipe macros** — tap the kcal tile on a recipe to open a sheet with a donut chart of the calorie share from carbs, fat and protein (4/9/4 kcal/g), plus grams and percentages per serving.
+
+### 🎨 UI / UX
+- **Recipe action bar** — Cook (when on) and Add to plan use the light orange tint of the bottom navigation's active tab instead of a solid orange fill.
+
 ## [1.2.0] — 2026-10-26
 
 ### 🎨 UI / UX
