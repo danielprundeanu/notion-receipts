@@ -14,11 +14,13 @@ import {
   ChevronRight,
   ArrowUpRight,
   Link2,
+  PieChart,
 } from "lucide-react";
 import { toggleFavorite, getRecipeWeekPlanServings, type RecipeRefGroup } from "@/lib/actions";
 import ShareButton from "@/components/ShareButton";
 import RecipeCover from "@/components/RecipeCover";
 import AddToPlanSheet from "@/components/AddToPlanSheet";
+import MacrosSheet from "@/components/MacrosSheet";
 import ServingsInput from "@/components/ServingsInput";
 import { categoryLabel, difficultyLabel } from "@/lib/labels";
 import { ingredientGrams } from "@/lib/nutrition";
@@ -109,6 +111,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const [cook, setCook] = useState(false);
   const [screenKeptOn, setScreenKeptOn] = useState(false);
   const [showPlan, setShowPlan] = useState(false);
+  const [showMacros, setShowMacros] = useState(false);
   const [plannerServings, setPlannerServings] = useState(0);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [doneSteps, setDoneSteps] = useState<Set<string>>(new Set());
@@ -265,10 +268,10 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
   const categories = (recipe.category ?? "").split(",").map((c) => c.trim()).filter(Boolean);
   const stats = [
-    hasNutrition && { label: "Per serving", value: `${perServing(totalKcal)} kcal` },
+    hasNutrition && { label: "Per serving", value: `${perServing(totalKcal)} kcal`, onClick: () => setShowMacros(true) },
     recipe.time && { label: "Total time", value: formatMinutes(recipe.time) },
     recipe.difficulty && { label: "Difficulty", value: difficultyLabel(recipe.difficulty) },
-  ].filter((s): s is { label: string; value: string } => Boolean(s));
+  ].filter((s): s is { label: string; value: string; onClick?: () => void } => Boolean(s));
   const statCols = ["", "grid-cols-1", "grid-cols-2", "grid-cols-3"][stats.length];
 
   const heroSrc = recipe.imageUrl && (recipe.imageUrl.startsWith("/") || recipe.imageUrl.startsWith("http")) && !heroBroken
@@ -377,12 +380,29 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
         {stats.length > 0 && (
           <div className={`mt-3.5 grid ${statCols} gap-2`}>
-            {stats.map((s) => (
-              <div key={s.label} className="px-3 py-2.5 rounded-[14px] bg-white dark:bg-[#24211c] border border-gray-100 dark:border-transparent">
-                <p className="text-xs text-gray-600 dark:text-[#a49c90]">{s.label}</p>
-                <p className="mt-0.5 text-[17px] font-bold text-gray-900 dark:text-[#eae5de]">{s.value}</p>
-              </div>
-            ))}
+            {stats.map((s) => {
+              const body = (
+                <>
+                  <p className="text-xs text-gray-600 dark:text-[#a49c90]">{s.label}</p>
+                  <p className="mt-0.5 text-[17px] font-bold text-gray-900 dark:text-[#eae5de]">{s.value}</p>
+                </>
+              );
+              const tile = "px-3 py-2.5 rounded-[14px] bg-white dark:bg-[#24211c] border border-gray-100 dark:border-transparent";
+              return s.onClick ? (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={s.onClick}
+                  aria-label={`${s.value} per serving — show macronutrients`}
+                  className={`${tile} text-left flex items-center justify-between gap-2 hover:border-orange-300 dark:hover:bg-[#2e2a24] transition-colors`}
+                >
+                  <div className="min-w-0">{body}</div>
+                  <PieChart size={16} className="shrink-0 text-orange-500" aria-hidden />
+                </button>
+              ) : (
+                <div key={s.label} className={tile}>{body}</div>
+              );
+            })}
           </div>
         )}
 
@@ -686,7 +706,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           aria-pressed={cook}
           className={`h-[52px] px-4 rounded-[14px] border flex items-center gap-2 text-[15px] font-semibold transition-colors ${
             cook
-              ? "bg-orange-500 border-orange-500 text-white"
+              ? "bg-orange-100 dark:bg-orange-500/15 border-transparent text-orange-700 dark:text-orange-400"
               : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#a49c90]"
           }`}
         >
@@ -695,7 +715,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <button
           type="button"
           onClick={() => { setToast(null); setShowPlan(true); }}
-          className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 h-[52px] rounded-[14px] bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/15 dark:hover:bg-orange-500/25 text-orange-700 dark:text-orange-400 text-base font-bold flex items-center justify-center gap-2 transition-colors"
         >
           <CalendarPlus size={20} aria-hidden /> Add to plan
         </button>
@@ -713,6 +733,16 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
             </Link>
           )}
         </div>
+      )}
+
+      {showMacros && (
+        <MacrosSheet
+          kcal={totalKcal / defaultServings}
+          carbs={totalCarbs / defaultServings}
+          fat={totalFat / defaultServings}
+          protein={totalProtein / defaultServings}
+          onClose={() => setShowMacros(false)}
+        />
       )}
 
       {showPlan && (
