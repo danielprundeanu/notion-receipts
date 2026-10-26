@@ -19,42 +19,20 @@ export default function RecipesFilterBar({
   onClearChips: () => void;
 }) {
   const [stuck, setStuck] = useState(false);
-  const [passedMin, setPassedMin] = useState(false); // scrolled ~40px past the stick point
   const sentinelRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Search chip (minimized state) → smooth-scroll to the top and focus the input.
-  // focus({ preventScroll }) avoids a competing jump-scroll; focusing inside the click
-  // keeps the mobile keyboard opening (iOS only opens it from a user gesture).
-  function goToSearch() {
-    searchInputRef.current?.focus({ preventScroll: true });
-    const scroller = searchInputRef.current?.closest<HTMLElement>("main");
-    (scroller ?? window).scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  // With an empty search the input row collapses into the search chip once scrolled ~40px
-  // past the stick point; with a value it stays open.
-  const hasValue = q.trim().length > 0;
-  const minimized = passedMin && !hasValue;
 
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const root = el.closest<HTMLElement>("main");
     // Stuck: the section reached the top. Chrome (border/shadow) turns on here.
-    const ioStuck = new IntersectionObserver(
+    const io = new IntersectionObserver(
       ([e]) => setStuck(!e.isIntersecting),
       { root: root ?? null, threshold: 0 }
     );
-    // Minimize threshold: a positive top rootMargin grows the root 40px above the
-    // top, so this only fires once the sentinel is ~40px past the stick point.
-    const ioMin = new IntersectionObserver(
-      ([e]) => setPassedMin(!e.isIntersecting),
-      { root: root ?? null, threshold: 0, rootMargin: "40px 0px 0px 0px" }
-    );
-    ioStuck.observe(el);
-    ioMin.observe(el);
-    return () => { ioStuck.disconnect(); ioMin.disconnect(); };
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
   const chip = "shrink-0 h-10 px-4 rounded-full text-sm font-medium flex items-center gap-1.5 border transition-colors";
@@ -81,9 +59,7 @@ export default function RecipesFilterBar({
         {/* Enter just closes the keyboard: results are already filtered. */}
         <form
           role="search"
-          className={`relative md:max-w-md overflow-hidden transition-all duration-300 ease-in-out md:!max-h-none md:!opacity-100 md:!mb-3 ${
-            minimized ? "max-h-0 opacity-0 mb-0 pointer-events-none" : "max-h-16 opacity-100 mb-2"
-          }`}
+          className="relative md:max-w-md mb-2 md:mb-3"
           onSubmit={(e) => { e.preventDefault(); searchInputRef.current?.blur(); }}
         >
           <Search size={20} aria-hidden className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-[#a49c90] pointer-events-none" />
@@ -109,39 +85,23 @@ export default function RecipesFilterBar({
           )}
         </form>
 
-        <div className="flex items-center">
-          {/* Search chip — mobile only, shown when minimized. Scrolls up and focuses the input. */}
-          <button
-            type="button"
-            onClick={goToSearch}
-            aria-label="Search"
-            aria-hidden={!minimized}
-            tabIndex={minimized ? 0 : -1}
-            className={`shrink-0 h-10 rounded-full flex items-center justify-center overflow-hidden border transition-all duration-300 ease-in-out md:hidden ${
-              minimized ? "w-10 opacity-100 mr-2" : "w-0 opacity-0 pointer-events-none"
-            } ${off}`}
-          >
-            <Search size={16} />
+        {/* Scrolling chips — categories are multi-select toggles */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none flex-nowrap items-center">
+          <button type="button" onClick={onClearChips} aria-pressed={noChips} className={`${chip} ${noChips ? on : off}`}>
+            All
           </button>
-
-          {/* Scrolling chips — categories are multi-select toggles */}
-          <div className="flex-1 min-w-0 flex gap-2 overflow-x-auto scrollbar-none flex-nowrap items-center">
-            <button type="button" onClick={onClearChips} aria-pressed={noChips} className={`${chip} ${noChips ? on : off}`}>
-              All
-            </button>
-            <button type="button" onClick={onToggleFav} aria-pressed={fav} className={`${chip} ${fav ? on : off}`}>
-              <Star size={15} aria-hidden className="fill-current" />
-              Favorites
-            </button>
-            {categories.map((c) => {
-              const active = cats.includes(c);
-              return (
-                <button key={c} type="button" onClick={() => onToggleCat(c)} aria-pressed={active} className={`${chip} ${active ? on : off}`}>
-                  {categoryLabel(c)}
-                </button>
-              );
-            })}
-          </div>
+          <button type="button" onClick={onToggleFav} aria-pressed={fav} className={`${chip} ${fav ? on : off}`}>
+            <Star size={15} aria-hidden className="fill-current" />
+            Favorites
+          </button>
+          {categories.map((c) => {
+            const active = cats.includes(c);
+            return (
+              <button key={c} type="button" onClick={() => onToggleCat(c)} aria-pressed={active} className={`${chip} ${active ? on : off}`}>
+                {categoryLabel(c)}
+              </button>
+            );
+          })}
         </div>
       </div>
     </>

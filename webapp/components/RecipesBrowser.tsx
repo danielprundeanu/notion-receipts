@@ -192,13 +192,8 @@ export default function RecipesBrowser({
         }}
       />
 
-      {/* Scroll anchor for revealResults — the margin clears the minimized sticky bar
-          (just the chips), or the full one while a search is typed. */}
-      <div
-        ref={resultsTopRef}
-        aria-hidden
-        className={`${filters.q.trim() ? "scroll-mt-28" : "scroll-mt-14"} md:scroll-mt-4`}
-      />
+      {/* Scroll anchor for revealResults — the margin clears the sticky bar (search + chips). */}
+      <div ref={resultsTopRef} aria-hidden className="scroll-mt-28 md:scroll-mt-4" />
 
       {!filtering && !selectMode && cookedRecipes.length > 0 && (
         <section aria-labelledby="cooked-heading" className="pt-1.5 pb-5">
