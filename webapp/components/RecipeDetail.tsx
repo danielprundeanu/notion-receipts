@@ -327,9 +327,9 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const stepBtn = "w-11 h-11 rounded-xl bg-gray-100 dark:bg-[#2e2a24] text-gray-800 dark:text-[#eae5de] flex items-center justify-center";
 
   return (
-    // At least a screen tall (less the layout's bottom-nav spacer), so on a short recipe the
-    // action bar still sits at the bottom instead of mid-screen.
-    <div className="max-w-4xl mx-auto md:p-8 flex flex-col min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:min-h-0">
+    // At least a screen tall, so on a short recipe the action bar still sits at the bottom
+    // instead of mid-screen.
+    <div className="max-w-4xl mx-auto md:p-8 flex flex-col min-h-[100dvh] md:min-h-0">
       {/* ── Hero: cover photo with the actions on top (or the actions alone) ── */}
       <div className={heroSrc ? "relative h-[250px] md:h-80 md:rounded-2xl overflow-hidden bg-gray-100 dark:bg-[#2e2a24]" : ""}>
         {heroSrc && (
@@ -678,8 +678,8 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
 
       <div className="flex-1" aria-hidden />
 
-      {/* ── Action bar: sits above the bottom nav on mobile ── */}
-      <div className="sticky z-30 bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] md:bottom-0 mt-5 flex gap-2.5 px-4 py-2.5 border-t border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] md:rounded-2xl md:border">
+      {/* ── Action bar: the bottom of the screen on mobile (the page has no tabs) ── */}
+      <div className="sticky z-30 bottom-0 mt-5 flex gap-2.5 px-4 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] border-t border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] md:rounded-2xl md:border">
         <button
           type="button"
           onClick={toggleCook}
@@ -704,7 +704,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
       {toast && (
         <div
           role="status"
-          className="fixed z-40 left-4 right-4 md:left-auto md:right-8 md:w-96 bottom-[calc(4rem+1px+env(safe-area-inset-bottom)+5.25rem)] md:bottom-28 flex items-center justify-between gap-2 rounded-[14px] bg-gray-900 dark:bg-[#eae5de] text-white dark:text-[#1a1714] pl-4 pr-2 py-2 text-[15px] font-medium shadow-lg"
+          className="fixed z-40 left-4 right-4 md:left-auto md:right-8 md:w-96 bottom-[calc(4.875rem+1px+max(0.625rem,env(safe-area-inset-bottom)))] md:bottom-28 flex items-center justify-between gap-2 rounded-[14px] bg-gray-900 dark:bg-[#eae5de] text-white dark:text-[#1a1714] pl-4 pr-2 py-2 text-[15px] font-medium shadow-lg"
         >
           <span>{toast.text}</span>
           {toast.planLink && (

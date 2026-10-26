@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Work_Sans, DM_Serif_Text } from "next/font/google";
 import Sidebar from "@/components/Sidebar";
-import BottomNav from "@/components/BottomNav";
+import BottomNav, { BottomNavSpacer } from "@/components/BottomNav";
 import ThemeProvider from "@/components/ThemeProvider";
 
 const dmSerifText = DM_Serif_Text({
@@ -58,7 +58,7 @@ export default function RootLayout({
               {children}
               {/* Spacer clears the fixed BottomNav on mobile — real content
                   element, since scroll-container padding is unreliable here. */}
-              <div className="mobile-safe-pb" aria-hidden />
+              <BottomNavSpacer />
             </main>
           </div>
           <BottomNav />

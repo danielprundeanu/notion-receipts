@@ -25,10 +25,13 @@ const nav: { href: string; label: string; Icon: LucideIcon; match: (p: string) =
 
 // The recipe editor is a full screen with its own Cancel / Save: no tabs to lose unsaved work with.
 const isEditor = (p: string) => p === "/recipes/new" || /^\/recipes\/[^/]+\/edit$/.test(p);
+// The recipe page ends in its own action bar (Cook / Add to plan) and has a back button, as in
+// the prototype: no tabs there.
+const isRecipe = (p: string) => /^\/recipes\/(?!new$|import$)[^/]+$/.test(p);
 
 export default function BottomNav() {
   const pathname = usePathname();
-  if (isEditor(pathname)) return null;
+  if (isEditor(pathname) || isRecipe(pathname)) return null;
 
   return (
     <nav
@@ -60,4 +63,12 @@ export default function BottomNav() {
       })}
     </nav>
   );
+}
+
+// Room at the end of the page so the fixed nav doesn't cover the last content. The recipe
+// page's sticky action bar sits at the very bottom itself, so it gets none.
+export function BottomNavSpacer() {
+  const pathname = usePathname();
+  if (isRecipe(pathname)) return null;
+  return <div className="mobile-safe-pb" aria-hidden />;
 }
