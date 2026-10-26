@@ -706,7 +706,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           aria-pressed={cook}
           className={`h-[52px] px-4 rounded-[14px] border flex items-center gap-2 text-[15px] font-semibold transition-colors ${
             cook
-              ? "bg-orange-500 border-orange-500 text-white"
+              ? "bg-orange-100 dark:bg-orange-500/15 border-transparent text-orange-700 dark:text-orange-400"
               : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#a49c90]"
           }`}
         >
@@ -715,7 +715,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
         <button
           type="button"
           onClick={() => { setToast(null); setShowPlan(true); }}
-          className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 transition-colors"
+          className="flex-1 h-[52px] rounded-[14px] bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/15 dark:hover:bg-orange-500/25 text-orange-700 dark:text-orange-400 text-base font-bold flex items-center justify-center gap-2 transition-colors"
         >
           <CalendarPlus size={20} aria-hidden /> Add to plan
         </button>
