@@ -105,7 +105,7 @@ export default function AddToPlanSheet({
   const seg = "flex-1 h-10 rounded-[10px] text-[15px] font-semibold transition-colors";
   const pill = "h-11 rounded-xl border text-sm font-semibold transition-colors";
   const pillOff = "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]";
-  const pillOn = "border-orange-500 bg-orange-500 text-white";
+  const pillOn = "border-orange-500 bg-orange-500 text-gray-900";
   const stepBtn = "w-11 h-11 rounded-xl bg-gray-100 dark:bg-[#2e2a24] text-gray-800 dark:text-[#eae5de] flex items-center justify-center";
 
   return (

@@ -85,7 +85,7 @@ function Chip({
       aria-pressed={active}
       className={`shrink-0 h-10 px-3.5 text-xs font-medium rounded-full border transition-colors flex items-center gap-1 ${
         active
-          ? "bg-orange-500 text-white border-orange-500"
+          ? "bg-orange-500 text-gray-900 border-orange-500"
           : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
       }`}
     >

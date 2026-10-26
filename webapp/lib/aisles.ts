@@ -4,17 +4,17 @@
 // categories share an aisle: a real week came out in 19 groups by category, ~8 by aisle.
 
 export const AISLES = [
-  { key: "produce", title: "Fruit & vegetables", short: "Fruit & veg" },
-  { key: "dairy", title: "Dairy & eggs", short: "Dairy" },
-  { key: "meat", title: "Meat, fish & tofu", short: "Meat & fish" },
-  { key: "grains", title: "Bread, pasta & grains", short: "Grains" },
-  { key: "tins", title: "Tins, jars & sauces", short: "Tins & jars" },
-  { key: "nuts", title: "Nuts, seeds & dried fruit", short: "Nuts & seeds" },
-  { key: "baking", title: "Baking, oils & sweet", short: "Baking" },
-  { key: "spices", title: "Spices & herbs", short: "Spices" },
-  { key: "frozen", title: "Frozen", short: "Frozen" },
-  { key: "drinks", title: "Drinks", short: "Drinks" },
-  { key: "other", title: "Household & other", short: "Other" },
+  { key: "produce", emoji: "🥕", title: "Fruit & vegetables", short: "Fruit & veg" },
+  { key: "dairy", emoji: "🥚", title: "Dairy & eggs", short: "Dairy" },
+  { key: "meat", emoji: "🥩", title: "Meat, fish & tofu", short: "Meat & fish" },
+  { key: "grains", emoji: "🌾", title: "Bread, pasta & grains", short: "Grains" },
+  { key: "tins", emoji: "🥫", title: "Tins, jars & sauces", short: "Tins & jars" },
+  { key: "nuts", emoji: "🥜", title: "Nuts, seeds & dried fruit", short: "Nuts & seeds" },
+  { key: "baking", emoji: "🍯", title: "Baking, oils & sweet", short: "Baking" },
+  { key: "spices", emoji: "🧂", title: "Spices & herbs", short: "Spices" },
+  { key: "frozen", emoji: "🧊", title: "Frozen", short: "Frozen" },
+  { key: "drinks", emoji: "🥤", title: "Drinks", short: "Drinks" },
+  { key: "other", emoji: "📦", title: "Household & other", short: "Other" },
 ] as const;
 
 export type AisleKey = (typeof AISLES)[number]["key"];

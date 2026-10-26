@@ -18,7 +18,7 @@ import { parseIngredientLine } from "@/lib/shopping-lines";
 import { addWeeks, getMondayOf, relativeWeekTitle, shortWeekRange } from "@/lib/weeks";
 import BulkGroceryAdd, { type BulkProductRow } from "@/components/BulkGroceryAdd";
 
-type Group = { key: string; title: string; short: string; items: ShoppingLine[] };
+type Group = { key: string; emoji: string; title: string; short: string; items: ShoppingLine[] };
 type Toast = { text: string; error?: boolean; undo?: () => void };
 
 const INPUT_CLS =
@@ -138,17 +138,17 @@ export default function GroceryListPage() {
   const toBuy = lines.filter((l) => !l.staple && !inCart(l));
   const added = toBuy.filter((l) => l.manual);
   const groups: Group[] = [
-    ...(added.length ? [{ key: "added", title: "Added by you", short: "Added", items: added }] : []),
-    ...AISLES.map((a) => ({ key: a.key as string, title: a.title as string, short: a.short as string, items: toBuy.filter((l) => !l.manual && aisleOf(l.category) === a.key) })),
+    ...(added.length ? [{ key: "added", emoji: "✍️", title: "Added by you", short: "Added", items: added }] : []),
+    ...AISLES.map((a) => ({ key: a.key as string, emoji: a.emoji as string, title: a.title as string, short: a.short as string, items: toBuy.filter((l) => !l.manual && aisleOf(l.category) === a.key) })),
   ].filter((g) => g.items.length > 0);
   const staples = lines.filter((l) => l.staple && !inCart(l));
   const cart = lines.filter(inCart).sort(byName);
   const countable = lines.filter((l) => !l.staple);
   const done = countable.filter(inCart).length;
   const chips = [
-    ...groups.map((g) => ({ key: g.key, label: g.short, count: g.items.length })),
-    ...(staples.length ? [{ key: "home", label: "At home", count: staples.length }] : []),
-    ...(cart.length ? [{ key: "cart", label: "In cart", count: cart.length }] : []),
+    ...groups.map((g) => ({ key: g.key, emoji: g.emoji, label: g.short, count: g.items.length })),
+    ...(staples.length ? [{ key: "home", emoji: "🏠", label: "At home", count: staples.length }] : []),
+    ...(cart.length ? [{ key: "cart", emoji: "🛒", label: "In cart", count: cart.length }] : []),
   ];
   const activeKey = active ?? chips[0]?.key ?? null;
   const manualLines = lines.filter((l) => l.manual);
@@ -319,7 +319,7 @@ export default function GroceryListPage() {
       `Shopping list · ${shortWeekRange(monday)}`,
       ...groups.flatMap((g) => [
         "",
-        g.title.toUpperCase(),
+        `${g.emoji} ${g.title.toUpperCase()}`,
         ...g.items.map((l) => {
           const q = formatShoppingAmounts(l.amounts);
           return `• ${l.name}${q ? ` — ${q}` : ""}`;
@@ -464,10 +464,11 @@ export default function GroceryListPage() {
                   aria-pressed={on}
                   className={`shrink-0 h-10 px-3.5 rounded-full border flex items-center gap-1.5 text-sm font-semibold transition-colors ${
                     on
-                      ? "bg-orange-500 border-orange-500 text-white"
+                      ? "bg-orange-500 border-orange-500 text-gray-900"
                       : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
+                  <span aria-hidden>{c.emoji}</span>
                   {c.label}
                   <span className={`text-xs ${on ? "opacity-85" : "opacity-70"}`}>{c.count}</span>
                 </button>
@@ -510,7 +511,7 @@ export default function GroceryListPage() {
             {groups.map((g) => (
               <section key={g.key} aria-labelledby={`shop-${g.key}`}>
                 <h2 id={`shop-${g.key}`} data-section={g.key} className={sectionHead}>
-                  <span>{g.title}</span>
+                  <span><span aria-hidden>{g.emoji}</span> {g.title}</span>
                   {g.key === "added" ? (
                     <span className="flex items-center gap-1">
                       {selectMode ? (
@@ -590,7 +591,7 @@ export default function GroceryListPage() {
                   aria-expanded={showStaples}
                   className={`${toggleRow} scroll-mt-4`}
                 >
-                  <span>Probably at home · {staples.length}</span>
+                  <span><span aria-hidden>🏠</span> Probably at home · {staples.length}</span>
                   <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-[#a49c90]">
                     {showStaples ? "Hide" : "Show"}
                     <ChevronDown size={18} className={`transition-transform ${showStaples ? "rotate-180" : ""}`} />
