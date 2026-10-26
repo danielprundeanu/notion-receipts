@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.0] — 2026-10-26
+
+### 🎨 UI / UX
+- **Recipe page** — no bottom tabs, as in the prototype: the Cook / Add to plan bar sits at the bottom of the screen (with room for the home indicator) and you leave through the back button. The "Added to plan" toast sits just above the bar.
+- **Recipes list** — the sticky bar keeps the search box and the chips on two lines while you scroll; the compact one-line version (search icon + chips) is gone. Tapping a chip brings the results to just below the bar.
+
 ## [1.1.0] — 2026-10-26
 
 ### ✨ Features
