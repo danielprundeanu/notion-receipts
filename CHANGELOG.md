@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.3] — 2026-10-26
+
+### 🎨 UI / UX
+- **Shopping list emojis** — each aisle shows its emoji again (🥕 Fruit & veg, 🥚 Dairy, 🥩 Meat & fish, …) in the section headers, the section chips and the shared text; Added by you / At home / In cart get ✍️ / 🏠 / 🛒.
+- **Selected chips** — orange chips and pills (recipe filters, shopping-list sections, meal and day pickers, recipe form, plan history) use dark text instead of white.
+
 ## [1.2.2] — 2026-10-26
 
 ### ⚙️ Internals
