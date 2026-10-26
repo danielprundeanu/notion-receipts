@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.2] — 2026-10-26
+
+### ⚙️ Internals
+- Session context dumps for the Oct 25–26 webapp work (`.claude/context/`, with `LATEST.md` pointing at the newest) and `.claude/launch.json`, which starts the webapp dev server for the preview pane. No app changes.
+
 ## [1.2.1] — 2026-10-26
 
 ### ✨ Features
