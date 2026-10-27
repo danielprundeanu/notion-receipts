@@ -5,29 +5,33 @@ import { Check, Loader2, Plus, Search, X } from "lucide-react";
 import { mealLabel } from "@/lib/labels";
 import { normalizeSearch } from "@/lib/search";
 import { RecipeThumb, recipeMeta } from "@/components/RecipesGrid";
-import { MEALS, type MealType, type PlannerRecipe } from "./shared";
+import { SheetGrabber, useSheetDrag } from "@/components/Sheet";
+import { DAY_NAMES, MEALS, dateOf, type MealType, type PlannerRecipe } from "./shared";
 
-// Bottom sheet for one day: pick a meal, then tap + on as many recipes as you like
-// (Cooked recently / Favorites, or search). A tick means it's in the plan; tapping
-// the tick takes it out again.
+// Bottom sheet: pick one or more days of the week and a meal, then tap + on as many recipes
+// as you like (Cooked recently / Favorites, or search) — each lands on every picked day.
+// A tick means it's in the plan; tapping the tick takes those entries out again.
 export default function AddMealSheet({
-  title, defaultMeal, recipes, recentIds, onAdd, onRemove, onClose,
+  monday, defaultDay, defaultMeal, recipes, recentIds, onAdd, onRemove, onClose,
 }: {
-  title: string;
+  monday: Date;
+  defaultDay: number;
   defaultMeal: MealType;
   recipes: PlannerRecipe[];
   recentIds: string[];
-  /** Adds the recipe to this day and meal; resolves with the new entry's id. */
-  onAdd: (recipe: PlannerRecipe, meal: MealType) => Promise<string>;
-  onRemove: (entryId: string) => Promise<void>;
+  /** Adds the recipe to each day for this meal; resolves with the new entries' ids. */
+  onAdd: (recipe: PlannerRecipe, days: number[], meal: MealType) => Promise<string[]>;
+  onRemove: (entryIds: string[]) => Promise<void>;
   onClose: () => void;
 }) {
+  const [days, setDays] = useState<number[]>([defaultDay]);
   const [meal, setMeal] = useState<MealType>(defaultMeal);
   const [q, setQ] = useState("");
-  // "meal:recipeId" → the entry it created ("pending" while saving), so the same recipe can
-  // go into two meals of the day.
-  const [added, setAdded] = useState<Map<string, string>>(new Map());
+  // "meal:recipeId" → the entries it created ("pending" while saving), so the same recipe can
+  // go into two meals.
+  const [added, setAdded] = useState<Map<string, string[] | "pending">>(new Map());
   const [error, setError] = useState<string | null>(null);
+  const { panelRef, grabberProps } = useSheetDrag(onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -37,39 +41,49 @@ export default function AddMealSheet({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function setEntry(key: string, entryId: string | null) {
+  function setEntry(key: string, entryIds: string[] | "pending" | null) {
     setAdded((prev) => {
       const next = new Map(prev);
-      if (entryId) next.set(key, entryId);
+      if (entryIds) next.set(key, entryIds);
       else next.delete(key);
       return next;
     });
   }
 
+  // At least one day stays picked.
+  function toggleDay(day: number) {
+    setDays((prev) =>
+      prev.includes(day) ? (prev.length > 1 ? prev.filter((d) => d !== day) : prev) : [...prev, day].sort((a, b) => a - b)
+    );
+  }
+
   async function toggle(r: PlannerRecipe) {
     const key = `${meal}:${r.id}`;
-    const entryId = added.get(key);
-    if (entryId === "pending") return;
+    const entryIds = added.get(key);
+    if (entryIds === "pending") return;
     setError(null);
-    if (entryId) {
+    if (entryIds) {
       setEntry(key, "pending");
       try {
-        await onRemove(entryId);
+        await onRemove(entryIds);
         setEntry(key, null);
       } catch {
-        setEntry(key, entryId);
+        setEntry(key, entryIds);
         setError(`Couldn't take ${r.name} out. Try again.`);
       }
       return;
     }
     setEntry(key, "pending");
     try {
-      setEntry(key, await onAdd(r, meal));
+      setEntry(key, await onAdd(r, days, meal));
     } catch {
       setEntry(key, null);
       setError(`Couldn't add ${r.name}. Try again.`);
     }
   }
+
+  const dayText =
+    days.length === 1 ? `${DAY_NAMES[days[0]]} ${dateOf(monday, days[0]).getDate()}` : `${days.length} days`;
 
   const terms = normalizeSearch(q).split(/\s+/).filter(Boolean);
   const byId = new Map(recipes.map((r) => [r.id, r]));
@@ -92,15 +106,16 @@ export default function AddMealSheet({
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-meal-title"
         className="mt-[70px] md:mt-0 flex-1 md:flex-none min-h-0 md:h-[80vh] w-full md:max-w-lg flex flex-col bg-[var(--color-bg-base)] rounded-t-3xl md:rounded-3xl shadow-xl"
       >
         <div className="px-4 pt-2.5 shrink-0">
-          <div className="w-10 h-[5px] rounded-full bg-gray-200 dark:bg-[#3a352e] mx-auto mb-3 md:hidden" aria-hidden />
+          <SheetGrabber drag={grabberProps} />
           <div className="flex items-center justify-between gap-3">
-            <h2 id="add-meal-title" className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">{title}</h2>
+            <h2 id="add-meal-title" className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Add to {dayText}</h2>
             <button
               type="button"
               onClick={onClose}
@@ -109,7 +124,30 @@ export default function AddMealSheet({
               Done
             </button>
           </div>
-          <div className="mt-3 grid grid-cols-4 gap-1.5">
+          <div role="group" aria-label="Days" className="mt-3 grid grid-cols-7 gap-1.5">
+            {DAY_NAMES.map((name, i) => {
+              const on = days.includes(i);
+              const date = dateOf(monday, i).getDate();
+              return (
+                <button
+                  key={name}
+                  type="button"
+                  onClick={() => toggleDay(i)}
+                  aria-pressed={on}
+                  aria-label={`${name} ${date}`}
+                  className={`h-[52px] rounded-xl border flex flex-col items-center justify-center gap-px text-xs font-semibold transition-colors ${
+                    on
+                      ? "border-orange-500 bg-orange-500 text-white"
+                      : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
+                  }`}
+                >
+                  {name.slice(0, 3)}
+                  <b className={`text-base ${on ? "text-white" : "text-gray-900 dark:text-[#eae5de]"}`}>{date}</b>
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-2 grid grid-cols-4 gap-1.5">
             {MEALS.map((m) => (
               <button
                 key={m}
@@ -163,9 +201,9 @@ export default function AddMealSheet({
               </h3>
               <ul>
                 {sec.items.map((r) => {
-                  const entryId = added.get(`${meal}:${r.id}`);
-                  const pending = entryId === "pending";
-                  const isAdded = !!entryId && !pending;
+                  const entryIds = added.get(`${meal}:${r.id}`);
+                  const pending = entryIds === "pending";
+                  const isAdded = !!entryIds && !pending;
                   const meta = r.nutrition ? `${Math.round(r.nutrition.kcal)} kcal per serving` : recipeMeta(r) || "Recipe";
                   return (
                     <li key={`${sec.title}-${r.id}`} className="flex items-center gap-3 py-2">
@@ -178,7 +216,7 @@ export default function AddMealSheet({
                         type="button"
                         onClick={() => toggle(r)}
                         disabled={pending}
-                        aria-label={isAdded ? `Remove ${r.name} from ${mealLabel(meal)}` : `Add ${r.name} to ${mealLabel(meal)}`}
+                        aria-label={isAdded ? `Remove ${r.name} from ${mealLabel(meal)}` : `Add ${r.name} to ${mealLabel(meal)} on ${dayText}`}
                         aria-pressed={isAdded}
                         className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center transition-colors ${
                           isAdded

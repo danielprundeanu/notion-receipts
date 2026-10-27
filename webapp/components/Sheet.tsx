@@ -1,8 +1,77 @@
 "use client";
 
-import { useEffect, useId } from "react";
+import { useEffect, useId, useRef } from "react";
 
 // Shared sheet primitives: the recipe editor, the recipes list and the add-recipes flow use them.
+
+// Drag a bottom sheet down by its grab bar to close it. Returns a ref for the sheet panel
+// and the props for the bar (SheetGrabber). A short or slow pull springs back.
+export function useSheetDrag(onClose: () => void) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ y: number; t: number; dy: number } | null>(null);
+
+  function settle(transform: string, ms: number) {
+    const p = panelRef.current;
+    if (!p) return;
+    p.style.transition = `transform ${ms}ms ease-out`;
+    p.style.transform = transform;
+  }
+
+  const grabberProps = {
+    onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      drag.current = { y: e.clientY, t: e.timeStamp, dy: 0 };
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // No live pointer to capture (a synthetic event): the drag still works while over the bar.
+      }
+      if (panelRef.current) panelRef.current.style.transition = "none";
+    },
+    onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+      const d = drag.current;
+      if (!d) return;
+      d.dy = Math.max(0, e.clientY - d.y);
+      if (panelRef.current) panelRef.current.style.transform = d.dy ? `translateY(${d.dy}px)` : "";
+    },
+    onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+      const d = drag.current;
+      drag.current = null;
+      if (!d) return;
+      const flick = d.dy > 24 && d.dy / Math.max(1, e.timeStamp - d.t) > 0.6;
+      if (d.dy < 96 && !flick) return settle("", 200);
+      settle("translateY(100%)", 180);
+      setTimeout(() => {
+        onClose();
+        // Still open (it asked to confirm and was kept): slide back up.
+        setTimeout(() => {
+          if (panelRef.current?.isConnected) settle("", 200);
+        }, 0);
+      }, 180);
+    },
+    onPointerCancel() {
+      drag.current = null;
+      settle("", 200);
+    },
+  };
+  return { panelRef, grabberProps };
+}
+
+// The grab bar at the top of a bottom sheet, as a full-width strip you can pull down.
+// Phones only, like the sheet shape itself. `className` sets the space under it.
+export function SheetGrabber({
+  drag,
+  className = "pb-3",
+}: {
+  drag: ReturnType<typeof useSheetDrag>["grabberProps"];
+  className?: string;
+}) {
+  return (
+    <div {...drag} aria-hidden className={`md:hidden -mx-4 -mt-2.5 pt-3 flex justify-center touch-none cursor-grab ${className}`}>
+      <div className="w-10 h-[5px] rounded-full bg-gray-200 dark:bg-[#3a352e]" />
+    </div>
+  );
+}
 
 // Bottom sheet on phones, centred dialog from md up. Escape and a tap on the dim area close it.
 export function Sheet({
@@ -17,6 +86,7 @@ export function Sheet({
   children: React.ReactNode;
 }) {
   const titleId = useId();
+  const { panelRef, grabberProps } = useSheetDrag(onClose);
   useEffect(() => {
     if (!escapeCloses) return;
     const onKey = (e: KeyboardEvent) => {
@@ -34,13 +104,14 @@ export function Sheet({
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         className="bg-[var(--color-bg-base)] rounded-t-3xl md:rounded-3xl w-full md:max-w-md max-h-[92dvh] overflow-y-auto px-4 pt-2.5 shadow-xl"
         style={{ paddingBottom: "max(1.75rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="w-10 h-[5px] rounded-full bg-gray-200 dark:bg-[#3a352e] mx-auto mb-3 md:hidden" aria-hidden />
+        <SheetGrabber drag={grabberProps} />
         <h2 id={titleId} className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">{title}</h2>
         {children}
       </div>

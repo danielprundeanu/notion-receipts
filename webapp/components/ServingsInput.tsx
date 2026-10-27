@@ -7,7 +7,7 @@ import { MIN_SERVINGS, roundServings } from "@/lib/servings";
  * Editable servings number shown between −/+ steppers. Typing is kept as a local
  * draft and only committed on blur / Enter, so a half-typed value ("1" on the way
  * to "12") never triggers a save or a rescale. Invalid input reverts to `value`.
- * Accepts one decimal ("1.5" or "1,5").
+ * Accepts two decimals ("1.25" or "1,25").
  */
 export default function ServingsInput({
   value,

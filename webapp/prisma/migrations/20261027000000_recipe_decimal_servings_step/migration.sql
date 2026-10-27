@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Recipe" ALTER COLUMN "servingsStep" SET DATA TYPE DOUBLE PRECISION;

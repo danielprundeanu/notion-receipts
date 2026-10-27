@@ -55,10 +55,12 @@ function EntryCard({ entry, recipe, onServings, onRemove }: {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`relative group rounded-[10px] bg-orange-50 dark:bg-orange-500/15 pl-2 pr-6 pt-1.5 pb-1 cursor-grab active:cursor-grabbing ${
+      className={`relative group rounded-[10px] bg-orange-50 dark:bg-orange-500/15 px-2 pt-2 pb-1 cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-30" : ""
       } ${saving ? "opacity-60" : ""}`}
     >
+      {/* A strip of the photo across the top; the card underneath stays the drag handle. */}
+      <RecipeThumb recipe={recipe} sizes="160px" className="h-10 mb-1.5 rounded-lg pointer-events-none" initialClass="text-lg" />
       <Link
         href={`/recipes/${recipe.id}`}
         className="block text-[13px] font-semibold leading-tight line-clamp-2 text-gray-900 dark:text-[#eae5de] hover:underline"
@@ -83,9 +85,9 @@ function EntryCard({ entry, recipe, onServings, onRemove }: {
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${recipe.name}`}
-        className="absolute top-1 right-0.5 w-6 h-6 flex items-center justify-center rounded-lg text-gray-500 dark:text-[#a49c90] hover:text-red-600 dark:hover:text-red-400 hover:bg-orange-100 dark:hover:bg-orange-500/20"
+        className="absolute top-[11px] right-[11px] w-5 h-5 flex items-center justify-center rounded-full bg-black/55 text-white hover:bg-red-600 transition-colors"
       >
-        <X size={13} />
+        <X size={12} />
       </button>
     </div>
   );

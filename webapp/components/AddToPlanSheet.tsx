@@ -7,6 +7,7 @@ import { mealLabel } from "@/lib/labels";
 import { stepServings, stepServingsDown } from "@/lib/servings";
 import { formatWeekRange, getMondayOf } from "@/lib/weeks";
 import ServingsInput from "./ServingsInput";
+import { SheetGrabber, useSheetDrag } from "./Sheet";
 
 // Stored/compared as WeekPlan.mealType — keep the English values; show mealLabel() for display.
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack"] as const;
@@ -38,6 +39,7 @@ export default function AddToPlanSheet({
   const [servings, setServings] = useState(initialServings);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { panelRef, grabberProps } = useSheetDrag(onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -116,13 +118,14 @@ export default function AddToPlanSheet({
       }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-to-plan-title"
         className="bg-[var(--color-bg-base)] rounded-t-3xl md:rounded-3xl w-full md:max-w-md px-4 pt-2.5 shadow-xl"
         style={{ paddingBottom: "max(1.75rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="w-10 h-[5px] rounded-full bg-gray-200 dark:bg-[#3a352e] mx-auto mb-3.5 md:hidden" aria-hidden />
+        <SheetGrabber drag={grabberProps} className="pb-3.5" />
         <div className="flex items-baseline justify-between gap-3">
           <h2 id="add-to-plan-title" className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Add to plan</h2>
           <span className="text-sm text-gray-600 dark:text-[#a49c90]">{formatWeekRange(monday)}</span>

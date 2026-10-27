@@ -23,7 +23,7 @@ model Recipe {
   nameRo       String?       // RO translation of the title (search-only for now)
   searchText   String?       // normalized name + nameRo (lowercased, diacritics stripped) for matching
   servings     Int?
-  servingsStep Int?          // +/− increment for servings steppers (null = 1)
+  servingsStep Float?        // +/− increment for servings steppers (null = 1); may be 0.5 / 0.25
   time         Int?
   difficulty   String?
   category     String?
@@ -112,7 +112,7 @@ model WeekPlan {
   weekStart DateTime
   dayOfWeek Int
   mealType  String
-  servings  Float    @default(1) // one decimal allowed (1.5 servings)
+  servings  Float    @default(1) // two decimals allowed (1.25 servings)
   createdAt DateTime @default(now())
 }
 

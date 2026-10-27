@@ -9,7 +9,7 @@ import {
 import type { ParsedRecipe } from "@/lib/import";
 import { formatAmount } from "@/lib/quantities";
 import { standardFactor } from "@/lib/units";
-import { Segmented, Switch } from "@/components/Sheet";
+import { Segmented, SheetGrabber, Switch, useSheetDrag } from "@/components/Sheet";
 import { buildConfirm, itemOptions, newItemName, questionsFor, type Answer, type Answers, type ItemOption, type Question } from "./review";
 
 // Add recipes: ask AI (links with notes, or a description), paste a recipe's text, or upload
@@ -333,6 +333,7 @@ export default function AddRecipes({ onClose, onAdded }: { onClose: () => void; 
     if (busy && !window.confirm("Leave without adding these recipes?")) return;
     onClose();
   }
+  const { panelRef, grabberProps } = useSheetDrag(close);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -582,6 +583,7 @@ export default function AddRecipes({ onClose, onAdded }: { onClose: () => void; 
       onClick={(e) => { if (e.target === e.currentTarget) close(); }}
     >
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -590,7 +592,7 @@ export default function AddRecipes({ onClose, onAdded }: { onClose: () => void; 
         } md:max-h-[90dvh]`}
       >
         <div className="px-4 md:px-6 pt-2.5 md:pt-4 pb-1 md:pb-3 md:border-b md:border-gray-200 md:dark:border-[#3a352e] shrink-0">
-          <div className="w-10 h-[5px] rounded-full bg-gray-200 dark:bg-[#3a352e] mx-auto mb-1.5 md:hidden" aria-hidden />
+          <SheetGrabber drag={grabberProps} className="pb-1.5" />
           <div className="min-h-12 flex items-center gap-1">
             {subMode && (
               <button type="button" onClick={() => setMode("ai")} aria-label="Back" className="md:hidden w-11 h-11 -ml-2.5 rounded-xl flex items-center justify-center text-gray-900 dark:text-[#eae5de]">
