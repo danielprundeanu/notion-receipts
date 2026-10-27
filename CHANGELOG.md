@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.4] — 2026-10-27
+
+### 🐛 Fixes
+- **Recipe import CLI** (`webapp/scripts/import-recipe.mts`) — strips surrounding quotes from `.env.local` values, like dotenv. The quoted `BLOB_READ_WRITE_TOKEN` was sent with its quotes, so Vercel Blob rejected it ("Access denied") and recipe photos fell back to `public/images/recipes/`. Photos from CLI imports now go to Blob again.
+
 ## [1.2.3] — 2026-10-27
 
 ### ⚙️ Internals
