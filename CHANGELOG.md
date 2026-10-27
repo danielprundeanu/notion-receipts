@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.3] — 2026-10-27
+
+### ⚙️ Internals
+- Photos for the 8 recipes imported from the "Plant-Powered 7-Day Meal Plan" PDF (Berry Chia Pudding, Healthy Glow Smoothie, Blackberry Pancakes, Buffalo Cauliflower Wraps, Hidden Veggie Mac & Cheese, Butternut Squash & Lentil Curry, Apple Walnut Salad, Fudgy Sweet Potato Brownies), added under `webapp/public/images/recipes/` because the Vercel Blob upload was refused. No app changes.
+
 ## [1.2.2] — 2026-10-26
 
 ### ⚙️ Internals
