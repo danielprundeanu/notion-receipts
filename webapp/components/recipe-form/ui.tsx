@@ -41,6 +41,6 @@ export const cardCls = "rounded-2xl bg-white dark:bg-[#24211c] border border-gra
 export const hintCls = "text-[13px] text-gray-600 dark:text-[#a49c90]";
 export const pillCls = "h-10 px-3.5 shrink-0 rounded-[10px] border text-sm font-semibold transition-colors";
 export const pillOff = "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]";
-export const pillOn = "border-orange-500 bg-orange-500 text-white";
+export const pillOn = "border-orange-500 bg-orange-500 text-gray-900";
 
 export { Sheet, Switch, Segmented } from "@/components/Sheet";

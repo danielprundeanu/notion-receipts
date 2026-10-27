@@ -137,12 +137,12 @@ export default function AddMealSheet({
                   aria-label={`${name} ${date}`}
                   className={`h-[52px] rounded-xl border flex flex-col items-center justify-center gap-px text-xs font-semibold transition-colors ${
                     on
-                      ? "border-orange-500 bg-orange-500 text-white"
+                      ? "border-orange-500 bg-orange-500 text-gray-900"
                       : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
                   {name.slice(0, 3)}
-                  <b className={`text-base ${on ? "text-white" : "text-gray-900 dark:text-[#eae5de]"}`}>{date}</b>
+                  <b className={`text-base ${on ? "text-gray-900" : "text-gray-900 dark:text-[#eae5de]"}`}>{date}</b>
                 </button>
               );
             })}
@@ -156,7 +156,7 @@ export default function AddMealSheet({
                 aria-pressed={meal === m}
                 className={`${pill} ${
                   meal === m
-                    ? "border-orange-500 bg-orange-500 text-white"
+                    ? "border-orange-500 bg-orange-500 text-gray-900"
                     : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
@@ -220,7 +220,7 @@ export default function AddMealSheet({
                         aria-pressed={isAdded}
                         className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center transition-colors ${
                           isAdded
-                            ? "bg-orange-500 border-orange-500 text-white"
+                            ? "bg-orange-500 border-orange-500 text-gray-900"
                             : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-orange-600 dark:text-orange-400"
                         }`}
                       >

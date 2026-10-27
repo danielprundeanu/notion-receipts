@@ -532,7 +532,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={on}
                   className={`${chip} ${
-                    on ? "bg-orange-500 border-orange-500 text-white" : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
+                    on ? "bg-orange-500 border-orange-500 text-gray-900" : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
                   {categoryLabel(cat)}
