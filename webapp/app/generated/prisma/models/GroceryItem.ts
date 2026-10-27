@@ -623,14 +623,6 @@ export type GroceryItemScalarRelationFilter = {
   isNot?: Prisma.GroceryItemWhereInput
 }
 
-export type NullableFloatFieldUpdateOperationsInput = {
-  set?: number | null
-  increment?: number
-  decrement?: number
-  multiply?: number
-  divide?: number
-}
-
 export type GroceryItemCreateNestedOneWithoutIngredientsInput = {
   create?: Prisma.XOR<Prisma.GroceryItemCreateWithoutIngredientsInput, Prisma.GroceryItemUncheckedCreateWithoutIngredientsInput>
   connectOrCreate?: Prisma.GroceryItemCreateOrConnectWithoutIngredientsInput

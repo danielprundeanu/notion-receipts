@@ -115,7 +115,8 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
   const [plannerServings, setPlannerServings] = useState(0);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [doneSteps, setDoneSteps] = useState<Set<string>>(new Set());
-  const [expandedRefs, setExpandedRefs] = useState<Set<string>>(new Set());
+  // Used recipes start open; this holds the ones folded away.
+  const [collapsedRefs, setCollapsedRefs] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ text: string; planLink: boolean } | null>(null);
   const [heroBroken, setHeroBroken] = useState(false);
   const tabsAnchorRef = useRef<HTMLDivElement>(null);
@@ -550,13 +551,13 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                   );
                 }
                 const ref = sec.ref;
-                const open = expandedRefs.has(ref.id);
+                const open = !collapsedRefs.has(ref.id);
                 return (
                   <div key={`r-${ref.id}`} className="mt-3 rounded-2xl border border-orange-200 dark:border-orange-900/50 bg-orange-50/50 dark:bg-orange-950/10">
                     <div className="flex items-center gap-1 pr-1">
                       <button
                         type="button"
-                        onClick={() => setExpandedRefs((prev) => toggleIn(prev, ref.id))}
+                        onClick={() => setCollapsedRefs((prev) => toggleIn(prev, ref.id))}
                         aria-expanded={open}
                         className="flex-1 min-w-0 flex items-center gap-2 px-3 py-2.5 text-left"
                       >

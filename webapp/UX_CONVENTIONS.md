@@ -22,7 +22,7 @@
 ## Data integrity
 - Multi-step DB writes must be **transactional** (`prisma.$transaction`). Keep external API calls (translation, blob) **outside** the transaction.
 - Don't delete a `GroceryItem` still referenced by ingredients (it would orphan nameless rows) — the server refuses and the UI explains why.
-- Validate numeric inputs server-side (planner servings ≥ 0.1, one decimal; recipe batch servings ≥ 1 integer; dayOfWeek 0–6, etc.).
+- Validate numeric inputs server-side (planner servings ≥ 0.1, two decimals; recipe batch servings ≥ 1 integer; dayOfWeek 0–6, etc.).
 
 ## i18n (UI copy is English)
 - All user-facing copy is **English**. Locale for dates: `toLocaleDateString("en-US", …)`.

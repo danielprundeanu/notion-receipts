@@ -5,9 +5,11 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, History, ListChecks, Loader2, Plus } from "lucide-react";
 import {
   addToWeekPlan,
+  addToWeekPlanSlots,
   getPlannerData,
   moveWeekPlanEntry,
   removeFromWeekPlan,
+  removeWeekPlanEntries,
   updateWeekPlanServings,
 } from "@/lib/actions";
 import { mealLabel } from "@/lib/labels";
@@ -103,6 +105,49 @@ export default function PlannerPage() {
       return id;
     } catch (err) {
       setEntries((prev) => prev.filter((e) => e.id !== tempId));
+      throw err;
+    }
+  }
+
+  // One recipe into several slots, saved together: all of them show up or none do.
+  async function addEntries(
+    recipe: PlannerRecipe,
+    slots: { day: number; meal: MealType }[],
+    servings = recipe.servings ?? 1
+  ): Promise<string[]> {
+    const temps: PlannerEntry[] = slots.map((s) => ({
+      id: `temp-${Math.random().toString(36).slice(2)}`,
+      dayOfWeek: s.day,
+      mealType: s.meal,
+      servings,
+      recipeId: recipe.id,
+    }));
+    const tempIds = new Set(temps.map((t) => t.id));
+    setEntries((prev) => [...prev, ...temps]);
+    try {
+      const { ids } = await addToWeekPlanSlots({
+        recipeId: recipe.id,
+        weekStartIso: weekIso,
+        slots: slots.map((s) => ({ dayOfWeek: s.day, mealType: s.meal })),
+        servings,
+      });
+      const idOf = new Map(temps.map((t, i) => [t.id, ids[i]]));
+      setEntries((prev) => prev.map((e) => ({ ...e, id: idOf.get(e.id) ?? e.id })));
+      return ids;
+    } catch (err) {
+      setEntries((prev) => prev.filter((e) => !tempIds.has(e.id)));
+      throw err;
+    }
+  }
+
+  async function removeEntries(ids: string[]) {
+    const gone = new Set(ids);
+    const removed = entries.filter((e) => gone.has(e.id));
+    setEntries((prev) => prev.filter((e) => !gone.has(e.id)));
+    try {
+      await removeWeekPlanEntries(ids);
+    } catch (err) {
+      setEntries((prev) => [...prev, ...removed]);
       throw err;
     }
   }
@@ -390,12 +435,13 @@ export default function PlannerPage() {
 
       {sheet?.kind === "add" && recipeList && (
         <AddMealSheet
-          title={`Add to ${DAY_NAMES[sheet.day]} ${dateOf(monday, sheet.day).getDate()}`}
+          monday={monday}
+          defaultDay={sheet.day}
           defaultMeal={sheet.meal}
           recipes={recipeList}
           recentIds={recentIds}
-          onAdd={(r, meal) => addEntry(r, sheet.day, meal)}
-          onRemove={async (id) => { await removeEntry(id); }}
+          onAdd={(r, days, meal) => addEntries(r, days.map((day) => ({ day, meal })))}
+          onRemove={removeEntries}
           onClose={() => setSheet(null)}
         />
       )}
@@ -407,6 +453,11 @@ export default function PlannerPage() {
           monday={monday}
           onServings={(n) => setServings(sheetEntry.id, n)}
           onMove={(day, meal) => moveEntry(sheetEntry.id, day, meal)}
+          onCopy={async (slots) => {
+            await addEntries(sheetRecipe, slots, sheetEntry.servings);
+            setSheet(null);
+            setToast({ text: `Copied ${sheetRecipe.name} · ${slots.length} ${slots.length === 1 ? "meal" : "meals"}` });
+          }}
           onRemove={() => {
             setSheet(null);
             removeWithUndo(sheetEntry.id);

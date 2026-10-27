@@ -57,6 +57,12 @@ type FormState = {
   sections: StepSection[];
 };
 
+// The −/+ step as typed ("0.5", "0,25"); empty or invalid counts as 1.
+function parseStep(s: string): number {
+  const n = parseFloat(s.replace(",", "."));
+  return isFinite(n) && n > 0 ? n : 1;
+}
+
 function initForm(initial?: InitialRecipeData): FormState {
   return {
     name: initial?.name ?? "",
@@ -105,7 +111,7 @@ function buildPayload(f: FormState, sections: { title: string; steps: { text: st
     nameRo: null,
     categories: f.categories,
     servings: f.servings ? parseInt(f.servings) : null,
-    servingsStep: parseInt(f.servingsStep) > 1 ? parseInt(f.servingsStep) : null,
+    servingsStep: parseStep(f.servingsStep) !== 1 ? parseStep(f.servingsStep) : null,
     time: f.time ? parseInt(f.time) : null,
     difficulty: f.difficulty || null,
     favorite: f.favorite,
@@ -192,7 +198,9 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
 
   // ── Servings (batch ↔ per serving) ──
   const curServings = parseInt(form.servings) || 1;
-  const stepN = parseInt(form.servingsStep) > 1 ? parseInt(form.servingsStep) : 1;
+  // A batch is a whole number of servings, so a fractional step (0.5) only moves the servings
+  // steppers on the recipe page and in the plan; here it counts in ones.
+  const stepN = parseStep(form.servingsStep) >= 1 ? Math.round(parseStep(form.servingsStep)) : 1;
 
   // Set servings to newN, rescaling every amount from oldN when scaling is on.
   function applyServings(newN: number, oldN: number) {
@@ -642,10 +650,10 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                   </label>
                   <input
                     id="servings-step"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     autoComplete="off"
                     value={form.servingsStep}
-                    onChange={(e) => set({ servingsStep: e.target.value.replace(/\D/g, "") })}
+                    onChange={(e) => set({ servingsStep: e.target.value.replace(/[^\d.,]/g, "") })}
                     placeholder="1"
                     className="w-14 h-11 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-center text-base text-gray-900 dark:text-[#eae5de] placeholder:text-gray-500 dark:placeholder:text-[#8f877b] focus:outline-none focus:border-orange-500"
                   />

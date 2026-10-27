@@ -22,7 +22,8 @@ if (existsSync(envPath)) {
   for (const line of readFileSync(envPath, "utf-8").split("\n")) {
     const eq = line.indexOf("=");
     if (eq < 0 || line.trim().startsWith("#")) continue;
-    const k = line.slice(0, eq).trim(), v = line.slice(eq + 1).trim();
+    // Strip surrounding quotes like dotenv does (Vercel writes BLOB_* values quoted).
+    const k = line.slice(0, eq).trim(), v = line.slice(eq + 1).trim().replace(/^(["'])(.*)\1$/, "$2");
     if (!process.env[k]) process.env[k] = v;
   }
 }

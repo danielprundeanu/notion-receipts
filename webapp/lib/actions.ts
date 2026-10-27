@@ -190,9 +190,10 @@ export async function checkRecipeReferences(
 }
 
 // Step must be a positive integer; 1 (the default) is stored as null.
+// The −/+ step: up to 100, down to a tenth (0.5, 0.25), two decimals. 1 is the default (null).
 function cleanServingsStep(step: number | null | undefined): number | null {
-  const n = Math.round(Number(step));
-  return isFinite(n) && n > 1 ? Math.min(n, 100) : null;
+  const n = roundServings(Number(step));
+  return isFinite(n) && n >= MIN_SERVINGS && n !== 1 ? Math.min(n, 100) : null;
 }
 
 export async function createRecipe(data: RecipeFormInput): Promise<string> {
@@ -623,6 +624,44 @@ export async function addToWeekPlan(data: {
   });
   revalidatePath("/grocery-list");
   return entry;
+}
+
+// One recipe into several slots of a week (Add a meal on several days, Copy a planned meal).
+// One transaction, so a failure never leaves only some of the copies behind.
+export async function addToWeekPlanSlots(data: {
+  recipeId: string;
+  weekStartIso: string;
+  slots: { dayOfWeek: number; mealType: string }[];
+  servings: number;
+}): Promise<{ ids: string[] }> {
+  const weekStart = new Date(data.weekStartIso);
+  if (isNaN(weekStart.getTime())) throw new Error("Invalid date");
+  if (!Array.isArray(data.slots) || data.slots.length === 0 || data.slots.length > 28) throw new Error("Invalid slots");
+  const servings = Math.max(MIN_SERVINGS, roundServings(data.servings || 1));
+  const rows = await prisma.$transaction(
+    data.slots.map((s) =>
+      prisma.weekPlan.create({
+        data: {
+          recipeId: data.recipeId,
+          weekStart,
+          dayOfWeek: Number.isFinite(s.dayOfWeek) ? Math.min(6, Math.max(0, Math.round(s.dayOfWeek))) : 0,
+          mealType: s.mealType,
+          servings,
+        },
+        select: { id: true },
+      })
+    )
+  );
+  revalidatePath("/grocery-list");
+  return { ids: rows.map((r) => r.id) };
+}
+
+// Undo for addToWeekPlanSlots: takes those entries out together.
+export async function removeWeekPlanEntries(ids: string[]): Promise<void> {
+  if (!Array.isArray(ids) || ids.length === 0) return;
+  await prisma.weekPlan.deleteMany({ where: { id: { in: ids } } });
+  revalidatePath("/planner");
+  revalidatePath("/grocery-list");
 }
 
 export async function removeFromWeekPlan(id: string) {

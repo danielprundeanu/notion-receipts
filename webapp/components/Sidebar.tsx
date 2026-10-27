@@ -3,12 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { BookOpen, CalendarDays, LayoutGrid, Leaf, ListChecks, type LucideIcon } from "lucide-react";
 
-const nav = [
-  { href: "/recipes", label: "Recipes", img: "/icons/recipes.webp" },
-  { href: "/planner", label: "Planner", img: "/icons/planner.webp" },
-  { href: "/grocery-list", label: "Grocery list", img: "/icons/grocery.webp" },
-  { href: "/ingredients", label: "Ingredients", img: "/icons/ingredients.webp" },
+// Same icons as the mobile tabs (BottomNav); Ingredients uses the More page's Leaf.
+const nav: { href: string; label: string; Icon: LucideIcon }[] = [
+  { href: "/recipes", label: "Recipes", Icon: BookOpen },
+  { href: "/planner", label: "Planner", Icon: CalendarDays },
+  { href: "/grocery-list", label: "Grocery list", Icon: ListChecks },
+  { href: "/ingredients", label: "Ingredients", Icon: Leaf },
 ];
 
 export default function Sidebar() {
@@ -26,7 +28,7 @@ export default function Sidebar() {
 
       {/* Navigation links */}
       <nav className="flex-1 p-3 space-y-0.5">
-        {nav.map(({ href, label, img }) => {
+        {nav.map(({ href, label, Icon }) => {
           // Exact match for /recipes to avoid matching /recipes/import
           const active =
             href === "/recipes"
@@ -43,7 +45,7 @@ export default function Sidebar() {
                   : "text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] hover:text-gray-900 dark:hover:text-[#eae5de]"
               }`}
             >
-              <Image src={img} alt="" width={20} height={20} className={`transition-opacity ${active ? "opacity-100" : "opacity-60"}`} />
+              <Icon size={20} strokeWidth={active ? 2.25 : 2} aria-hidden className="shrink-0" />
               {label}
             </Link>
           );
@@ -61,13 +63,7 @@ export default function Sidebar() {
               : "text-gray-600 dark:text-[#a49c90] hover:bg-gray-50 dark:hover:bg-[#2a2620] hover:text-gray-900 dark:hover:text-[#eae5de]"
           }`}
         >
-          <Image
-            src="/icons/settings.webp"
-            alt=""
-            width={20}
-            height={20}
-            className={`transition-opacity ${pathname === "/more" ? "opacity-100" : "opacity-60"}`}
-          />
+          <LayoutGrid size={20} strokeWidth={pathname === "/more" ? 2.25 : 2} aria-hidden className="shrink-0" />
           More &amp; settings
         </Link>
       </div>

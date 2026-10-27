@@ -301,7 +301,7 @@ export type RecipeWhereInput = {
   nameRo?: Prisma.StringNullableFilter<"Recipe"> | string | null
   searchText?: Prisma.StringNullableFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableFilter<"Recipe"> | number | null
-  servingsStep?: Prisma.IntNullableFilter<"Recipe"> | number | null
+  servingsStep?: Prisma.FloatNullableFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableFilter<"Recipe"> | string | null
   category?: Prisma.StringNullableFilter<"Recipe"> | string | null
@@ -353,7 +353,7 @@ export type RecipeWhereUniqueInput = Prisma.AtLeast<{
   nameRo?: Prisma.StringNullableFilter<"Recipe"> | string | null
   searchText?: Prisma.StringNullableFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableFilter<"Recipe"> | number | null
-  servingsStep?: Prisma.IntNullableFilter<"Recipe"> | number | null
+  servingsStep?: Prisma.FloatNullableFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableFilter<"Recipe"> | string | null
   category?: Prisma.StringNullableFilter<"Recipe"> | string | null
@@ -403,7 +403,7 @@ export type RecipeScalarWhereWithAggregatesInput = {
   nameRo?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   searchText?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   servings?: Prisma.IntNullableWithAggregatesFilter<"Recipe"> | number | null
-  servingsStep?: Prisma.IntNullableWithAggregatesFilter<"Recipe"> | number | null
+  servingsStep?: Prisma.FloatNullableWithAggregatesFilter<"Recipe"> | number | null
   time?: Prisma.IntNullableWithAggregatesFilter<"Recipe"> | number | null
   difficulty?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
   category?: Prisma.StringNullableWithAggregatesFilter<"Recipe"> | string | null
@@ -470,7 +470,7 @@ export type RecipeUpdateInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -494,7 +494,7 @@ export type RecipeUncheckedUpdateInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -537,7 +537,7 @@ export type RecipeUpdateManyMutationInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -556,7 +556,7 @@ export type RecipeUncheckedUpdateManyInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -644,6 +644,14 @@ export type RecipeScalarRelationFilter = {
 }
 
 export type NullableIntFieldUpdateOperationsInput = {
+  set?: number | null
+  increment?: number
+  decrement?: number
+  multiply?: number
+  divide?: number
+}
+
+export type NullableFloatFieldUpdateOperationsInput = {
   set?: number | null
   increment?: number
   decrement?: number
@@ -844,7 +852,7 @@ export type RecipeUpdateWithoutReferencesInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -867,7 +875,7 @@ export type RecipeUncheckedUpdateWithoutReferencesInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -901,7 +909,7 @@ export type RecipeUpdateWithoutUsedInInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -924,7 +932,7 @@ export type RecipeUncheckedUpdateWithoutUsedInInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1009,7 +1017,7 @@ export type RecipeUpdateWithoutIngredientsInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1032,7 +1040,7 @@ export type RecipeUncheckedUpdateWithoutIngredientsInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1117,7 +1125,7 @@ export type RecipeUpdateWithoutInstructionsInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1140,7 +1148,7 @@ export type RecipeUncheckedUpdateWithoutInstructionsInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1225,7 +1233,7 @@ export type RecipeUpdateWithoutWeekPlansInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1248,7 +1256,7 @@ export type RecipeUncheckedUpdateWithoutWeekPlansInput = {
   nameRo?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   searchText?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   servings?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
-  servingsStep?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
+  servingsStep?: Prisma.NullableFloatFieldUpdateOperationsInput | number | null
   time?: Prisma.NullableIntFieldUpdateOperationsInput | number | null
   difficulty?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   category?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
@@ -1885,7 +1893,7 @@ export interface RecipeFieldRefs {
   readonly nameRo: Prisma.FieldRef<"Recipe", 'String'>
   readonly searchText: Prisma.FieldRef<"Recipe", 'String'>
   readonly servings: Prisma.FieldRef<"Recipe", 'Int'>
-  readonly servingsStep: Prisma.FieldRef<"Recipe", 'Int'>
+  readonly servingsStep: Prisma.FieldRef<"Recipe", 'Float'>
   readonly time: Prisma.FieldRef<"Recipe", 'Int'>
   readonly difficulty: Prisma.FieldRef<"Recipe", 'String'>
   readonly category: Prisma.FieldRef<"Recipe", 'String'>
