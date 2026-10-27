@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0] — 2026-10-27
+
+### ✨ Features
+- **Add meal on several days** — the Add meal sheet has a row of the week's days: pick one or more, and + puts the recipe on each of them for the chosen meal ("Add to 3 days"). The tick takes them all out again.
+- **Copy a planned meal** — tap a meal in the plan: next to Move to there's Copy to, where you pick several days and meals ("Add 5 copies", same servings). The slot it already sits in is skipped.
+- **Fractional servings steps** — a recipe's "− / + count in steps of" takes 0.5 or 0.25, so the steppers on the recipe page and in the plan move in quarters or halves. Servings keep two decimals (1.25).
+
+### 🎨 UI / UX
+- **Bottom sheets close when dragged down** by their grab bar on phones; a short or slow pull springs back.
+- **Recipes used inside a recipe** start open on the recipe page.
+- **Desktop plan cards** show a photo strip on top, with a smaller remove button over it.
+- **Desktop sidebar** uses the same icons as the mobile tabs.
+
+### ⚙️ Internals
+- `Recipe.servingsStep` is now a Float (migration `20261027000000_recipe_decimal_servings_step`, already applied on Neon). `addToWeekPlanSlots` / `removeWeekPlanEntries` add or remove several plan entries in one transaction. `useSheetDrag` + `SheetGrabber` in `components/Sheet.tsx`.
+
 ## [1.2.4] — 2026-10-27
 
 ### 🐛 Fixes
