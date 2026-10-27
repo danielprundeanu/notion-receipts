@@ -1,118 +1,116 @@
-<!-- copie a 2026-10-26-0048-webapp.md -->
+<!-- copie a 2026-10-27-2342-webapp.md -->
 ---
-data: 2026-10-26 00:48
+data: 2026-10-27 23:42
 zonă: webapp
 branch: main
-head: d9df747 Merge branch 'feat/add-recipes-ai'
+head: 1382808 chore: release v1.3.0
 ---
 
-# v1.0.0 (redesign-ul mobil, fazele 0–5) e live; după el s-au construit local, nepush-uit, sortarea/selecția din Recipes, Planner-ul de desktop cu panou și fluxul „Add recipes” cu AI — căile AI n-au rulat niciodată, pentru că `ANTHROPIC_API_KEY` nu e în `webapp/.env.local`.
+# v1.3.0 e făcută local (commit + tag), dar push-ul a fost blocat de clasificatorul auto mode; urmează redesign-ul ecranelor Ingredients în prototip.
 
 ## Ce s-a făcut
-- **Faza 5, editorul de rețete** (`components/RecipeForm.tsx`, `components/recipe-form/*`, `lib/steps.ts`):
-  - ecran complet cu Cancel/Save, secțiuni ca carduri;
-  - ingredientele se editează într-un sheet, cu drag pentru ordine;
-  - pași Step by step | Text;
-  - Delete cu confirmare inline.
-- **Fix de build:** `middleware.ts` → `proxy.ts` (convenția Next 16), commit `90d5bea`.
-- **Release v1.0.0** (`154245d`, tag `v1.0.0`) push-uit pe `origin/main`. Deploy Vercel: „success”; verificat `/login` 200 și `/recipes` 307 → login.
-- **După v1.0.0, local și nepush-uit (6 commit-uri):**
-  - **`abda5bf` Recipes:**
-    - sortarea e un buton cu etichetă care deschide sheet-ul „Sort by” (`components/RecipesBrowser.tsx`);
-    - modul Select are bara Edit/Delete (`components/RecipesSelectBar.tsx`);
-    - batch edit e acum sheet, cu „As is” pe fiecare câmp (`components/RecipeBatchEditSheet.tsx`); modal-ul vechi e șters;
-    - Sheet/Switch/Segmented s-au mutat în `components/Sheet.tsx`;
-    - header-ul Recipes are un singur „+”.
-  - **`c9a2328` Planner desktop** (`components/planner/DesktopWeek.tsx`):
-    - panoul de rețete stă în dreapta de la `lg` în sus;
-    - plasare prin drag, click rețetă → slot sau click slot → rețetă;
-    - în header e link Shopping list (`app/planner/page.tsx`).
-  - **`325b3f0` Add recipes:**
-    - `components/add-recipes/AddRecipes.tsx` (UI), `review.ts` (întrebări + payload), `AddRecipesButton.tsx`;
-    - backend: `lib/ai-import.ts` + `app/api/import/ai/route.ts`;
-    - `lib/units.ts`: tabelul de conversii standard, folosit și de wizard;
-    - `lib/recipe-scraper.ts` exportă `browserHeaders`, `normalizeUnit` și `isUnsupportedHost`.
-- **Prototipul** (https://claude.ai/artifact/VaqXPSYUdXucrvvedDW8Um) are artboard-uri noi:
-  - `Main` (sortare + select);
-  - `Add.dc.html` (sheet-ul „+” pe mobil);
-  - `PlanDesktop.dc.html` (Planner desktop cu dialogul Add).
+- **More → „Import recipes”** deschide dialogul Add recipes pe loc (`components/add-recipes/AddRecipesTrigger.tsx`); după ce ai adăugat ceva, la închidere te duce în /recipes. Wizard-ul `/recipes/import` există, dar fără link în UI.
+- **AI import trimite lista de produse** (`lib/ai-import.ts`: `groceryNames()`, bloc de sistem cu `cache_control`). Claude folosește numele exact al produsului când e același lucru → matcher-ul găsește potrivire exactă. Pe 3 surse de test: 39/39 potrivite (înainte 35).
+- **Pagina rețetei fără bottom nav** (`components/BottomNav.tsx`: `isRecipe`, `BottomNavSpacer` folosit în `app/layout.tsx`); bara Cook / Add to plan stă la `bottom-0` cu safe-area (`components/RecipeDetail.tsx`).
+- **Recipes list:** bara sticky nu se mai strânge în varianta pe un rând (`components/RecipesFilterBar.tsx`); ancora din `RecipesBrowser.tsx` e mereu `scroll-mt-28`.
+- **Sidebar desktop:** iconițe lucide ca pe mobil (`components/Sidebar.tsx`). `public/icons/*.webp` nu mai sunt folosite de nimic.
+- **Plan:**
+  - „Add meal” pe mai multe zile (`components/planner/AddMealSheet.tsx`); bifa scoate toate intrările create.
+  - „Move to / Copy to” în foaia unei mese (`components/planner/EntrySheet.tsx`); copierea pe zile × mese sare peste slotul sursă.
+  - Acțiuni noi într-o tranzacție: `addToWeekPlanSlots`, `removeWeekPlanEntries` (`lib/actions.ts`); `addEntries` / `removeEntries` optimiste în `app/planner/page.tsx`.
+- **Foile de jos se închid trase de bară** (`components/Sheet.tsx`: `useSheetDrag`, `SheetGrabber`), folosite în Sheet, AddMealSheet, EntrySheet, AddToPlanSheet, AddRecipes.
+- **Rețetele incluse** pornesc deschise pe pagina rețetei (`collapsedRefs` în `RecipeDetail.tsx`).
+- **`Recipe.servingsStep` e Float**, porțiile au 2 zecimale: `lib/servings.ts` (`roundServings` la sutimi, `stepServings` cu epsilon, `stepServingsDown` cu podea `min(1, step)`), `cleanServingsStep` în `lib/actions.ts`, câmpul din `RecipeForm.tsx` (`parseStep`), `ServingsInput.tsx`. Migrarea: `prisma/migrations/20261027000000_recipe_decimal_servings_step/`.
+- **Cardurile din planul de desktop** au o bandă cu poza sus și un X mai mic peste ea (`components/planner/DesktopWeek.tsx`, `EntryCard`).
 
 ## Decizii și de ce
-- **AI import: „Full flow from the prototype”** (alegerea lui Daniel).
-  - Progresul și cardurile de întrebări înlocuiesc Review/Resolve-ul wizard-ului **doar** în fluxul nou.
-  - Wizard-ul `/recipes/import` rămâne; în More are încă linkul „Import recipes”.
-- **O cerere per sursă** (`/api/import/ai`, `maxDuration` 60): fiecare link își arată progresul, iar un site lent nu le ține pe celelalte.
-- **Claude citește link-urile și textul ori de câte ori cheia există**, chiar fără note: scraper-ul scoate nume murdare („of garlic”, „kosher salt and … to taste”). Fără cheie, fallback pe scraper/parser.
-- **Modelul:** `claude-opus-5-5`, `effort: "medium"`, `messages.parse` + `jsonSchemaOutputFormat`.
-  - Schema folosește string-uri goale și `0` în loc de `null`, ca să evite riscul cu tipurile nullable.
-  - SDK 0.80 nu are parametrul `fallbacks`; un refuz se tratează ca mesaj de eroare. Respins: upgrade de SDK doar pentru asta.
-- **Unitățile venite de la Claude** trec prin `normalizeUnit` și `parseIngredientString` din scraper, ca să se stocheze la fel ca restul importurilor.
-- **Întrebări doar unde matcher-ul e nesigur:**
-  - `similar` → cel mult 3 variante + „A new item” + „Something else…” (caută prin `/api/import/search-items`);
-  - `new` → „Add X as new” + căutare; candidații de joasă încredere ai matcher-ului sunt ascunși, pentru că sunt zgomot (pentru garlic propunea „Cartofi Galbeni”);
-  - conversie → cantitatea totală în unitatea produsului („8 piece = ? g”), nu factor per unitate, pentru că era greu de înțeles;
-  - conversiile fixe (tbsp→tsp, cup→ml) se aplică fără întrebare și se salvează ca `UnitRule`;
-  - „Remember” (implicit pornit) setează `saveMapping` sau o regulă de unitate.
-- **Selecția în Recipes:** acțiunile se aplică doar rețetelor selectate **și vizibile**, ca un filtru să nu includă pe ascuns ce nu vezi.
-- **Desktop Planner:** panoul e în dreapta doar de la `lg`; la `md` stă sub grilă, pentru că 340 px laterali nu încap. Miniatura din cardurile din slot a dispărut, pentru spațiu.
-- **`turbopack.root` respins:** a stricat dev server-ul pornit din rădăcina repo-ului și nu merită pentru avertismentul cu lockfile-ul rătăcit `~/package-lock.json`, care e doar local.
+- **Lista de produse trimisă lui Claude, nu doar „scoate descriptorii”.** Varianta fără listă ar fi pus „canned chickpeas” pe Chickpeas uscat, deci macro greșite; cu lista ajunge pe Chickpeas Tinned. Cost: ~+2¢ la prima rețetă dintr-un import (scrierea în cache a ~3.400 de tokeni), ~+0,3¢ la următoarele în 5 minute. Dezavantaj acceptat: Claude ia singur alegeri aproximative („onion” → Yellow Onion, „lemon juice” → Lemon), marcate „matched”, deci fără întrebare.
+- **Spațiul pentru bottom nav e ascuns doar pe pagina rețetei, nu și în editor.** Editorul n-are bară jos, iar fără spațiu ultimul conținut ar sta sub home indicator.
+- **Tragerea foii se face doar din banda barei de sus, nu și din header.** `setPointerCapture` pe un header cu butoane ar fura click-urile. Banda e ascunsă de la md în sus, la fel ca forma de foaie.
+- **„Drag-ul pe mobile” l-am interpretat ca tragerea foii în jos**, pentru că Daniel selectase bara foii. Mutarea meselor între zile prin drag pe mobil NU e făcută; i-am spus că o pot face separat.
+- **Add meal: rămâne mereu cel puțin o zi aleasă**; bifa scoate toate copiile create din acea foaie.
+- **Copy to:** meniu cu mai multe zile × mese; slotul sursă e exclus; butonul „Add N copies”, iar foaia rămâne deschisă cu eroare dacă salvarea pică.
+- **Porțiile au 2 zecimale peste tot**, ca să meargă pasul 0.25 (Daniel a ales asta în locul variantei „doar 0.5”). Stepper-ul „Makes … servings” din editor merge în continuare din 1 în 1, pentru că `Recipe.servings` e Int.
+- **Miniatura e o bandă pe toată lățimea, nu un pătrat lângă titlu.** Cardurile au 65–127 px; un pătrat ar fi înghesuit titlul. Prototipul nu are miniatură în aceste carduri.
+- **Noutățile din plan sunt doar pe mobil.** Desktop-ul are grila proprie (DesktopWeek), fără AddMealSheet/EntrySheet.
 
 ## Stare externă descoperită
-- **`ANTHROPIC_API_KEY` nu există în niciun fișier env al proiectului.**
-  - Daniel a spus că l-a pus în `webapp/.env.local`, dar fișierul are data Jul 21 și nu conține variabila.
-  - Nici `webapp/.env` nu o are. Pe Vercel nu e verificat.
-  - Fără ea, `translateTitleAlt`, suggest-conversion, suggest-category și tot AI-ul nou întorc „not set up”.
-- **Avertisment de build „inferred your workspace root”:** vine din `~/package-lock.json` + `~/package.json` (tokens-studio, apr 2025), din afara repo-ului. E inofensiv.
-- **Date de referință:**
-  - 223 de rețete (Daniel a mai importat între timp).
-  - Două nume au spații la capete: „ Sweet Potato & Black Bean Enchilada”, „Easy Blondie Cookies ”. Sortarea A–Z le tratează acum corect; datele nu sunt corectate.
-- **Link-uri reale bune pentru teste:** `https://reciperunner.com/creamy-red-lentil-soup/`, `https://www.bbcgoodfood.com/recipes/veggie-breakfast-bakes`.
-  - Prin scraper dau 24 și 6 ingrediente.
-  - Întrebările: similar (Salt), new (garlic, cilantro, mushrooms), conversii piece→g (Tomato), g→handful (Baby spinach), clove→piece (Garlic clove).
-- **Prototipul (artifact „Design”):** publicarea cere întâi un `Artifact read` pe url fără `path`; altfel e refuzată cu „haven't viewed the latest version”. Fișierele se editează în `scratchpad/artifact-files/<id>/project/`.
+- **Neon:** `Recipe.servingsStep` e acum `double precision` (aplicat cu `npx prisma db execute --file …`). La momentul schimbării toate rețetele aveau `servingsStep` null. Numărul de rețete a urcat la 307 (de la 223–224 pe 26 oct; importuri făcute între timp de Daniel sau de alte sesiuni).
+- **Site-ul live rulează v1.2.4,** cu clientul Prisma vechi (`servingsStep` Int). Până se face deploy la v1.3.0, nu salva un pas fracționar: e posibil ca site-ul live să nu mai poată citi rețeta respectivă.
+- **`ANTHROPIC_API_KEY`:**
+  - în `webapp/.env.local` e cheia copiată din `revolut-notion/.env.local` (aceeași cheie, `CCm…CQAA`);
+  - Daniel a confirmat că Vercel are o cheie pentru Production, probabil cea din 17 iulie (`tXC…RwAA`); n-am verificat eu, nu există CLI `vercel`.
+- **Funcțiile AI din webapp folosesc aceeași variabilă:**
+  - Opus 5.5: import (`lib/ai-import.ts`);
+  - Haiku 4.5: sugestie de conversie, sugestie de categorie, traducerea titlului.
+  - Macro-urile vin din USDA (`/api/nutrition`), nu din AI.
+- **Cost măsurat pe import AI** (Opus 5.5: 4 $ / 20 $ per MTok):
+
+  | Sursă | Cost |
+  |---|---|
+  | link lung (reciperunner: 10.7k tokeni trimiși / 2.9k primiți) | ~0,10–0,12 $ |
+  | link scurt BBC | ~0,03 $ |
+  | descriere / text | ~0,02–0,03 $ |
+  | poză / PDF | ~0,02 $ |
+  | conversie / categorie (Haiku) | < 0,001 $, ~1 s |
+
+- **Matcher-ul** (`lib/import.ts`, `matchIngredient`) caută candidați după primul cuvânt din nume, deci nume care încep cu un descriptor („fresh ground black pepper”) nu-și găsesc produsul. E acoperit acum de lista trimisă lui Claude; wizard-ul vechi are în continuare problema.
+- **Deploy-urile Vercel nu apar în API-ul GitHub** (`gh api …/deployments?sha=` întoarce gol); starea deploy-ului se vede doar în dashboard-ul Vercel.
+- **Alte sesiuni au lansat între timp** v1.2.1 (PR #3: graficul de macro + butoanele mai discrete), v1.2.3 și v1.2.4 (fix la importul CLI). Toate sunt deja în local.
 
 ## Blocat pe
-- **Testul căilor AI** (link cu note, descriere, text liber, poză/PDF, sugestie de conversie). Ca să se deblocheze, Daniel trebuie să adauge efectiv în `webapp/.env.local` o linie `ANTHROPIC_API_KEY=...`. Apoi:
-  - repornești dev server-ul din pane (`preview_start` „webapp”), ca să încarce variabila;
-  - rulezi testele din pane, prin `fetch('/api/import/ai', …)` logat, cu payload `{kind:"link",url,notes}` / `{kind:"describe",prompt}` / `{kind:"text",text}` / `{kind:"file",mediaType,data}`. Poza se poate genera dintr-un canvas cu textul unei rețete.
-- **Push / deploy:** doar când îl cere Daniel. Push-ul pe `main` e blocat de clasificatorul auto mode („Production Deploy”) dacă nu îl cere explicit (a mers după ce a rulat el `/ship`). Pe Vercel trebuie și `ANTHROPIC_API_KEY`.
+- **Push-ul v1.3.0.** Clasificatorul auto mode blochează `git push` pe main („Production Deploy”), chiar și din `/ship`. Ca să se deblocheze, Daniel rulează el:
+  `git push origin HEAD && git push origin v1.3.0`
+  (sau adaugă o regulă de permisiune pentru push). Până atunci: coloana de pe Neon e Float, dar site-ul live e v1.2.4.
 
 ## Verificat
-- **Toate trei părțile:** `npx tsc --noEmit` și `eslint` pe fișierele atinse trec. `npm run build` trece (26 de pagini, `/api/import/ai` în listă).
-- **În pane, mobil 375 px și desktop 1440 px, dark:**
-  - **Recipes:** sort sheet (A–Z în URL), Select / Select all / Done, sheet-ul Edit și confirmarea Delete; erorile cu `fetch` stub-uit, fără nicio scriere.
-  - **Planner:**
-    - panoul e în dreapta (159 → 877 px);
-    - click rețetă → „Add here” pe 28 de sloturi;
-    - adăugarea eșuată revine la starea de dinainte și arată toast;
-    - click slot → „Pick a recipe for Wednesday dinner”.
-  - **Add recipes, prin scraper (fără AI):**
-    - 2 link-uri → progres → 7 întrebări → răspunsuri → „Add 2 recipes”;
-    - payload-ul interceptat e corect: fiecare ingredient are id sau newItem; tomato 800 g, spinach 4 handful, garlic 2 piece cu saveMapping, paprika 3 tsp automat; regulile de unitate sunt incluse;
-    - eroarea de salvare ține dialogul deschis.
-- **NETESTAT:** orice apel la Claude (lipsește cheia); salvarea reală prin fluxul nou (ar crea ingrediente noi în producție); drag-and-drop real pe desktop; Wake Lock pe telefon; drag cu degetul în editor.
+- `npx tsc --noEmit`, `npx eslint` pe fișierele atinse, `npm run build` (26 de pagini): toate trec, inclusiv pe commit-ul de release `1382808`.
+- **În panou, în tab separat** (tab-ul `seed` era al lui Daniel), pe săptămâna 21–27 decembrie, care era goală:
+  - Add meal pe Mon+Wed → 2 intrări; după reîncărcare erau în baza de date.
+  - Bifa le-a scos pe amândouă.
+  - Copy to Mon/Thu/Fri × Lunch/Dinner → „Add 5 copies”; slotul sursă exclus corect.
+  - Tragere scurtă → revine; tragere lungă → închide (AddMealSheet și EntrySheet).
+  - Săptămâna golită la loc; după reîncărcare, „nothing planned”.
+- **Pas 0.25 pe „Apple Cider & Kiwi”:**
+  - salvat din editor; pe Neon `servingsStep: 0.25`;
+  - stepper-ul pe pagina rețetei: 2 → 2.25 → 2.5 … până la 0.25;
+  - readus la null; ingredientele (4) și pașii (1) au rămas aceiași.
+- **Rețeta cu „Ciorbă Base” inclusă:** acordeonul e deschis implicit.
+- **Miniatura din carduri:** verificată la 1280 px (card de ~65 px) și la 1720 px (~127 px).
+- **Funcțiile AI testate direct pe `/api/import/ai`:** link cu note, link, descriere, text în română, poză JPEG, PDF, suggest-conversion, suggest-category → toate 200.
+- **NETESTAT:**
+  - mesajul „Copied …” după copiere (dispăruse până la verificare);
+  - drag-ul pe un telefon real (doar evenimente sintetice);
+  - fluxul Add recipes cu AI până la salvare din UI, după schimbarea cu lista de produse.
 
 ## Capcane
-- **Cache-ul de dev Turbopack (`webapp/.next/dev`, ~900 MB) se strică** dacă schimbi `turbopack.root` sau rădăcina. Simptome: orice pagină atârnă, iar în log apare în buclă `Can't resolve 'tailwindcss' in '.../notion'`. Fix: oprești serverul, `rm -rf webapp/.next/dev`, pornești din nou. E în memorie (`dev-cache-tailwind-resolve`).
-- **Hook-ul de tool-uri poate da timeout** („PreToolUse hook did not respond”): apelul nu s-a executat, trebuie reîncercat.
-- **Screenshot-urile din pane** sunt des vechi sau scalate. Verifică prin DOM (`getBoundingClientRect`, stiluri calculate).
-- **Butoanele cu text identic:** `find` dintr-un `querySelectorAll('button')` cu regex /garlic/ a ales greșit (Garlic Powder). Caută după textul exact.
-- **React Compiler / ESLint:** fără `setState` sincron în efect. „suggesting” se derivă dintr-un `suggestedFor` setat în callback.
-- **Tailwind v4:** `!important` se scrie ca sufix (`border-white!`).
-- **`app/generated/prisma`** e force-tracked: folosește `git add -u` (n-a fost nevoie azi).
+- **Stub pe `window.fetch` care citește `input.url`:** strică fetch-ul RSC al Next (primește un obiect URL) și forțează navigare completă. Folosește `input instanceof Request ? input.url : String(input)`.
+- **Butoanele cu stare „pending”** au `aria-pressed="false"` și sunt dezactivate; un test care așteaptă „false” după un tap le apasă din nou prea devreme. Așteaptă `!disabled`.
+- **`setPointerCapture` aruncă excepție pe evenimente sintetice;** e prins în try/catch în `useSheetDrag`.
+- **`.env.local` nu se poate încărca cu `source`** (`DATABASE_URL` cu `&`, fără ghilimele). Pentru scripturi:
+  - `npx tsx --env-file=.env.local script.mts`;
+  - extensia `.mts`, pentru top-level await;
+  - `import * as db from ".../lib/db"` și apoi `db.prisma ?? db.default.prisma`.
+- **După `prisma generate`, repornește serverul de dev** (clientul stă pe `globalThis`). Commit-ul include `git add -u webapp/app/generated/prisma` și folderul nou din `migrations/`.
+- **`webapp/next-env.d.ts`** e rescris de serverul de dev (`.next/dev/types`); nu-l pune în commit.
+- **Daniel folosește tab-ul `seed` din panou.** Testează în `tabs_create`, ca să nu-i schimbi pagina.
 
 ## Următorii pași
-1. **[BLOCAT pe cheie]** Testează căile AI (vezi „Blocat pe”) și repară ce pică. Fișiere: `lib/ai-import.ts` (schemă, prompt, `pageText`), `app/api/import/ai/route.ts`. Atenție la tipurile din schema structured output și la durata pe Vercel (`maxDuration` 60).
-2. **Test real de salvare prin fluxul nou**, pe ceva inofensiv, apoi ștergere. Ingredientele noi create rămân în `GroceryItem`, deci alege o rețetă cu toate ingredientele potrivite deja sau șterge-le după.
-3. **Opțional:** pune linkul „Import recipes” din More (`app/more/page.tsx`) să deschidă fluxul nou, sau scoate wizard-ul vechi.
-4. **Opțional:** curăță spațiile din cele 2 nume de rețete (UPDATE pe Neon, doar cu acordul lui Daniel).
-5. **`/ship`** când cere Daniel: probabil 1.1.0. Verifică întâi `ANTHROPIC_API_KEY` pe Vercel. Push-ul declanșează deploy-ul.
+1. **[BLOCAT pe Daniel]** Push la v1.3.0 (vezi „Blocat pe”), apoi verifică pe site că planul și pașii de porții merg.
+2. **Redesign în prototip al ecranelor Ingredients** (cerut de Daniel). Prototipul e artifact-ul de tip Design `https://claude.ai/artifact/VaqXPSYUdXucrvvedDW8Um`:
+   - artboard-uri: Main, Recipe, Plan, PlanDesktop, Shop, More, Edit, Add;
+   - fă întâi `Artifact read` pe url (fără `path`), altfel publicarea e refuzată;
+   - ecranele de redesenat în app: `app/ingredients/page.tsx`, `app/ingredients/audit/page.tsx`, `GroceryItemModal`, `BulkGroceryAdd`.
+3. **Opțional:** Add meal pe mai multe zile și Copy to și pe desktop (`components/planner/DesktopWeek.tsx`).
+4. **Opțional:** drag & drop între zile pe mobil, dacă la asta se referea Daniel.
+5. **Opțional:** șterge `webapp/public/icons/*.webp` (nefolosite).
 
 ## Stare reală (nu de dorit)
-- **Pe GitHub / Vercel:** v1.0.0 (tag `v1.0.0`, `154245d`) e live în producție.
-- **Nepush-uit:** `abda5bf`, `c9a2328`, `325b3f0` + 3 merge-uri, local pe `main`.
-- **Pe Neon, scris în sesiunea asta și apoi șters:** o rețetă de test „ZZ Test delete me”. Numerele au revenit la cele de dinainte: 216 rețete, 385 de produse, 2000 de ingrediente, 1276 de pași, la momentul acela.
-- **Pe Neon:** nimic din fluxul AI nou n-a fost salvat.
-- **Prototipul** e la Version 12 (artboard-uri noi `Add.dc.html`, `PlanDesktop.dc.html`).
-- **Memorie nouă:** `dev-cache-tailwind-resolve.md`; `mobile-redesign.md` actualizat (v1.0.0 livrat).
-- **Necommit-uite intenționat:** `.claude/context/*`, `.claude/launch.json`.
+- **Neon:**
+  - coloana `Recipe.servingsStep` e deja `double precision`;
+  - intrările de test din plan (săptămâna din 21 decembrie) au fost create și apoi șterse;
+  - „Apple Cider & Kiwi” a fost salvată de două ori din editor (pas 0.25, apoi gol), deci `updatedAt` s-a schimbat.
+- **Local, nepush-uite:** `e91001d` (sidebar), `3ed0c72` (plan, foi, porții, miniatură), `1382808` (release v1.3.0) și tag-ul `v1.3.0`.
+- **Pe origin / live:** până la v1.2.4. Tag-urile v1.2.1 și v1.2.2 le-am pus eu, v1.2.3 și v1.2.4 sunt din alte sesiuni.
+- **Cost API Anthropic consumat la teste:** ~0,40 $, pe cheia din revolut-notion.
+- **Prototipul** n-a fost modificat în sesiunea asta, doar citit.
