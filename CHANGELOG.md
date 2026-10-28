@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1] — 2026-10-28
+
+### 🐛 Fixes
+- **Ingredient nutrition is per 100 g again** — a data change on Neon, not in the code. 109 ingredients that were saved per serving (1 tsp, 1 tbsp, 1 piece, 1 oz) now hold USDA values per 100 g, 21 empty ones are filled in, and 43 gram-per-unit weights that were wrong or empty are set (a garlic clove was 85 g, now 5 g). Recipe and planner nutrition was far too low for these. Old values are backed up in `.claude/context/`.
+
+### ⚙️ Internals
+- The repo root ignores `.vercel` and `.env*`, which `vercel link` creates.
+
 ## [1.5.0] — 2026-10-28
 
 ### ✨ Features
