@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.5.0] — 2026-10-28
+
+### ✨ Features
+- **USDA lookup picks the right food** — Check USDA no longer takes the first result: "Cinnamon" gives Spices, cinnamon, ground (not Bread, cinnamon), "Apple" gives Apples, raw, and British names (wholemeal, tinned, flax seeds, cacao) find their USDA match. In the ingredient editor, Other matches lists the alternatives; tap one to use it instead.
+- **Pick a match in Data check** — when USDA isn't sure which food a name means, Data check doesn't write anything and shows Pick a match, with the options and their values per 100 g. Look up all, the Fill nutrition bulk action and the quick add fill only sure matches.
+
+### 🎨 UI / UX
+- **Readable selected chips** — selected chips, pills and segments are tinted orange instead of solid, so their emoji show (shopping-list aisles, ingredient filters, unit and day pickers, recipe filters).
+- **Dark text on orange** — buttons, the + button, checkboxes and badges filled with orange use dark text and icons; white on orange was too faint. Counts on chips are no longer faded.
+
+### ⚙️ Internals
+- `lib/usda.ts`: search and scoring (Atwater energy fields, word scoring, synonyms). `/api/nutrition` returns `confident` and `alternatives` beside the best match. The contrast rule is in `webapp/UX_CONVENTIONS.md`.
+
 ## [1.4.0] — 2026-10-28
 
 ### ✨ Features
