@@ -123,7 +123,7 @@ export default function RecipeBatchEditSheet({
               onClick={() => setCats((prev) => (on ? prev.filter((x) => x !== c) : [...prev, c]))}
               className={`h-10 px-3.5 rounded-full border text-sm font-medium transition-colors ${
                 on
-                  ? "bg-orange-700 border-orange-700 text-white dark:bg-orange-500 dark:border-orange-500 dark:text-[#1a1714]"
+                  ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                   : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
               }`}
             >
@@ -149,7 +149,7 @@ export default function RecipeBatchEditSheet({
           type="button"
           onClick={apply}
           disabled={!changed || saving}
-          className="flex-1 h-[52px] rounded-[14px] bg-orange-700 hover:bg-orange-800 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-[#1a1714] text-base font-bold flex items-center justify-center gap-2 disabled:opacity-45 transition-colors"
+          className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-45 transition-colors"
         >
           {saving && <Loader2 size={18} className="animate-spin" aria-hidden />}
           {changed ? `Apply to ${count}` : "Nothing changed yet"}

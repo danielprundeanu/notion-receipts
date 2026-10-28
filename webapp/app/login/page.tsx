@@ -12,7 +12,7 @@ export default function LoginPage() {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[var(--color-bg-base)]">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-orange-500 text-white flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-2xl bg-orange-500 text-gray-900 flex items-center justify-center mb-3">
             <LogIn size={22} />
           </div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Meal Planner</h1>
@@ -55,7 +55,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isPending}
-            className="w-full py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
+            className="w-full py-2.5 bg-orange-500 text-gray-900 rounded-lg text-sm font-semibold hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors"
           >
             {isPending ? <Loader2 size={15} className="animate-spin" /> : <LogIn size={15} />}
             Sign in

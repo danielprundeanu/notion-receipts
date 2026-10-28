@@ -497,7 +497,7 @@ export default function GroceryListPage() {
               picking ? "rounded-md" : "rounded-full"
             } ${
               (picking ? picked : ticked)
-                ? "bg-orange-500 border-orange-500 text-white"
+                ? "bg-orange-500 border-orange-500 text-gray-900"
                 : "border-gray-300 dark:border-[#3a352e]"
             }`}
           >
@@ -538,7 +538,7 @@ export default function GroceryListPage() {
   const toggleRow = "w-full h-[52px] flex items-center justify-between px-4 border-t border-gray-100 dark:border-[#3a352e] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]";
   const smallBtn = "h-9 px-2.5 rounded-lg text-xs font-semibold normal-case tracking-normal";
   const sheetBtn = "flex-1 h-12 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]";
-  const sheetMainBtn = "flex-1 h-12 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
+  const sheetMainBtn = "flex-1 h-12 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
 
   return (
     <div className="max-w-2xl mx-auto md:px-8 md:pt-8 flex flex-col min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:min-h-dvh">
@@ -598,13 +598,13 @@ export default function GroceryListPage() {
                   aria-pressed={on}
                   className={`shrink-0 h-10 px-3.5 rounded-full border flex items-center gap-1.5 text-sm font-semibold transition-colors ${
                     on
-                      ? "bg-orange-500 border-orange-500 text-gray-900"
+                      ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                       : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
                   <span aria-hidden>{c.emoji}</span>
                   {c.label}
-                  <span className={`text-xs ${on ? "opacity-85" : "opacity-70"}`}>{c.count}</span>
+                  <span className="text-xs">{c.count}</span>
                 </button>
               );
             })}
@@ -762,7 +762,7 @@ export default function GroceryListPage() {
             type="button"
             onClick={openAdd}
             aria-label="Add items to the list"
-            className="pointer-events-auto ml-auto w-14 h-14 rounded-[20px] bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center transition-colors"
+            className="pointer-events-auto ml-auto w-14 h-14 rounded-[20px] bg-orange-500 hover:bg-orange-600 text-gray-900 shadow-lg flex items-center justify-center transition-colors"
           >
             <Plus size={26} strokeWidth={2.4} />
           </button>
@@ -893,7 +893,7 @@ export default function GroceryListPage() {
               type="button"
               onClick={copySelected}
               disabled={busy}
-              className="w-full h-11 bg-orange-500 text-white rounded-xl text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
+              className="w-full h-11 bg-orange-500 text-gray-900 rounded-xl text-sm font-semibold hover:bg-orange-600 disabled:opacity-40 flex items-center justify-center gap-2 transition-colors"
             >
               {busy ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
               Copy here

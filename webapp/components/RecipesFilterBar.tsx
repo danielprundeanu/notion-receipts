@@ -37,7 +37,7 @@ export default function RecipesFilterBar({
 
   const chip = "shrink-0 h-10 px-4 rounded-full text-sm font-medium flex items-center gap-1.5 border transition-colors";
   const off = "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-700 dark:text-[#bab2a6]";
-  const on = "bg-orange-500 border-orange-500 text-gray-900";
+  const on = "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300";
   const noChips = cats.length === 0 && !fav;
 
   // The WHOLE section (search input + filter chips) is one sticky unit. It sticks as

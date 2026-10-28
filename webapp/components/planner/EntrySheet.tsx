@@ -68,7 +68,7 @@ export default function EntrySheet({
   const step = servingsStepOf(recipe);
   const saving = entry.id.startsWith("temp-"); // not in the database yet — nothing to change
   const pillOff = "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]";
-  const pillOn = "border-orange-500 bg-orange-500 text-gray-900";
+  const pillOn = "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300";
   const stepBtn = "w-11 h-11 rounded-xl bg-gray-100 dark:bg-[#2e2a24] text-gray-800 dark:text-[#eae5de] flex items-center justify-center disabled:opacity-40";
 
   return (
@@ -162,7 +162,7 @@ export default function EntrySheet({
                 className={`h-14 rounded-xl border flex flex-col items-center justify-center gap-px text-xs font-semibold transition-colors disabled:opacity-50 ${on ? pillOn : pillOff}`}
               >
                 {name.slice(0, 3)}
-                <b className={`text-base ${on ? "text-white" : "text-gray-900 dark:text-[#eae5de]"}`}>{date}</b>
+                <b className={`text-base ${on ? "" : "text-gray-900 dark:text-[#eae5de]"}`}>{date}</b>
               </button>
             );
           })}
@@ -195,7 +195,7 @@ export default function EntrySheet({
               type="button"
               disabled={saving || copying || slots.length === 0}
               onClick={copy}
-              className="mt-[18px] w-full h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+              className="mt-[18px] w-full h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
             >
               {copying && <Loader2 size={18} className="animate-spin" aria-hidden />}
               {slots.length === 0 ? "Pick days to copy to" : `Add ${slots.length} ${slots.length === 1 ? "copy" : "copies"}`}
@@ -214,7 +214,7 @@ export default function EntrySheet({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold transition-colors"
+              className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold transition-colors"
             >
               {saving ? "Saving…" : "Done"}
             </button>

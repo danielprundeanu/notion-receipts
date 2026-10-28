@@ -247,7 +247,7 @@ export default function IngredientSheet({
             )}
             <button
               type="submit"
-              className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold transition-colors"
+              className="flex-1 h-[52px] rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold transition-colors"
             >
               {row ? "Done" : "Add"}
             </button>

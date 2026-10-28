@@ -339,7 +339,7 @@ export default function PlannerPage() {
                         <h2 id={`day-${i}-title`} className="text-[17px] font-bold text-gray-900 dark:text-[#eae5de]">
                           {name} {date.getDate()}
                         </h2>
-                        {isToday && <span className="px-2 py-0.5 rounded-full bg-orange-500 text-white text-xs font-bold">Today</span>}
+                        {isToday && <span className="px-2 py-0.5 rounded-full bg-orange-500 text-gray-900 text-xs font-bold">Today</span>}
                       </div>
                       {kcal ? <span className="text-[13px] text-gray-600 dark:text-[#a49c90]">{formatKcal(kcal)}</span> : null}
                     </div>

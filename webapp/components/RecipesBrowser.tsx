@@ -242,7 +242,7 @@ export default function RecipesBrowser({
                 <button
                   type="button"
                   onClick={stopSelect}
-                  className="h-10 px-4 rounded-xl bg-orange-700 hover:bg-orange-800 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-[#1a1714] text-[15px] font-bold transition-colors"
+                  className="h-10 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold transition-colors"
                 >
                   Done
                 </button>

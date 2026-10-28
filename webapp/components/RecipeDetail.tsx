@@ -299,7 +299,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
           <span
             aria-hidden
             className={`mt-0.5 w-6 h-6 shrink-0 rounded-lg border-2 flex items-center justify-center transition-colors ${
-              on ? "bg-orange-500 border-orange-500 text-white" : "border-gray-300 dark:border-[#3a352e]"
+              on ? "bg-orange-500 border-orange-500 text-gray-900" : "border-gray-300 dark:border-[#3a352e]"
             }`}
           >
             {on && <Check size={14} strokeWidth={3} />}
@@ -659,7 +659,7 @@ export default function RecipeDetail({ recipe }: { recipe: RecipeData }) {
                       n === null ? "w-[30px] h-[30px] text-xl" : "w-[30px] h-[30px] text-[15px]"
                     } ${
                       done
-                        ? "bg-orange-500 text-white"
+                        ? "bg-orange-500 text-gray-900"
                         : n === null
                           ? "text-gray-400 dark:text-[#8f877b]"
                           : "bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-400"

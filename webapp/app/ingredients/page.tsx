@@ -663,7 +663,7 @@ export default function IngredientsPage() {
   const sheetBtn =
     "flex-1 h-12 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de] flex items-center justify-center";
   const sheetMainBtn =
-    "flex-1 h-12 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
+    "flex-1 h-12 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
   const showList = view === "list" ? "" : "md:hidden";
 
   return (
@@ -695,7 +695,7 @@ export default function IngredientsPage() {
                     onClick={() => changeView(v)}
                     aria-pressed={view === v}
                     className={`h-full px-3.5 flex items-center gap-1.5 text-sm font-semibold transition-colors ${
-                      view === v ? "bg-orange-500 text-gray-900" : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
+                      view === v ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300" : "bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
                     }`}
                   >
                     {v === "list" ? <List size={15} /> : <Table size={15} />} {v === "list" ? "List" : "Table"}
@@ -707,7 +707,7 @@ export default function IngredientsPage() {
                 type="button"
                 onClick={() => openNew()}
                 aria-label="New ingredient"
-                className="w-11 h-11 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center transition-colors"
+                className="w-11 h-11 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-gray-900 flex items-center justify-center transition-colors"
               >
                 <Plus size={22} />
               </button>
@@ -764,12 +764,12 @@ export default function IngredientsPage() {
                 aria-pressed={on}
                 className={`shrink-0 h-10 px-3.5 rounded-full border flex items-center gap-1.5 text-sm font-semibold transition-colors ${
                   on
-                    ? "bg-orange-500 border-orange-500 text-gray-900"
+                    ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                     : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
                 {c.label}
-                <span className={`text-xs ${on ? "opacity-85" : "opacity-70"}`}>{c.count}</span>
+                <span className="text-xs">{c.count}</span>
               </button>
             );
           })}
@@ -850,7 +850,7 @@ export default function IngredientsPage() {
                             <span
                               aria-hidden
                               className={`w-[26px] h-[26px] shrink-0 rounded-full border-2 flex items-center justify-center ${
-                                on ? "bg-orange-500 border-orange-500 text-white" : "border-gray-300 dark:border-[#3a352e]"
+                                on ? "bg-orange-500 border-orange-500 text-gray-900" : "border-gray-300 dark:border-[#3a352e]"
                               }`}
                             >
                               {on && <Check size={14} strokeWidth={3} />}
@@ -1108,7 +1108,7 @@ export default function IngredientsPage() {
               aria-label="New category name"
               className="flex-1 min-w-0 h-12 px-3.5 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-base text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#8f877b] outline-none focus:border-orange-500"
             />
-            <button type="button" onClick={addCategoryAndApply} disabled={!newCatName.trim() || bulkBusy} className="h-12 px-4 rounded-[14px] bg-orange-500 text-white text-[15px] font-bold disabled:opacity-50">
+            <button type="button" onClick={addCategoryAndApply} disabled={!newCatName.trim() || bulkBusy} className="h-12 px-4 rounded-[14px] bg-orange-500 text-gray-900 text-[15px] font-bold disabled:opacity-50">
               {bulkBusy ? <Loader2 size={16} className="animate-spin" /> : "Add"}
             </button>
           </div>
@@ -1176,7 +1176,7 @@ export default function IngredientsPage() {
                 onClick={() => setNd((p) => ({ ...p, unit: u }))}
                 className={`shrink-0 h-10 px-3.5 rounded-[10px] border text-sm font-semibold ${
                   nd.unit === u
-                    ? "bg-orange-500 border-orange-500 text-gray-900"
+                    ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                     : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
@@ -1200,7 +1200,7 @@ export default function IngredientsPage() {
                   onClick={() => setNd((p) => ({ ...p, category: on ? "" : c, categoryPicked: true }))}
                   className={`h-10 px-3 rounded-full border text-sm ${
                     on
-                      ? "bg-orange-500 border-orange-500 text-gray-900 font-semibold"
+                      ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300 font-semibold"
                       : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] font-medium"
                   }`}
                 >

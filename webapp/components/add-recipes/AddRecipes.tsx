@@ -87,7 +87,7 @@ function ingredientLine(q: Question): string {
 }
 
 const btnPrimary =
-  "h-[52px] md:h-11 px-5 rounded-[14px] md:rounded-xl bg-orange-700 hover:bg-orange-800 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-[#1a1714] text-base md:text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-45 transition-colors";
+  "h-[52px] md:h-11 px-5 rounded-[14px] md:rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-base md:text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-45 transition-colors";
 const btnSecondary =
   "h-[52px] md:h-11 px-5 rounded-[14px] md:rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-bold text-gray-900 dark:text-[#eae5de]";
 const card = "rounded-2xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c]";

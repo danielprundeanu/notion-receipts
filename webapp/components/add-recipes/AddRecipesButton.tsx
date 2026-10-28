@@ -16,7 +16,7 @@ export default function AddRecipesButton() {
         onClick={() => setOpen(true)}
         aria-label="Add recipes"
         title="Add recipes"
-        className="flex items-center justify-center w-11 h-11 rounded-[14px] bg-orange-700 text-white hover:bg-orange-800 dark:bg-orange-500 dark:text-[#1a1714] dark:hover:bg-orange-400 transition-colors"
+        className="flex items-center justify-center w-11 h-11 rounded-[14px] bg-orange-500 text-gray-900 hover:bg-orange-600 transition-colors"
       >
         <Plus size={22} />
       </button>

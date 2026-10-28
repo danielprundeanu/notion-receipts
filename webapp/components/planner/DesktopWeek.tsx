@@ -217,7 +217,7 @@ function RecipePanel({ recipes, recentIds, newIds, picked, target, onPick, onCan
   const chipCls = (on: boolean) =>
     `shrink-0 h-[34px] px-3 rounded-full border text-[13px] font-medium flex items-center gap-1.5 transition-colors ${
       on
-        ? "bg-orange-700 border-orange-700 text-white dark:bg-orange-500 dark:border-orange-500 dark:text-[#1a1714]"
+        ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
         : "bg-white dark:bg-[#1a1714] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
     }`;
   const busy = picked || target;
@@ -238,7 +238,7 @@ function RecipePanel({ recipes, recentIds, newIds, picked, target, onPick, onCan
           <button
             type="button"
             onClick={onAddRecipes}
-            className="h-10 px-3.5 rounded-xl bg-orange-700 hover:bg-orange-800 text-white dark:bg-orange-500 dark:hover:bg-orange-400 dark:text-[#1a1714] text-sm font-bold flex items-center gap-1.5 transition-colors"
+            className="h-10 px-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-sm font-bold flex items-center gap-1.5 transition-colors"
           >
             <Plus size={17} aria-hidden /> Add recipes
           </button>

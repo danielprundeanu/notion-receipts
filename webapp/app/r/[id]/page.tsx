@@ -100,7 +100,7 @@ export default async function RecipePreviewPage({
           </div>
           <Link
             href={`/recipes/${id}`}
-            className="mt-5 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
+            className="mt-5 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-orange-500 text-gray-900 rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors"
           >
             View full recipe
           </Link>

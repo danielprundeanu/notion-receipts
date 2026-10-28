@@ -416,7 +416,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
             <button
               type="submit"
               disabled={saving || imageUploading}
-              className="h-10 px-[18px] rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold flex items-center gap-1.5 disabled:opacity-60 transition-colors"
+              className="h-10 px-[18px] rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold flex items-center gap-1.5 disabled:opacity-60 transition-colors"
             >
               {saving && <Loader2 size={15} className="animate-spin" aria-hidden />}
               {imageUploading ? "Uploading…" : "Save"}
@@ -532,7 +532,7 @@ export default function RecipeForm({ initial }: { initial?: InitialRecipeData })
                   onClick={() => toggleCategory(cat)}
                   aria-pressed={on}
                   className={`${chip} ${
-                    on ? "bg-orange-500 border-orange-500 text-gray-900" : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
+                    on ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300" : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
                   {categoryLabel(cat)}

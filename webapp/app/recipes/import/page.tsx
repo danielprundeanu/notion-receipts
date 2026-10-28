@@ -26,7 +26,7 @@ function StepIndicator({ step }: { step: number }) {
         <div key={i} className="flex items-center gap-2">
           <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${
             i + 1 < step
-              ? "bg-orange-500 text-white"
+              ? "bg-orange-500 text-gray-900"
               : i + 1 === step
               ? "bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-400 ring-2 ring-orange-400"
               : "bg-gray-100 dark:bg-[#2a2620] text-gray-400 dark:text-[#5c554b]"
@@ -171,7 +171,7 @@ function RecipeReviewCard({
               onClick={() => onBatchChange(true)}
               className={`text-xs px-2 py-0.5 rounded font-medium transition-colors ${
                 recipe.batch
-                  ? "bg-orange-500 text-white"
+                  ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300"
                   : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
@@ -181,7 +181,7 @@ function RecipeReviewCard({
               onClick={() => onBatchChange(false)}
               className={`text-xs px-2 py-0.5 rounded font-medium transition-colors ${
                 !recipe.batch
-                  ? "bg-orange-500 text-white"
+                  ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300"
                   : "bg-gray-100 dark:bg-[#2a2620] text-gray-500 dark:text-[#7c756a] hover:bg-gray-200 dark:hover:bg-[#322e28]"
               }`}
             >
@@ -863,7 +863,7 @@ function ReviewRow({
             </button>
           )}
           <button onClick={handleSave} disabled={!canSave}
-            className="ml-auto text-sm font-semibold py-2 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            className="ml-auto text-sm font-semibold py-2 px-6 rounded-lg bg-orange-500 hover:bg-orange-600 text-gray-900 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             {isReviewed ? "Update" : "Save"}
           </button>
         </div>
@@ -1251,7 +1251,7 @@ export default function ImportPage() {
                 onClick={() => setInputMode("urls")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   inputMode === "urls"
-                    ? "bg-orange-500 text-white"
+                    ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300"
                     : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
@@ -1261,7 +1261,7 @@ export default function ImportPage() {
                 onClick={() => setInputMode("text")}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                   inputMode === "text"
-                    ? "bg-orange-500 text-white"
+                    ? "bg-orange-100 text-orange-800 dark:bg-orange-500/15 dark:text-orange-300"
                     : "bg-white dark:bg-[#201c18] border border-gray-200 dark:border-[#2e2a24] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
@@ -1329,7 +1329,7 @@ export default function ImportPage() {
               <button
                 onClick={handleParse}
                 disabled={loading || (inputMode === "urls" ? !urlsText.trim() : !textContent.trim())}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
                 {loading ? "Parsing..." : "Parse recipes"}
@@ -1378,7 +1378,7 @@ export default function ImportPage() {
                 </button>
                 <button
                   onClick={() => setStep(totalConflicts > 0 ? 3 : 4)}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 font-medium text-sm transition-colors"
                 >
                   {totalConflicts > 0 ? `Resolve ${totalConflicts} conflicts` : "Preview & import"}
                   <ArrowRight size={16} />
@@ -1498,7 +1498,7 @@ export default function ImportPage() {
               <button
                 onClick={() => setStep(4)}
                 disabled={conflictIngredients.length > 0}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Preview & import <ArrowRight size={16} />
               </button>
@@ -1536,7 +1536,7 @@ export default function ImportPage() {
               </button>
               <Link
                 href="/recipes"
-                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
+                className="flex items-center gap-2 px-5 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 font-medium text-sm transition-colors"
               >
                 View recipes <ArrowRight size={14} />
               </Link>
@@ -1692,7 +1692,7 @@ export default function ImportPage() {
               <button
                 onClick={handleImport}
                 disabled={loading}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 font-medium text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                 {loading ? "Importing..." : `Import ${validRecipes.length} recipes`}

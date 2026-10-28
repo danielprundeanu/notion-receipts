@@ -119,7 +119,7 @@ export default function AddMealSheet({
             <button
               type="button"
               onClick={onClose}
-              className="h-11 px-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold transition-colors"
+              className="h-11 px-3.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold transition-colors"
             >
               Done
             </button>
@@ -137,7 +137,7 @@ export default function AddMealSheet({
                   aria-label={`${name} ${date}`}
                   className={`h-[52px] rounded-xl border flex flex-col items-center justify-center gap-px text-xs font-semibold transition-colors ${
                     on
-                      ? "border-orange-500 bg-orange-500 text-gray-900"
+                      ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                       : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
                   }`}
                 >
@@ -156,7 +156,7 @@ export default function AddMealSheet({
                 aria-pressed={meal === m}
                 className={`${pill} ${
                   meal === m
-                    ? "border-orange-500 bg-orange-500 text-gray-900"
+                    ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                     : "border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90]"
                 }`}
               >
@@ -220,7 +220,7 @@ export default function AddMealSheet({
                         aria-pressed={isAdded}
                         className={`w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center transition-colors ${
                           isAdded
-                            ? "bg-orange-500 border-orange-500 text-gray-900"
+                            ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
                             : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-orange-600 dark:text-orange-400"
                         }`}
                       >

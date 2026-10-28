@@ -40,7 +40,7 @@ const aiBtnCls =
 const btn2Cls =
   "flex-1 h-12 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de] flex items-center justify-center gap-1.5 disabled:opacity-50";
 const mainBtnCls =
-  "flex-1 h-12 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
+  "flex-1 h-12 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
 const doneCls = "rounded-2xl px-3.5 py-3.5 bg-orange-50 dark:bg-orange-500/15 text-[15px] font-semibold text-orange-700 dark:text-orange-300";
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
@@ -132,7 +132,7 @@ function GramsFix({
           type="button"
           onClick={save}
           disabled={saving || Number.isNaN(value) || value <= 0}
-          className="shrink-0 h-12 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold flex items-center gap-1.5 disabled:opacity-50"
+          className="shrink-0 h-12 px-4 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold flex items-center gap-1.5 disabled:opacity-50"
         >
           {saving && <Loader2 size={15} className="animate-spin" />}
           Save

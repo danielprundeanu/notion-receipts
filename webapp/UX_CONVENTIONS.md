@@ -53,3 +53,8 @@
 
 ## Styling
 - Match the surrounding component's Tailwind + dark-mode tokens: `dark:bg-[#1f1f1f]`, `#2a2a2a` inputs, `#e3e3e3` text, **orange-500** brand accent, teal secondary.
+- **Never white on `orange-500`** (2.9:1, fails). Anything filled orange — buttons, the FAB, checkboxes, badges —
+  takes `text-gray-900` (6.1:1).
+- **Selected chips / pills / segments are tinted, not filled:** `bg-orange-100 border-orange-300 text-orange-800
+  dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300` (drop the border classes on segments).
+  A solid orange chip swallows the emoji. Chip counts take no `opacity-*`: gray-600 at 85% falls under 4.5:1 on white.

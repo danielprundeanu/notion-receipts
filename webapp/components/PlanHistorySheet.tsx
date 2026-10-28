@@ -85,7 +85,7 @@ function Chip({
       aria-pressed={active}
       className={`shrink-0 h-10 px-3.5 text-xs font-medium rounded-full border transition-colors flex items-center gap-1 ${
         active
-          ? "bg-orange-500 text-gray-900 border-orange-500"
+          ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
           : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
       }`}
     >
@@ -222,7 +222,7 @@ function WeekCard({
                 <button
                   onClick={() => run("add")}
                   disabled={importing}
-                  className="flex-1 h-10 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                  className="flex-1 h-10 rounded-lg bg-orange-500 text-gray-900 text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
                 >
                   {importing && <Loader2 size={13} className="animate-spin" />}
                   Keep &amp; add
@@ -247,7 +247,7 @@ function WeekCard({
             <button
               onClick={() => (targetCount > 0 ? setConfirming(true) : run("add"))}
               disabled={importing}
-              className="w-full h-11 rounded-lg bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+              className="w-full h-11 rounded-lg bg-orange-500 text-gray-900 text-sm font-medium hover:bg-orange-600 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
             >
               {importing ? <Loader2 size={14} className="animate-spin" /> : <CopyPlus size={15} />}
               Import into {targetLabel}

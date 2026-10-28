@@ -50,7 +50,7 @@ function SelectCircle({ on, className = "" }: { on: boolean; className?: string 
       aria-hidden
       className={`rounded-full flex items-center justify-center shrink-0 transition-colors ${
         on
-          ? "bg-orange-700 text-white dark:bg-orange-500 dark:text-[#1a1714]"
+          ? "bg-orange-500 text-gray-900"
           : "border-2 border-gray-400 dark:border-[#8f877b]"
       } ${className}`}
     >

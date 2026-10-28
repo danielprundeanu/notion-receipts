@@ -94,7 +94,7 @@ function UnitPicker({
   const pill = (on: boolean) =>
     `shrink-0 h-10 px-3.5 rounded-[10px] border text-sm font-semibold transition-colors ${
       on
-        ? "bg-orange-500 border-orange-500 text-gray-900"
+        ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300"
         : "bg-[var(--color-bg-base)] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90]"
     }`;
   return (
@@ -394,7 +394,7 @@ export default function GroceryItemModal({
             disabled={!canSave}
             className={`h-10 min-w-[72px] px-[18px] rounded-xl text-[15px] font-bold flex items-center justify-center gap-1.5 transition-colors ${
               canSave
-                ? "bg-orange-500 hover:bg-orange-600 text-white"
+                ? "bg-orange-500 hover:bg-orange-600 text-gray-900"
                 : "bg-gray-100 dark:bg-[#2e2a24] text-gray-500 dark:text-[#a49c90]"
             }`}
           >
@@ -462,7 +462,7 @@ export default function GroceryItemModal({
                       onClick={() => patch({ category: c })}
                       className={`h-10 px-3 rounded-full border text-sm transition-colors ${
                         on
-                          ? "bg-orange-500 border-orange-500 text-gray-900 font-semibold"
+                          ? "bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-500/15 dark:border-orange-500/50 dark:text-orange-300 font-semibold"
                           : hinted
                           ? "border-dashed border-orange-500 bg-white dark:bg-[#24211c] text-orange-600 dark:text-orange-400 font-semibold"
                           : "bg-white dark:bg-[#24211c] border-gray-200 dark:border-[#3a352e] text-gray-600 dark:text-[#a49c90] font-medium"
@@ -573,7 +573,7 @@ export default function GroceryItemModal({
                     <button type="button" onClick={() => setUsda(null)} className="flex-1 h-11 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]">
                       Keep mine
                     </button>
-                    <button type="button" onClick={useUsda} className="flex-1 h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-[15px] font-bold">
+                    <button type="button" onClick={useUsda} className="flex-1 h-11 rounded-xl bg-orange-500 hover:bg-orange-600 text-gray-900 text-[15px] font-bold">
                       Use these
                     </button>
                   </div>
