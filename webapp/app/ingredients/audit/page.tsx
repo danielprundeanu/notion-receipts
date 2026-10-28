@@ -24,7 +24,9 @@ type NutritionRow = {
   id: string; name: string; nameRo: string | null; unit: string | null; uses: number; category: string | null;
   carbs: number | null; fat: number | null; protein: number | null;
 };
-type LookState = "busy" | "ok" | "none" | "error";
+// "pick": USDA answered, but the name could mean several foods, so nothing was written.
+type LookState = "busy" | "ok" | "pick" | "none" | "error";
+type UsdaFood = { name: string; kcal: number | null; carbs: number | null; fat: number | null; protein: number | null };
 type CatGroup = { key: string; from: string; target: string | null; rows: UncategorizedRow[] };
 
 const GROUP_NOTES: Record<string, string> = {
@@ -156,6 +158,10 @@ export default function DataCheckPage() {
   const [noNutrition, setNoNutrition] = useState<NutritionRow[]>([]);
   const [look, setLook] = useState<Record<string, LookState>>({});
   const [filledText, setFilledText] = useState<Record<string, string>>({});
+  const [usdaOptions, setUsdaOptions] = useState<Record<string, UsdaFood[]>>({});
+  const [matchFor, setMatchFor] = useState<NutritionRow | null>(null);
+  const [matchSaving, setMatchSaving] = useState<string | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
   const [showHousehold, setShowHousehold] = useState(false);
 
@@ -216,7 +222,18 @@ export default function DataCheckPage() {
   const foodLeft = food.filter((r) => look[r.id] !== "ok").length;
   const toLook = food.filter((r) => !look[r.id] || look[r.id] === "error");
 
-  // Look one item up in USDA and fill its empty values. Returns what happened.
+  // Write a USDA food's values. Only what's empty: a macro typed in by hand stays.
+  async function fill(row: NutritionRow, food: UsdaFood) {
+    await updateGroceryItem(row.id, {
+      kcal: food.kcal ?? null,
+      ...(row.carbs == null && food.carbs != null ? { carbs: food.carbs } : {}),
+      ...(row.fat == null && food.fat != null ? { fat: food.fat } : {}),
+      ...(row.protein == null && food.protein != null ? { protein: food.protein } : {}),
+    });
+    setFilledText((t) => ({ ...t, [row.id]: `${food.kcal ?? "—"} kcal` }));
+  }
+
+  // Look one item up in USDA and fill it when the match is a sure one. Returns what happened.
   async function lookUp(row: NutritionRow): Promise<LookState> {
     setLook((l) => ({ ...l, [row.id]: "busy" }));
     let state: LookState;
@@ -226,21 +243,33 @@ export default function DataCheckPage() {
       else if (!res.ok) state = "error";
       else {
         const data = await res.json();
-        // Only fill what's empty: a macro typed in by hand stays.
-        await updateGroceryItem(row.id, {
-          kcal: data.kcal ?? null,
-          ...(row.carbs == null && data.carbs != null ? { carbs: data.carbs } : {}),
-          ...(row.fat == null && data.fat != null ? { fat: data.fat } : {}),
-          ...(row.protein == null && data.protein != null ? { protein: data.protein } : {}),
-        });
-        setFilledText((t) => ({ ...t, [row.id]: `${data.kcal ?? "—"} kcal` }));
-        state = "ok";
+        if (data.confident) {
+          await fill(row, data);
+          state = "ok";
+        } else {
+          setUsdaOptions((o) => ({ ...o, [row.id]: [data, ...(data.alternatives ?? [])] }));
+          state = "pick";
+        }
       }
     } catch {
       state = "error";
     }
     setLook((l) => ({ ...l, [row.id]: state }));
     return state;
+  }
+
+  async function chooseMatch(row: NutritionRow, food: UsdaFood) {
+    setMatchSaving(food.name);
+    setMatchError(null);
+    try {
+      await fill(row, food);
+      setLook((l) => ({ ...l, [row.id]: "ok" }));
+      setMatchFor(null);
+    } catch {
+      setMatchError("Couldn't save it. Please try again.");
+    } finally {
+      setMatchSaving(null);
+    }
   }
 
   async function lookUpOne(row: NutritionRow) {
@@ -251,11 +280,12 @@ export default function DataCheckPage() {
   async function lookUpAll() {
     const todo = [...toLook];
     if (!todo.length || bulk) return;
-    let found = 0, none = 0, failed = 0, failsInARow = 0;
+    let found = 0, pick = 0, none = 0, failed = 0, failsInARow = 0;
     for (let i = 0; i < todo.length; i++) {
       setBulk({ done: i, total: todo.length });
       const state = await lookUp(todo[i]);
       if (state === "ok") found++;
+      else if (state === "pick") pick++;
       else if (state === "none") none++;
       else failed++;
       failsInARow = state === "error" ? failsInARow + 1 : 0;
@@ -264,6 +294,7 @@ export default function DataCheckPage() {
     }
     setBulk(null);
     const parts = [`Filled ${found}`];
+    if (pick) parts.push(`${pick} need you to pick the match`);
     if (none) parts.push(`${none} need a look by hand`);
     if (failed) parts.push(`${failed} failed${failsInARow >= 3 ? ", stopped" : ""}`);
     showToast(parts.join(" · "), failed > 0 && found === 0);
@@ -480,6 +511,15 @@ export default function DataCheckPage() {
                           <span className="shrink-0 h-9 px-3 rounded-full flex items-center text-[13px] font-semibold bg-orange-50 dark:bg-orange-500/15 text-orange-700 dark:text-orange-300">
                             Filled · {filledText[r.id]}
                           </span>
+                        ) : st === "pick" ? (
+                          <button
+                            type="button"
+                            onClick={() => { setMatchError(null); setMatchFor(r); }}
+                            aria-label={`Pick the USDA match for ${r.name}`}
+                            className="shrink-0 h-9 px-3 rounded-full flex items-center gap-1 text-[13px] font-semibold bg-amber-50 text-amber-800 dark:bg-amber-400/10 dark:text-amber-300"
+                          >
+                            Pick a match <ChevronRight size={14} />
+                          </button>
                         ) : st === "none" ? (
                           <Link
                             href={`/ingredients?edit=${r.id}`}
@@ -682,6 +722,38 @@ export default function DataCheckPage() {
         >
           {toast.text}
         </div>
+      )}
+
+      {matchFor && (
+        <Sheet title={`Which food is “${matchFor.name}”?`} onClose={() => setMatchFor(null)}>
+          <p className={`${introCls} mt-1`}>USDA isn&apos;t sure. Pick the one you buy; values are per 100 g.</p>
+          <div className="mt-2">
+            {(usdaOptions[matchFor.id] ?? []).map((o) => (
+              <button
+                key={o.name}
+                type="button"
+                onClick={() => chooseMatch(matchFor, o)}
+                disabled={matchSaving != null}
+                className="w-full min-h-[56px] py-2 px-1 flex items-center justify-between gap-3 text-left border-b border-gray-100 dark:border-[#3a352e] disabled:opacity-50"
+              >
+                <span className="min-w-0">
+                  <span className="block text-[15px] text-gray-900 dark:text-[#eae5de]">{o.name}</span>
+                  <span className="block mt-0.5 text-[13px] text-gray-600 dark:text-[#a49c90]">
+                    P {o.protein ?? "—"} · C {o.carbs ?? "—"} · F {o.fat ?? "—"}
+                  </span>
+                </span>
+                <span className="shrink-0 flex items-center gap-1.5 text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]">
+                  {matchSaving === o.name && <Loader2 size={14} className="animate-spin" />}
+                  {o.kcal ?? "—"} kcal
+                </span>
+              </button>
+            ))}
+          </div>
+          {matchError && <p role="alert" className="mt-3 text-[14px] text-red-600 dark:text-red-400">{matchError}</p>}
+          <Link href={`/ingredients?edit=${matchFor.id}`} className={`${btn2Cls} mt-4 w-full`}>
+            None of these · open the ingredient
+          </Link>
+        </Sheet>
       )}
 
       {picker && (

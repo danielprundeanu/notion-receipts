@@ -554,7 +554,7 @@ export default function IngredientsPage() {
     const had = selectedCount - todo.length;
     if (!todo.length) { showToast(`All ${selectedCount} already have nutrition. Nothing changed.`); return; }
     setBulkBusy(true);
-    let filled = 0, noMatch = 0, failed = 0, failsInARow = 0;
+    let filled = 0, unsure = 0, noMatch = 0, failed = 0, failsInARow = 0;
     for (let i = 0; i < todo.length; i++) {
       setBulkProgress({ done: i, total: todo.length });
       const it = todo[i];
@@ -563,6 +563,8 @@ export default function IngredientsPage() {
         if (res.status === 404) { noMatch++; failsInARow = 0; continue; }
         if (!res.ok) throw new Error(String(res.status));
         const data = await res.json();
+        // The name could mean several foods: leave it for a pick instead of guessing.
+        if (!data.confident) { unsure++; failsInARow = 0; continue; }
         const patch: Partial<Pick<GroceryItem, "kcal" | "carbs" | "fat" | "protein">> = {};
         if (it.kcal == null && data.kcal != null) patch.kcal = data.kcal;
         if (it.carbs == null && data.carbs != null) patch.carbs = data.carbs;
@@ -583,6 +585,7 @@ export default function IngredientsPage() {
     setBulkProgress(null);
     setBulkBusy(false);
     const parts = [`Filled ${filled}`];
+    if (unsure) parts.push(`${unsure} need a pick in Data check`);
     if (noMatch) parts.push(`${noMatch} no match`);
     if (had) parts.push(`${had} already had it`);
     if (failed) parts.push(`${failed} failed`);
@@ -622,6 +625,7 @@ export default function IngredientsPage() {
       if (res.status === 404) { showToast(`Added ${name} · no USDA match, add nutrition by hand`); return; }
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
+      if (!data.confident) { showToast(`Added ${name} · USDA isn't sure which food it is. Use Check USDA on it.`); return; }
       const patch = { kcal: data.kcal ?? null, carbs: data.carbs ?? null, fat: data.fat ?? null, protein: data.protein ?? null };
       await updateGroceryItem(created.id, patch);
       setItems((prev) => prev.map((x) => (x.id === created.id ? { ...x, ...patch } : x)));

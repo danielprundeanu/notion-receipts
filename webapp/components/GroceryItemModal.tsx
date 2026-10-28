@@ -47,7 +47,9 @@ type Draft = {
   pantryStaple: boolean;
 };
 
-type Usda = { name: string; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
+type UsdaFood = { name: string; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null };
+// The food shown, the others USDA offered, and whether the name was unambiguous.
+type Usda = { pick: UsdaFood; options: UsdaFood[]; confident: boolean };
 type AiNote = { text: string; error: boolean };
 
 const str = (n: number | null | undefined) => (n == null ? "" : String(n));
@@ -301,7 +303,9 @@ export default function GroceryItemModal({
       const data = await res.json().catch(() => ({}));
       if (res.status === 404) { setLookError(`USDA has no match for “${q}”. Try a simpler name, or type the values in.`); return; }
       if (!res.ok) { setLookError(data.error ?? "Couldn't reach USDA. Please try again."); return; }
-      setUsda({ name: data.name ?? q, kcal: data.kcal ?? null, protein: data.protein ?? null, carbs: data.carbs ?? null, fat: data.fat ?? null });
+      const food = (f: Partial<UsdaFood>): UsdaFood => ({ name: f.name ?? q, kcal: f.kcal ?? null, protein: f.protein ?? null, carbs: f.carbs ?? null, fat: f.fat ?? null });
+      const pick = food(data);
+      setUsda({ pick, options: [pick, ...(data.alternatives ?? []).map(food)], confident: data.confident === true });
     } catch {
       setLookError("Couldn't reach USDA. Check your connection.");
     } finally {
@@ -311,11 +315,12 @@ export default function GroceryItemModal({
 
   function useUsda() {
     if (!usda) return;
+    const { pick } = usda;
     patch({
-      kcal: usda.kcal != null ? String(usda.kcal) : d.kcal,
-      protein: usda.protein != null ? String(usda.protein) : d.protein,
-      carbs: usda.carbs != null ? String(usda.carbs) : d.carbs,
-      fat: usda.fat != null ? String(usda.fat) : d.fat,
+      kcal: pick.kcal != null ? String(pick.kcal) : d.kcal,
+      protein: pick.protein != null ? String(pick.protein) : d.protein,
+      carbs: pick.carbs != null ? String(pick.carbs) : d.carbs,
+      fat: pick.fat != null ? String(pick.fat) : d.fat,
     });
     setUsda(null);
   }
@@ -565,10 +570,13 @@ export default function GroceryItemModal({
               {lookError && <p role="alert" className={`${warnCls} mb-3`}>{lookError}</p>}
               {usda && (
                 <div className={`${cardCls} !border-orange-500 mb-3 px-3.5 py-3`}>
-                  <p className="text-[13px] text-gray-600 dark:text-[#a49c90]">USDA · {usda.name}</p>
+                  <p className="text-[13px] text-gray-600 dark:text-[#a49c90]">USDA · {usda.pick.name}</p>
                   <p className="mt-1 text-base font-semibold text-gray-900 dark:text-[#eae5de]">
-                    {fmtNum(usda.kcal)} kcal · P {fmtNum(usda.protein)} · C {fmtNum(usda.carbs)} · F {fmtNum(usda.fat)}
+                    {fmtNum(usda.pick.kcal)} kcal · P {fmtNum(usda.pick.protein)} · C {fmtNum(usda.pick.carbs)} · F {fmtNum(usda.pick.fat)}
                   </p>
+                  {!usda.confident && usda.pick === usda.options[0] && (
+                    <p className="mt-1 text-[13px] text-amber-700 dark:text-amber-300">Closest match, not a sure one. Check it&apos;s the right food.</p>
+                  )}
                   <div className="mt-3 flex gap-2">
                     <button type="button" onClick={() => setUsda(null)} className="flex-1 h-11 rounded-xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]">
                       Keep mine
@@ -577,6 +585,22 @@ export default function GroceryItemModal({
                       Use these
                     </button>
                   </div>
+                  {usda.options.length > 1 && (
+                    <div className="mt-3 border-t border-gray-200 dark:border-[#3a352e] pt-2">
+                      <p className="text-xs font-semibold uppercase tracking-[.04em] text-gray-600 dark:text-[#a49c90]">Other matches</p>
+                      {usda.options.filter((o) => o !== usda.pick).map((o) => (
+                        <button
+                          key={o.name}
+                          type="button"
+                          onClick={() => setUsda({ ...usda, pick: o })}
+                          className="w-full min-h-11 py-2 flex items-center justify-between gap-3 text-left text-[14px] text-gray-900 dark:text-[#eae5de]"
+                        >
+                          <span className="min-w-0">{o.name}</span>
+                          <span className="shrink-0 text-gray-600 dark:text-[#a49c90]">{fmtNum(o.kcal)} kcal</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               <div className={`${cardCls} p-3.5`}>
