@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ClipboardList, Copy, CalendarDays, Loader2, Plus, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Copy, CalendarDays, Eye, EyeOff, Loader2, Plus, Trash2, X } from "lucide-react";
 import {
   getGroceryList,
-  addGroceryListItem,
   addGroceryListItems,
   deleteGroceryListItem,
   deleteGroceryListItems,
@@ -12,17 +12,19 @@ import {
   type ShoppingLine,
 } from "@/lib/actions";
 import { AISLES, aisleOf } from "@/lib/aisles";
-import { GROCERY_CATEGORIES } from "@/lib/constants";
-import { formatShoppingAmounts } from "@/lib/quantities";
-import { parseIngredientLine } from "@/lib/shopping-lines";
+import { mealLabel } from "@/lib/labels";
+import { exactAmount, formatShoppingAmounts } from "@/lib/quantities";
+import { normalizeSearch } from "@/lib/search";
+import { parseIngredientBlock } from "@/lib/shopping-lines";
 import { addWeeks, getMondayOf, relativeWeekTitle, shortWeekRange } from "@/lib/weeks";
-import BulkGroceryAdd, { type BulkProductRow } from "@/components/BulkGroceryAdd";
+import { Sheet } from "@/components/Sheet";
+import { MEALS, type MealType } from "@/components/planner/shared";
 
 type Group = { key: string; emoji: string; title: string; short: string; items: ShoppingLine[] };
 type Toast = { text: string; error?: boolean; undo?: () => void };
 
-const INPUT_CLS =
-  "px-3 py-2.5 text-sm bg-white dark:bg-[#24211c] border border-gray-200 dark:border-[#3a352e] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-400 dark:placeholder:text-[#7c756a] rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400";
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HIDE_KEY = "grocery-hide-ticked";
 
 function manualLine(e: GroceryEntry): ShoppingLine {
   return {
@@ -32,11 +34,67 @@ function manualLine(e: GroceryEntry): ShoppingLine {
     amounts: e.quantity > 0 ? [{ quantity: e.quantity, unit: e.unit }] : [],
     staple: false,
     manual: true,
+    sources: [],
   };
 }
 
+// Same key the server de-dupes hand-added products on (name + unit, case-folded).
+const dupKey = (name: string, unit: string | null | undefined) =>
+  `${name.trim().toLowerCase()}::${(unit ?? "").trim().toLowerCase()}`;
+
 function byName(a: ShoppingLine, b: ShoppingLine): number {
   return a.name.localeCompare(b.name);
+}
+
+// The recipes a line comes from, each with the meals it's planned for and how much
+// that meal needs. Opened by tapping the line's amount.
+function SourceRecipes({ line }: { line: ShoppingLine }) {
+  const sources = [...line.sources].sort(
+    (a, b) => a.dayOfWeek - b.dayOfWeek || MEALS.indexOf(a.mealType as MealType) - MEALS.indexOf(b.mealType as MealType)
+  );
+  const recipes: { id: string; name: string; meals: { when: string; amount: string }[] }[] = [];
+  for (const s of sources) {
+    let r = recipes.find((x) => x.id === s.recipeId);
+    if (!r) {
+      r = { id: s.recipeId, name: s.recipeName, meals: [] };
+      recipes.push(r);
+    }
+    r.meals.push({
+      when: `${DAYS[s.dayOfWeek] ?? ""} · ${mealLabel(s.mealType).toLowerCase()}`,
+      amount: s.quantity > 0 ? exactAmount(s.quantity, s.unit) : "to taste",
+    });
+  }
+  const qty = formatShoppingAmounts(line.amounts) || "To taste";
+  const forWhat = recipes.length === 1 ? "1 recipe" : `${recipes.length} recipes`;
+  return (
+    <>
+      <p className="mt-1 text-[15px] text-gray-600 dark:text-[#a49c90]">
+        {qty} this week, for {forWhat}
+        {sources.length > recipes.length ? ` in ${sources.length} meals` : ""}.
+      </p>
+      <ul>
+        {recipes.map((r) => (
+          <li key={r.id}>
+            <Link
+              href={`/recipes/${r.id}`}
+              className="mt-2.5 block rounded-2xl border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] px-3.5 py-3 active:bg-gray-50 dark:active:bg-[#2e2a24]"
+            >
+              <span className="flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-base font-semibold leading-snug text-gray-900 dark:text-[#eae5de]">{r.name}</span>
+                <ChevronRight size={16} className="shrink-0 text-gray-400 dark:text-[#8f877b]" />
+              </span>
+              {r.meals.map((m, i) => (
+                <span key={i} className="mt-1.5 flex justify-between gap-3 text-sm">
+                  <span className="text-gray-600 dark:text-[#a49c90]">{m.when}</span>
+                  <span className="font-semibold text-gray-900 dark:text-[#eae5de]">{m.amount}</span>
+                </span>
+              ))}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </>
+  );
 }
 
 // "Next week" / "In 3 weeks" / "2 weeks ago" — relative to the week on screen.
@@ -56,14 +114,18 @@ export default function GroceryListPage() {
   const [loadedWeek, setLoadedWeek] = useState<string | null>(null);
   const [failedWeek, setFailedWeek] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
-  // Ticked = in the cart. Kept per device and per week, so ticks survive a reload mid-shop.
+  // Ticked = got it. A ticked line stays where it is, crossed out (or hidden). Kept per
+  // device and per week, so ticks survive a reload mid-shop.
   const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [hideTicked, setHideTicked] = useState(false);
   const [showStaples, setShowStaples] = useState(false);
-  const [showCart, setShowCart] = useState(true);
   const [active, setActive] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
+  // The line whose recipes are open in a sheet.
+  const [sourceId, setSourceId] = useState<string | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addText, setAddText] = useState("");
   const [adding, setAdding] = useState(false);
-  const [pasteOpen, setPasteOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
   // Selecting hand-added products to copy them to another week, or delete them.
   const [selectMode, setSelectMode] = useState(false);
@@ -109,21 +171,42 @@ export default function GroceryListPage() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Hiding ticked lines is a per-device preference, like the ticks themselves.
+  useEffect(() => {
+    try {
+      setHideTicked(localStorage.getItem(HIDE_KEY) === "1");
+    } catch {
+      // Storage blocked: ticked lines simply start visible.
+    }
+  }, []);
+
+  function toggleHideTicked() {
+    setHideTicked((on) => {
+      try {
+        localStorage.setItem(HIDE_KEY, on ? "0" : "1");
+      } catch {
+        // Not remembered, but it still applies until the page reloads.
+      }
+      return !on;
+    });
+  }
+
   function shiftWeek(weeks: number) {
     setMonday((m) => addWeeks(m, weeks));
     setSelectMode(false);
     setSelected(new Set());
     setConfirmDelete(false);
     setActive(null);
+    setSourceId(null);
   }
 
-  // Persist on toggle (keyed to this week) rather than in an effect, so a week change
+  // Persist on change (keyed to this week) rather than in an effect, so a week change
   // can never write one week's ticks under another week's key.
-  function toggleCheck(id: string) {
+  function setTicked(id: string, on: boolean) {
     setChecked((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (on) next.add(id);
+      else next.delete(id);
       try {
         localStorage.setItem(checkedKey, JSON.stringify([...next]));
       } catch {
@@ -133,26 +216,62 @@ export default function GroceryListPage() {
     });
   }
 
+  function tick(line: ShoppingLine) {
+    const on = !checked.has(line.id);
+    setTicked(line.id, on);
+    // With ticked lines hidden the row vanishes, so offer a way back.
+    if (on && hideTicked) {
+      setToast({ text: `${line.name} ticked`, undo: () => { setToast(null); setTicked(line.id, false); } });
+    }
+  }
+
   // ── Sections ──
-  const inCart = (l: ShoppingLine) => checked.has(l.id);
-  const toBuy = lines.filter((l) => !l.staple && !inCart(l));
-  const added = toBuy.filter((l) => l.manual);
+  const isTicked = (l: ShoppingLine) => checked.has(l.id);
+  const listed = (l: ShoppingLine) => !(hideTicked && isTicked(l));
+  const left = (items: ShoppingLine[]) => items.filter((l) => !isTicked(l)).length;
+  const countable = lines.filter((l) => !l.staple);
+  const added = countable.filter((l) => l.manual && listed(l));
   const groups: Group[] = [
     ...(added.length ? [{ key: "added", emoji: "✍️", title: "Added by you", short: "Added", items: added }] : []),
-    ...AISLES.map((a) => ({ key: a.key as string, emoji: a.emoji as string, title: a.title as string, short: a.short as string, items: toBuy.filter((l) => !l.manual && aisleOf(l.category) === a.key) })),
+    ...AISLES.map((a) => ({
+      key: a.key as string,
+      emoji: a.emoji as string,
+      title: a.title as string,
+      short: a.short as string,
+      items: countable.filter((l) => !l.manual && aisleOf(l.category) === a.key && listed(l)),
+    })),
   ].filter((g) => g.items.length > 0);
-  const staples = lines.filter((l) => l.staple && !inCart(l));
-  const cart = lines.filter(inCart).sort(byName);
-  const countable = lines.filter((l) => !l.staple);
-  const done = countable.filter(inCart).length;
+  const staples = lines.filter((l) => l.staple && listed(l));
+  const done = countable.filter(isTicked).length;
+  const tickedCount = lines.filter(isTicked).length;
   const chips = [
-    ...groups.map((g) => ({ key: g.key, emoji: g.emoji, label: g.short, count: g.items.length })),
-    ...(staples.length ? [{ key: "home", emoji: "🏠", label: "At home", count: staples.length }] : []),
-    ...(cart.length ? [{ key: "cart", emoji: "🛒", label: "In cart", count: cart.length }] : []),
+    ...groups.map((g) => ({ key: g.key, emoji: g.emoji, label: g.short, count: left(g.items) })),
+    ...(staples.length ? [{ key: "home", emoji: "🏠", label: "At home", count: left(staples) }] : []),
   ];
   const activeKey = active ?? chips[0]?.key ?? null;
   const manualLines = lines.filter((l) => l.manual);
   const selectedLines = manualLines.filter((l) => selected.has(l.id));
+  const sourceLine = sourceId ? lines.find((l) => l.id === sourceId) ?? null : null;
+
+  // What the add sheet would add: one row per line typed or pasted.
+  const existingKeys = new Set(manualLines.map((l) => dupKey(l.name, l.amounts[0]?.unit)));
+  const seenKeys = new Set<string>();
+  const preview = parseIngredientBlock(addText).map((p, i) => {
+    const key = dupKey(p.name, p.unit);
+    const onList = existingKeys.has(key);
+    const twice = !onList && seenKeys.has(key);
+    seenKeys.add(key);
+    const fromRecipes = lines.find((l) => !l.manual && normalizeSearch(l.name) === normalizeSearch(p.name));
+    const note = onList
+      ? "Already on the list. It will be skipped."
+      : twice
+        ? "Listed twice. It's added once."
+        : fromRecipes
+          ? `Also on the list from recipes (${formatShoppingAmounts(fromRecipes.amounts) || "to taste"}).`
+          : null;
+    return { ...p, i, note, skip: onList || twice };
+  });
+  const toAdd = preview.filter((p) => !p.skip);
 
   // ── Scroll-spy: the chip of the section under the sticky bar lights up ──
   const hasBar = !loading && !loadError && lines.length > 0;
@@ -194,7 +313,6 @@ export default function GroceryListPage() {
 
   function jumpTo(key: string) {
     if (key === "home") setShowStaples(true);
-    if (key === "cart") setShowCart(true);
     setActive(key);
     jumpingUntil.current = Date.now() + 800;
     // A section's header doesn't move when it expands (its rows open below it), so the
@@ -211,36 +329,35 @@ export default function GroceryListPage() {
   }
 
   // ── Hand-added products ──
-  async function quickAdd(e: FormEvent) {
-    e.preventDefault();
-    const parsed = parseIngredientLine(draft);
-    if (!parsed || adding) return;
-    setAdding(true);
-    try {
-      const entry = await addGroceryListItem(weekIso, { name: parsed.name, quantity: parsed.qty, unit: parsed.unit, category: "Other" });
-      setLines((prev) => [...prev, manualLine(entry)].sort(byName));
-      setDraft("");
-    } catch {
-      setToast({ text: `Couldn't add ${parsed.name}. Try again.`, error: true });
-    } finally {
-      setAdding(false);
-    }
+  function openAdd() {
+    setAddError(null);
+    setAddOpen(true);
   }
 
-  async function handleBulkAdd(rows: BulkProductRow[]): Promise<boolean> {
+  async function addItems() {
+    if (!toAdd.length || adding) return;
+    setAdding(true);
+    setAddError(null);
     try {
-      const res = await addGroceryListItems(weekIso, rows);
+      const res = await addGroceryListItems(
+        weekIso,
+        toAdd.map((p) => ({ name: p.name, quantity: p.qty, unit: p.unit, category: "Other" }))
+      );
       if (res.added.length) setLines((prev) => [...prev, ...res.added.map(manualLine)].sort(byName));
-      setPasteOpen(false);
+      setAddOpen(false);
+      setAddText("");
+      const n = res.added.length;
       setToast({
-        text: res.added.length
-          ? `${res.added.length} added${res.skipped ? ` · ${res.skipped} already here` : ""}`
+        text: n
+          ? `${n === 1 ? res.added[0].name : `${n} items`} added${res.skipped ? ` · ${res.skipped} already here` : ""}`
           : "All of them were already on this week's list",
-        undo: res.added.length ? () => removeManual(res.added.map((a) => a.id), "Couldn't undo. They're still on the list.") : undefined,
+        undo: n ? () => removeManual(res.added.map((a) => a.id), "Couldn't undo. They're still on the list.") : undefined,
       });
-      return true;
     } catch {
-      return false; // the paste form keeps what was typed and shows its own error
+      // Keep the sheet and what was typed, so nothing has to be retyped.
+      setAddError("Couldn't add them. Check your connection and try again.");
+    } finally {
+      setAdding(false);
     }
   }
 
@@ -317,14 +434,19 @@ export default function GroceryListPage() {
   async function share() {
     const text = [
       `Shopping list · ${shortWeekRange(monday)}`,
-      ...groups.flatMap((g) => [
-        "",
-        `${g.emoji} ${g.title.toUpperCase()}`,
-        ...g.items.map((l) => {
-          const q = formatShoppingAmounts(l.amounts);
-          return `• ${l.name}${q ? ` — ${q}` : ""}`;
-        }),
-      ]),
+      ...groups.flatMap((g) => {
+        const items = g.items.filter((l) => !isTicked(l));
+        return items.length
+          ? [
+              "",
+              `${g.emoji} ${g.title.toUpperCase()}`,
+              ...items.map((l) => {
+                const q = formatShoppingAmounts(l.amounts);
+                return `• ${l.name}${q ? ` — ${q}` : ""}`;
+              }),
+            ]
+          : [];
+      }),
     ].join("\n");
     if (navigator.share) {
       try {
@@ -344,12 +466,14 @@ export default function GroceryListPage() {
 
   // ── Rendering ──
   function row(line: ShoppingLine, opts: { onDelete?: () => void } = {}) {
-    const ticked = inCart(line);
-    const qty = formatShoppingAmounts(line.amounts);
-    const picking = selectMode && line.manual && !ticked;
+    const ticked = isTicked(line);
+    // A line every recipe leaves "to taste" has no amount, but its recipes still open.
+    const qty = formatShoppingAmounts(line.amounts) || (line.sources.length ? "to taste" : "");
+    const picking = selectMode && !!line.manual;
     const picked = selected.has(line.id);
+    const qtyCls = `text-[15px] font-semibold text-gray-600 dark:text-[#a49c90] ${ticked ? "opacity-45 line-through" : ""}`;
     return (
-      <li key={line.id} className="flex items-center">
+      <li key={line.id} className="flex items-stretch">
         <button
           type="button"
           onClick={() =>
@@ -360,10 +484,10 @@ export default function GroceryListPage() {
                   else next.add(line.id);
                   return next;
                 })
-              : toggleCheck(line.id)
+              : tick(line)
           }
           aria-pressed={picking ? picked : ticked}
-          className={`flex-1 min-w-0 min-h-[52px] flex items-center gap-3.5 px-4 py-1.5 text-left transition-colors ${
+          className={`flex-1 min-w-0 min-h-[52px] flex items-center gap-3.5 pl-4 pr-2 py-1.5 text-left transition-colors ${
             picking && picked ? "bg-orange-50 dark:bg-orange-500/10" : "active:bg-gray-50 dark:active:bg-[#24211c]"
           }`}
         >
@@ -382,18 +506,26 @@ export default function GroceryListPage() {
           <span className={`flex-1 min-w-0 text-base leading-snug text-gray-900 dark:text-[#eae5de] ${ticked ? "opacity-45 line-through" : ""}`}>
             {line.name}
           </span>
-          {qty && (
-            <span className={`shrink-0 text-right text-[15px] font-semibold text-gray-600 dark:text-[#a49c90] ${ticked ? "opacity-45 line-through" : ""}`}>
-              {qty}
-            </span>
-          )}
         </button>
+        {/* The amount opens the recipes it comes from; the rest of the row ticks. */}
+        {qty && line.sources.length > 0 && !picking ? (
+          <button
+            type="button"
+            onClick={() => setSourceId(line.id)}
+            aria-label={`${qty} ${line.name}: show the recipes it's for`}
+            className="shrink-0 min-w-14 pl-2 pr-4 flex items-center justify-end text-right active:bg-gray-50 dark:active:bg-[#24211c] transition-colors"
+          >
+            <span className={qtyCls}>{qty}</span>
+          </button>
+        ) : (
+          qty && <span className={`shrink-0 pl-2 flex items-center text-right ${opts.onDelete && !selectMode ? "" : "pr-4"} ${qtyCls}`}>{qty}</span>
+        )}
         {opts.onDelete && !selectMode && (
           <button
             type="button"
             onClick={opts.onDelete}
             aria-label={`Delete ${line.name}`}
-            className="w-11 h-11 mr-2 shrink-0 flex items-center justify-center rounded-xl text-gray-400 dark:text-[#7c756a] hover:text-red-600 dark:hover:text-red-400"
+            className="w-11 h-11 my-auto mr-2 shrink-0 flex items-center justify-center rounded-xl text-gray-400 dark:text-[#7c756a] hover:text-red-600 dark:hover:text-red-400"
           >
             <Trash2 size={16} />
           </button>
@@ -405,6 +537,8 @@ export default function GroceryListPage() {
   const sectionHead = "scroll-mt-4 flex items-center justify-between gap-2 px-4 pt-4 pb-1.5 text-[13px] font-semibold tracking-[.04em] uppercase text-gray-500 dark:text-[#a49c90]";
   const toggleRow = "w-full h-[52px] flex items-center justify-between px-4 border-t border-gray-100 dark:border-[#3a352e] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]";
   const smallBtn = "h-9 px-2.5 rounded-lg text-xs font-semibold normal-case tracking-normal";
+  const sheetBtn = "flex-1 h-12 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]";
+  const sheetMainBtn = "flex-1 h-12 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white text-base font-bold flex items-center justify-center gap-2 disabled:opacity-50 transition-colors";
 
   return (
     <div className="max-w-2xl mx-auto md:px-8 md:pt-8 flex flex-col min-h-[calc(100dvh-5rem-env(safe-area-inset-bottom))] md:min-h-dvh">
@@ -415,7 +549,7 @@ export default function GroceryListPage() {
           <button
             type="button"
             onClick={share}
-            disabled={groups.length === 0}
+            disabled={done === countable.length}
             aria-label="Share the list"
             className="w-11 h-11 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] flex items-center justify-center disabled:opacity-40"
           >
@@ -504,7 +638,7 @@ export default function GroceryListPage() {
         ) : lines.length === 0 ? (
           <div className="py-14 px-8 text-center">
             <p className="text-[17px] font-semibold text-gray-900 dark:text-[#eae5de]">Nothing to buy this week</p>
-            <p className="mt-1.5 text-sm text-gray-600 dark:text-[#a49c90]">Plan some meals, or add an item below.</p>
+            <p className="mt-1.5 text-sm text-gray-600 dark:text-[#a49c90]">Plan some meals, or add something with +.</p>
           </div>
         ) : (
           <>
@@ -563,7 +697,7 @@ export default function GroceryListPage() {
                       )}
                     </span>
                   ) : (
-                    <span>{g.items.length}</span>
+                    <span>{left(g.items)}</span>
                   )}
                 </h2>
                 <ul>
@@ -576,7 +710,7 @@ export default function GroceryListPage() {
 
             {groups.length === 0 && countable.length > 0 && (
               <div className="py-8 px-6 text-center">
-                <p className="text-lg font-bold text-gray-900 dark:text-[#eae5de]">Everything is in the cart</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-[#eae5de]">Everything is ticked off</p>
                 <p className="mt-1.5 text-sm text-gray-600 dark:text-[#a49c90]">Nice. Staples below, if you need any.</p>
               </div>
             )}
@@ -601,62 +735,39 @@ export default function GroceryListPage() {
               </section>
             )}
 
-            {cart.length > 0 && (
-              <section>
-                <button
-                  type="button"
-                  id="shop-cart"
-                  data-section="cart"
-                  onClick={() => setShowCart((v) => !v)}
-                  aria-expanded={showCart}
-                  className={`${toggleRow} scroll-mt-4`}
-                >
-                  <span>In the cart · {cart.length}</span>
-                  <span className="flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-[#a49c90]">
-                    {showCart ? "Hide" : "Show"}
-                    <ChevronDown size={18} className={`transition-transform ${showCart ? "rotate-180" : ""}`} />
-                  </span>
-                </button>
-                {showCart && <ul>{cart.map((l) => row(l))}</ul>}
-              </section>
-            )}
             {/* Room for the last sections to scroll up under the bar, so their chips can light up. */}
             <div className="h-[45dvh]" aria-hidden />
           </>
         )}
       </div>
 
-      {/* Quick add — sits above the bottom nav on mobile */}
-      <form
-        onSubmit={quickAdd}
-        className="sticky z-20 bottom-[calc(4rem+1px+env(safe-area-inset-bottom))] md:bottom-0 flex gap-2 px-4 md:px-0 py-2.5 border-t border-gray-100 dark:border-[#3a352e] bg-[var(--color-bg-base)]"
-      >
-        <button
-          type="button"
-          onClick={() => setPasteOpen(true)}
-          aria-label="Paste a list"
-          title="Paste a list"
-          className="w-12 h-12 shrink-0 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-600 dark:text-[#a49c90] flex items-center justify-center"
-        >
-          <ClipboardList size={20} />
-        </button>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          aria-label="Add an item"
-          placeholder="Add an item, e.g. 2 lemons"
-          enterKeyHint="done"
-          className="flex-1 min-w-0 h-12 px-3.5 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-gray-900 dark:text-[#eae5de] placeholder:text-gray-500 dark:placeholder:text-[#8f877b] focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500"
-        />
-        <button
-          type="submit"
-          aria-label="Add item"
-          disabled={adding || !draft.trim()}
-          className="w-12 h-12 shrink-0 rounded-[14px] bg-orange-500 hover:bg-orange-600 text-white flex items-center justify-center disabled:opacity-50 transition-colors"
-        >
-          {adding ? <Loader2 size={20} className="animate-spin" /> : <Plus size={22} />}
-        </button>
-      </form>
+      {/* Floating over the list, above the bottom nav on mobile: hide/show ticked, and + to add */}
+      {!loading && !loadError && (
+        <div className="sticky z-20 bottom-[calc(4rem+1px+env(safe-area-inset-bottom)+0.75rem)] md:bottom-6 px-4 md:px-0 flex items-center gap-3 pointer-events-none">
+          {tickedCount > 0 && (
+            <button
+              type="button"
+              onClick={toggleHideTicked}
+              aria-pressed={hideTicked}
+              className="pointer-events-auto h-12 pl-3 pr-3.5 rounded-full border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] shadow-lg flex items-center gap-2 text-[15px] font-semibold text-gray-900 dark:text-[#eae5de]"
+            >
+              {hideTicked ? <Eye size={20} /> : <EyeOff size={20} />}
+              {hideTicked ? "Show ticked" : "Hide ticked"}
+              <span className="min-w-6 h-6 px-1.5 rounded-full bg-orange-500 text-gray-900 text-[13px] font-bold flex items-center justify-center">
+                {tickedCount}
+              </span>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={openAdd}
+            aria-label="Add items to the list"
+            className="pointer-events-auto ml-auto w-14 h-14 rounded-[20px] bg-orange-500 hover:bg-orange-600 text-white shadow-lg flex items-center justify-center transition-colors"
+          >
+            <Plus size={26} strokeWidth={2.4} />
+          </button>
+        </div>
+      )}
 
       {toast && (
         <div
@@ -674,33 +785,81 @@ export default function GroceryListPage() {
         </div>
       )}
 
-      {/* Paste a list */}
-      {pasteOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/40 dark:bg-black/60 flex flex-col justify-end md:items-center md:justify-center"
-          onClick={(e) => { if (e.target === e.currentTarget) setPasteOpen(false); }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="paste-title"
-            className="w-full md:max-w-lg max-h-[88dvh] overflow-y-auto bg-[var(--color-bg-base)] rounded-t-3xl md:rounded-3xl px-4 pt-3 shadow-xl"
-            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 id="paste-title" className="text-xl font-bold text-gray-900 dark:text-[#eae5de]">Paste a list</h2>
-              <button type="button" onClick={() => setPasteOpen(false)} aria-label="Close" className="w-11 h-11 flex items-center justify-center text-gray-500 dark:text-[#a49c90]">
-                <X size={20} />
-              </button>
-            </div>
-            <BulkGroceryAdd
-              categories={GROCERY_CATEGORIES}
-              existing={manualLines.map((l) => ({ name: l.name, unit: l.amounts[0]?.unit ?? null }))}
-              inputCls={INPUT_CLS}
-              onAdd={handleBulkAdd}
-            />
+      {/* Where a line comes from: its recipes, by day and meal */}
+      {sourceLine && (
+        <Sheet title={sourceLine.name} onClose={() => setSourceId(null)}>
+          <SourceRecipes line={sourceLine} />
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={() => setSourceId(null)} className={sheetBtn}>
+              Close
+            </button>
+            <button
+              type="button"
+              onClick={() => { tick(sourceLine); setSourceId(null); }}
+              className={sheetMainBtn}
+            >
+              {isTicked(sourceLine) ? "Untick" : "Tick off"}
+            </button>
           </div>
-        </div>
+        </Sheet>
+      )}
+
+      {/* Add: one item typed, or a whole list pasted */}
+      {addOpen && (
+        <Sheet title="Add to this week" onClose={() => setAddOpen(false)}>
+          <p className="mt-1 text-[15px] text-gray-600 dark:text-[#a49c90]">One per line. Type one thing, or paste a whole list.</p>
+          <textarea
+            value={addText}
+            onChange={(e) => setAddText(e.target.value)}
+            autoFocus
+            rows={4}
+            aria-label="Items to add, one per line"
+            placeholder={"2 lemons\n500 ml milk\nDish sponges"}
+            className="mt-3 w-full min-h-[120px] px-3.5 py-3 rounded-[14px] border border-gray-200 dark:border-[#3a352e] bg-white dark:bg-[#24211c] text-base leading-relaxed text-gray-900 dark:text-[#eae5de] placeholder:text-gray-500 dark:placeholder:text-[#8f877b] resize-none focus:outline-none focus:ring-2 focus:ring-inset focus:ring-orange-500"
+          />
+          {preview.length > 0 && (
+            <>
+              <p className="mt-4 mb-1 text-[13px] font-semibold tracking-[.04em] uppercase text-gray-500 dark:text-[#a49c90]">
+                Will add · {toAdd.length}
+              </p>
+              <ul>
+                {preview.map((p) => (
+                  <li key={p.i} className="flex items-center gap-2.5 min-h-12 border-t border-gray-100 dark:border-[#3a352e]">
+                    <span className="flex-1 min-w-0 py-1.5">
+                      <span className={`block text-base text-gray-900 dark:text-[#eae5de] ${p.skip ? "opacity-50 line-through" : ""}`}>{p.name}</span>
+                      {p.note && (
+                        <span className={`block text-[13px] ${p.skip ? "text-gray-500 dark:text-[#a49c90]" : "text-amber-700 dark:text-amber-400"}`}>
+                          {p.note}
+                        </span>
+                      )}
+                    </span>
+                    {p.qty != null && (
+                      <span className="shrink-0 text-[15px] font-semibold text-gray-600 dark:text-[#a49c90]">{exactAmount(p.qty, p.unit)}</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAddText(preview.filter((x) => x.i !== p.i).map((x) => x.raw).join("\n"))}
+                      aria-label={`Don't add ${p.name}`}
+                      className="w-11 h-11 -mr-2.5 shrink-0 flex items-center justify-center text-gray-400 dark:text-[#8f877b]"
+                    >
+                      <X size={16} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {addError && <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">{addError}</p>}
+          <div className="mt-5 flex gap-2">
+            <button type="button" onClick={() => setAddOpen(false)} className={sheetBtn}>
+              Cancel
+            </button>
+            <button type="button" onClick={addItems} disabled={adding || toAdd.length === 0} className={sheetMainBtn}>
+              {adding && <Loader2 size={18} className="animate-spin" />}
+              {toAdd.length > 1 ? `Add ${toAdd.length} items` : toAdd.length === 1 ? "Add 1 item" : "Add"}
+            </button>
+          </div>
+        </Sheet>
       )}
 
       {/* Copy selected products to another week */}

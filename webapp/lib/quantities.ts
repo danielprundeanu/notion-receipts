@@ -83,6 +83,14 @@ function shoppingAmount(q: number, unit: string | null): string {
   return `${num} ${q > 1 && PLURAL[u] ? PLURAL[u] : u}`;
 }
 
+/** One recipe's own amount, not rounded up: "¾", "2 cups", "220 g". */
+export function exactAmount(q: number, unit: string | null): string {
+  const u = unit?.trim().toLowerCase() || null;
+  const num = formatAmount(q, u);
+  if (!u || u === "piece") return num;
+  return `${num} ${q > 1 && PLURAL[u] ? PLURAL[u] : u}`;
+}
+
 /** "5", "2½ cups + 180 g", "3 cans" — every unit an item is needed in, joined. */
 export function formatShoppingAmounts(amounts: { quantity: number; unit: string | null }[]): string {
   return amounts.filter((a) => a.quantity > 0).map((a) => shoppingAmount(a.quantity, a.unit)).join(" + ");

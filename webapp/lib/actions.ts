@@ -781,6 +781,17 @@ export type GroceryEntry = {
 
 export type ShoppingAmount = { quantity: number; unit: string | null };
 
+// One planned meal a shopping line's amount comes from. `quantity` is 0 when the
+// recipe leaves it to taste.
+export type ShoppingSource = {
+  recipeId: string;
+  recipeName: string;
+  dayOfWeek: number;
+  mealType: string;
+  quantity: number;
+  unit: string | null;
+};
+
 // One line of the shopping list per grocery item. Amounts in different units stay
 // separate ("2½ cups + 180 g") — summing 200 g with 1 cup would be a nonsense total.
 export type ShoppingLine = {
@@ -790,6 +801,7 @@ export type ShoppingLine = {
   amounts: ShoppingAmount[];
   staple: boolean; // GroceryItem.pantryStaple — "Probably at home"
   manual?: boolean;
+  sources: ShoppingSource[]; // empty for a hand-added product
 };
 
 export async function getGroceryList(
@@ -803,7 +815,7 @@ export async function getGroceryList(
   const [plans, manual] = await Promise.all([
     prisma.weekPlan.findMany({
       where: { weekStart: { gte: weekStart, lt: weekEnd } },
-      include: { recipe: { select: { servings: true } } },
+      include: { recipe: { select: { name: true, servings: true } } },
     }),
     prisma.groceryListItem.findMany({ where: { weekStart: { gte: weekStart, lt: weekEnd } } }),
   ]);
@@ -818,14 +830,23 @@ export async function getGroceryList(
       if (!gi) continue;
       let line = byItem.get(gi.id);
       if (!line) {
-        line = { id: gi.id, name: gi.name, category: gi.category ?? "Other", amounts: [], staple: gi.pantryStaple, units: new Map() };
+        line = { id: gi.id, name: gi.name, category: gi.category ?? "Other", amounts: [], staple: gi.pantryStaple, sources: [], units: new Map() };
         byItem.set(gi.id, line);
       }
       const unit = ing.unit ?? gi.unit;
       const key = (unit ?? "").trim().toLowerCase();
       const amount = line.units.get(key) ?? { quantity: 0, unit };
-      amount.quantity += (ing.quantity || 0) * scale;
+      const quantity = (ing.quantity || 0) * scale;
+      amount.quantity += quantity;
       line.units.set(key, amount);
+      line.sources.push({
+        recipeId: plan.recipeId,
+        recipeName: plan.recipe.name.trim(),
+        dayOfWeek: plan.dayOfWeek,
+        mealType: plan.mealType,
+        quantity,
+        unit,
+      });
     }
   }
 
@@ -841,6 +862,7 @@ export async function getGroceryList(
       amounts: m.quantity ? [{ quantity: m.quantity, unit: m.unit }] : [],
       staple: false,
       manual: true,
+      sources: [],
     });
   }
   lines.sort((a, b) => a.name.localeCompare(b.name));
