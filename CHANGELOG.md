@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0] — 2026-10-28
+
+### ✨ Features
+- **Shopping list: where an amount comes from** — tap an item's amount to see the recipes it's for, by day and meal, with what each one needs. The sheet can tick the item, and each recipe opens with a tap.
+- **Shopping list: ticks stay in place** — a ticked item stays crossed out in its aisle; the In the cart section is gone. A floating pill hides or shows ticked items (remembered on the device), with Undo when a tick hides a row.
+- **Shopping list: + to add** — a floating + replaces the bottom bar. One sheet takes a single item or a pasted list, previews the rows and flags what's already on the list or comes from recipes.
+- **Ingredients redesign** — search that ignores diacritics; filters (No nutrition, At home, categories); sorting by aisle, name, most used, newest, calories or macros; a Data check card; select mode to set a category, fill in nutrition or delete (items used in recipes are refused); a quick add with a suggested category. The inline-editing table stays, on desktop.
+- **Ingredient editor** — full screen on phones, a dialog on desktop. The name can be edited; AI suggests unit conversions; Check USDA proposes values without overwriting yours; a warning when protein, carbs and fat don't add up to the calories; per-unit equivalents and the recipes that use it.
+- **Data check** — tabs for Nutrition (look up one or all; household items skipped), Categories (moves off the old categories, plus the ones that would land in Other, with AI matching) and Units.
+
+### ⚙️ Internals
+- `getGroceryList` returns each line's `sources` (recipe, day, meal, amount) and `getGroceryItems` returns `uses`. New `exactAmount` in `lib/quantities.ts`, shared helpers in `lib/grocery-items.ts`. `BulkGroceryAdd` removed.
+
 ## [1.3.1] — 2026-10-27
 
 ### 🎨 UI / UX
