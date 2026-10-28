@@ -1082,7 +1082,7 @@ export async function getGroceryCategories(): Promise<string[]> {
 }
 
 export async function getGroceryItems() {
-  return prisma.groceryItem.findMany({
+  const rows = await prisma.groceryItem.findMany({
     orderBy: [{ category: "asc" }, { name: "asc" }],
     select: {
       id: true,
@@ -1099,8 +1099,12 @@ export async function getGroceryItems() {
       unitWeight: true,
       pantryStaple: true,
       createdAt: true,
+      _count: { select: { ingredients: true } },
     },
   });
+  // `uses` = ingredient rows across all recipes: sorts the list by "most used" and
+  // tells which items can still be deleted.
+  return rows.map(({ _count, ...item }) => ({ ...item, uses: _count.ingredients }));
 }
 
 // ─── Unit audit ───────────────────────────────────────────────────────────────
