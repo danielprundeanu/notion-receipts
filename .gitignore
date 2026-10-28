@@ -40,3 +40,5 @@ data/local/
 # Env
 webapp/.env
 webapp/.env.local
+.vercel
+.env*
